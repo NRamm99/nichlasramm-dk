@@ -1,0 +1,12 @@
+@import "tailwindcss";
+.github-heatmap {
+  margin-top: 48px;
+  text-align: center;
+}
+
+.github-heatmap img {
+  max-width: 100%;
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+}
