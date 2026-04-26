@@ -7,14 +7,11 @@ import Blog from "./pages/Blog";
 import About from "./pages/About";
 
 import "./App.css";
-import GitHubHeatmap from "./components/GitHubHeatMap";
 
 function App() {
   return (
     <>
       <Navbar />
-
-      <GitHubHeatmap />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/projects" element={<Projects />} />
