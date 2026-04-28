@@ -2,7 +2,11 @@ body {
   margin: 0;
   font-family: Inter, Arial, sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 35%),
+    radial-gradient(
+      circle at top left,
+      rgba(56, 189, 248, 0.14),
+      transparent 35%
+    ),
     #0f172a;
   color: white;
 }
@@ -71,7 +75,6 @@ h1 {
 }
 
 p {
-  max-width: 650px;
   font-size: 1.2rem;
   line-height: 1.7;
   color: #cbd5e1;
@@ -87,10 +90,6 @@ button {
   color: #020617;
 
   font-weight: 800;
-}
-
-button:hover {
-  transform: translateY(-2px);
 }
 
 .projects-grid {
@@ -132,4 +131,42 @@ button:hover {
 
 .projects-page h1 {
   margin-bottom: 32px;
+}
+
+.github-section {
+  margin-top: 48px;
+  text-align: center;
+}
+
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(53, 12px);
+  gap: 4px;
+  justify-content: center;
+}
+
+.heatmap-day {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.level-0 {
+  background: #1e293b;
+}
+
+.level-1 {
+  background: #0e7490;
+}
+
+.level-2 {
+  background: #0891b2;
+}
+
+.level-3 {
+  background: #06b6d4;
+}
+
+.level-4 {
+  background: #67e8f9;
 }

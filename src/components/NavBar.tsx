@@ -4,7 +4,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       <NavLink to="/" className="logo">
-        NichlasRamm.dk
+        Nichlas Ramm
       </NavLink>
 
       <div className="flex gap-4">

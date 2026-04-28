@@ -4,22 +4,31 @@ function Projects() {
   return (
     <main className="projects-page">
       {/* Override index.css h1 to make it yellow*/}
-      <h1 className="text-red-500">Projects</h1>
+      <h1>Projects</h1>
 
+      <h2>Ongoing Projects</h2>
       <div className="projects-grid">
         <ProjectCard
           title="100 Days"
-          description="Mit projekt hvor jeg koder hver dag i 100 dage."
+          description="To work on my discipline and coding skills, I set my self the challenge to code for 100 days straight."
         />
 
         <ProjectCard
-          title="Broccoli Ben"
-          description="Brotato-inspired co-op game med upgrades og waves."
+          title="NichlasRamm.dk"
+          description="This website is an ongoing project to learn more about web development and to showcase my projects."
+        />
+      </div>
+
+      <h2>Completed Projects</h2>
+      <div className="projects-grid">
+        <ProjectCard
+          title="A lot of small school projects"
+          description="A lot of small school projects that I have worked on since I started studying @Zealand."
         />
 
         <ProjectCard
           title="Racekatteklubben"
-          description="Spring Boot system med clean architecture og MySQL."
+          description="School project where I worked on a Spring Boot system with clean architecture and MySQL."
         />
       </div>
     </main>
