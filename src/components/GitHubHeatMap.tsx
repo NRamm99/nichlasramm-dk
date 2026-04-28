@@ -48,7 +48,7 @@ export default function GitHubHeatMap() {
               className={`heatmap-day level-${getLevel(day.contributionCount)}`}
               title={`${day.date}: ${day.contributionCount} contributions`}
             />
-          ))
+          )),
         )}
       </div>
     </section>

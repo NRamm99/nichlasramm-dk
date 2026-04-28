@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 api/github.ts
+
+.vercel
+.env*.local
