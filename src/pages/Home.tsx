@@ -6,18 +6,18 @@ import SocialLinks from "../components/SocialLinks";
 function Home() {
   return (
     <main>
-      <div className="flex flex-row items-center justify-center gap-10">
+      <div className="flex flex-row items-center justify-center gap-10 fade-up">
         <img
           src={mig}
           alt="Nichlas Ramm"
-          className="size-100 rounded-full fill-white drop-shadow-xl/75"
+          className="size-100 rounded-full fill-white drop-shadow-xl/75 float"
         />
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 fade-up">
           <h1>Nichlas Ramm</h1>
           <p>Fulltime student @Zealand · Web dev · game dev</p>
 
-          <div className="flex flex-row gap-4 justify-center">
+          <div className="flex flex-row gap-4 justify-center fade-up">
             <Link to="/projects">
               <button className="transition duration-150 ease-in-out hover:scale-105 w-50">
                 Se projekter
