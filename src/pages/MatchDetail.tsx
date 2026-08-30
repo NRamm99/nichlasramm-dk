@@ -520,7 +520,8 @@ export function MatchDetail() {
                 >
                   <p className="text-sm text-line/65">
                     Kampen har ikke et resultat endnu. Registrér sættene her.
-                    Sidste sæt må gerne være ufærdigt.
+                    Sidste sæt må gerne være ufærdigt; det tæller kun, hvis
+                    kampen ellers ville være uafgjort.
                   </p>
                   <SetScores
                     sets={resultSets}

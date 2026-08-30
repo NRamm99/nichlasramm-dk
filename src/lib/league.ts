@@ -18,6 +18,15 @@ export type LeagueTeamPlayer = {
   slot: 1 | 2;
 };
 
+export type LeagueJoinRequest = {
+  id: string;
+  league_id: string;
+  requester_id: string;
+  recipient_id: string;
+  created_at: string;
+  other: PartnerPreview | null;
+};
+
 export type LeagueTeam = {
   id: string;
   league_id: string;

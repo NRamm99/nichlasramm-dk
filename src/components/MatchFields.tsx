@@ -107,8 +107,8 @@ export function SetScores({
   return (
     <div className="space-y-3">
       <p className="text-sm text-line/65">
-        Færdigt sæt: mindst 6 partier og forskel. Sidste sæt må stå ufærdigt,
-        hvis I stoppede før bedst af fem.
+        Færdigt sæt: mindst 6 partier og forskel. Sidste sæt må stå ufærdigt.
+        Det tæller kun, hvis kampen ellers ville være uafgjort.
       </p>
       <div className="overflow-x-auto rounded-2xl border border-line/10 bg-[#06110d] p-3">
         <div

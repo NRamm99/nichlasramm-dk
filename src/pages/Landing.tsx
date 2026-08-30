@@ -179,7 +179,8 @@ function HomeDashboardView({
             <Link
               to="/liga"
               className={`block rounded-2xl border bg-court-mid px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition hover:border-ball/40 ${
-                data.inLeague && (data.remainingLeagueMatches ?? 0) > 0
+                data.leagueInvites > 0 ||
+                (data.inLeague && (data.remainingLeagueMatches ?? 0) > 0)
                   ? "border-ball/35"
                   : "border-line/10"
               }`}
@@ -198,6 +199,17 @@ function HomeDashboardView({
                       : "Alle jeres ligakampe er registreret."}
                   </p>
                 </>
+              ) : data.leagueInvites > 0 ? (
+                <>
+                  <p className="mt-1 font-display text-3xl tracking-wide">
+                    {data.leagueInvites === 1
+                      ? "1 ligaanmodning"
+                      : `${data.leagueInvites} ligaanmodninger`}
+                  </p>
+                  <p className="mt-1 text-sm text-line/60">
+                    Nogen vil spille liga med dig. Acceptér eller afvis.
+                  </p>
+                </>
               ) : (
                 <>
                   <p className="mt-1 font-display text-3xl tracking-wide">
@@ -207,7 +219,7 @@ function HomeDashboardView({
                   </p>
                   <p className="mt-1 text-sm text-line/60">
                     {data.signupOpen
-                      ? "Find en makker og meld jer på hold."
+                      ? "Find en makker og send en anmodning. Holdet oprettes, når de siger ja."
                       : "Der er ikke et åbent hold for dig lige nu."}
                   </p>
                 </>

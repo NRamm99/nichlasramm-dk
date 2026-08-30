@@ -20,6 +20,7 @@ export type HomeDashboard = {
   remainingLeagueMatches: number | null;
   inLeague: boolean;
   signupOpen: boolean;
+  leagueInvites: number;
 };
 
 export function unreadDialogCopy(count: number) {
@@ -122,6 +123,7 @@ export async function fetchHomeDashboard(
     remainingLeagueMatches: null,
     inLeague: false,
     signupOpen: false,
+    leagueInvites: 0,
   };
 
   if (!league) return empty;
@@ -143,7 +145,16 @@ export async function fetchHomeDashboard(
   >[];
   const myTeamId = roster.find((row) => row.profile_id === userId)?.team_id;
   if (!myTeamId) {
-    return { ...empty, signupOpen };
+    const { data: inviteRows } = await supabase
+      .from("league_join_requests")
+      .select("id")
+      .eq("league_id", league.id)
+      .eq("recipient_id", userId);
+    return {
+      ...empty,
+      signupOpen,
+      leagueInvites: inviteRows?.length ?? 0,
+    };
   }
 
   const fixtures = (fixtureRows ?? []) as LeagueFixture[];
@@ -214,5 +225,6 @@ export async function fetchHomeDashboard(
     remainingLeagueMatches,
     inLeague: true,
     signupOpen,
+    leagueInvites: 0,
   };
 }

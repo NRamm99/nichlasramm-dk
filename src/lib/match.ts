@@ -96,11 +96,28 @@ export function setScoreLine(sets: MatchSet[]) {
 export function teamSetWins(sets: MatchSet[]) {
   let team1 = 0;
   let team2 = 0;
+  let unfinished: MatchSet | null = null;
+
   for (const row of sets) {
-    if (row.team1_games === row.team2_games) continue;
-    if (row.team1_games > row.team2_games) team1 += 1;
+    if (isCompleteSet(row.team1_games, row.team2_games)) {
+      if (row.team1_games > row.team2_games) team1 += 1;
+      else team2 += 1;
+      continue;
+    }
+    if (isUnfinishedSet(row.team1_games, row.team2_games)) {
+      unfinished = row;
+    }
+  }
+
+  if (
+    team1 === team2 &&
+    unfinished &&
+    unfinished.team1_games !== unfinished.team2_games
+  ) {
+    if (unfinished.team1_games > unfinished.team2_games) team1 += 1;
     else team2 += 1;
   }
+
   return { team1, team2 };
 }
 

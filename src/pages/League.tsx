@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { LeaguePlace } from "../components/LeaguePlace";
+import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -15,6 +16,7 @@ import {
   teamName,
   type League,
   type LeagueFixture,
+  type LeagueJoinRequest,
   type LeagueMessage,
   type LeagueTeam,
   type LeagueTeamPlayer,
@@ -64,6 +66,7 @@ export function League() {
   const [editingSeason, setEditingSeason] = useState(false);
   const [creatingNext, setCreatingNext] = useState(false);
   const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
+  const [joinRequests, setJoinRequests] = useState<LeagueJoinRequest[]>([]);
 
   function fillSeasonFromLeague(current: League) {
     setName(current.name);
@@ -99,12 +102,13 @@ export function League() {
     if (!latest) {
       setTeams([]);
       setFixtures([]);
+      setJoinRequests([]);
       setUnreadFixtures(new Set());
       setReady(true);
       return;
     }
 
-    const [{ data: teamRows }, { data: rosterRows }, { data: fixtureRows }] =
+    const [{ data: teamRows }, { data: rosterRows }, { data: fixtureRows }, { data: requestRows }] =
       await Promise.all([
         supabase.from("league_teams").select("*").eq("league_id", latest.id),
         supabase
@@ -112,10 +116,30 @@ export function League() {
           .select("*")
           .eq("league_id", latest.id),
         supabase.from("league_fixtures").select("*").eq("league_id", latest.id),
+        supabase
+          .from("league_join_requests")
+          .select("id, league_id, requester_id, recipient_id, created_at")
+          .eq("league_id", latest.id),
       ]);
 
     const roster = (rosterRows ?? []) as LeagueTeamPlayer[];
-    const peopleById = await fetchMembersByIds(roster.map((row) => row.profile_id));
+    const pendingRequests = (requestRows ?? []) as Omit<
+      LeagueJoinRequest,
+      "other"
+    >[];
+    const peopleById = await fetchMembersByIds([
+      ...roster.map((row) => row.profile_id),
+      ...pendingRequests.flatMap((row) => [row.requester_id, row.recipient_id]),
+    ]);
+    setJoinRequests(
+      pendingRequests.map((row) => ({
+        ...row,
+        other:
+          peopleById.get(
+            row.requester_id === user.id ? row.recipient_id : row.requester_id,
+          ) ?? null,
+      })),
+    );
     const mappedTeams: LeagueTeam[] = ((teamRows ?? []) as Omit<
       LeagueTeam,
       "players"
@@ -245,6 +269,12 @@ export function League() {
   const signupOpen = Boolean(
     league && new Date(league.signup_deadline).getTime() >= Date.now(),
   );
+  const incomingJoins = joinRequests.filter(
+    (request) => request.recipient_id === user.id,
+  );
+  const outgoingJoin = joinRequests.find(
+    (request) => request.requester_id === user.id,
+  );
   const seasonRunning = Boolean(league && leagueIsRunning(league));
   const standings = league
     ? leagueStandings(
@@ -365,7 +395,7 @@ export function League() {
     if (!league) return;
     setError(null);
     setJoining(true);
-    const { error: joinError } = await supabase.rpc("join_league", {
+    const { error: joinError } = await supabase.rpc("request_league_join", {
       p_league_id: league.id,
       p_partner_id: partnerId,
     });
@@ -374,7 +404,49 @@ export function League() {
       setError(danishAuthError(joinError.message));
       return;
     }
+    setInfo("Anmodning sendt. Makkeren skal acceptere, før I er tilmeldt.");
+    await load();
+  }
+
+  async function handleAcceptJoin(requestId: string) {
+    setError(null);
+    setInfo(null);
+    const { error: acceptError } = await supabase.rpc("accept_league_join", {
+      p_request_id: requestId,
+    });
+    if (acceptError) {
+      setError(danishAuthError(acceptError.message));
+      return;
+    }
     setInfo("I er tilmeldt ligaen.");
+    await load();
+  }
+
+  async function handleDeclineJoin(requestId: string) {
+    setError(null);
+    setInfo(null);
+    const { error: declineError } = await supabase.rpc("decline_league_join", {
+      p_request_id: requestId,
+    });
+    if (declineError) {
+      setError(danishAuthError(declineError.message));
+      return;
+    }
+    setInfo("Anmodningen er afvist.");
+    await load();
+  }
+
+  async function handleCancelJoin(requestId: string) {
+    setError(null);
+    setInfo(null);
+    const { error: cancelError } = await supabase.rpc("cancel_league_join", {
+      p_request_id: requestId,
+    });
+    if (cancelError) {
+      setError(danishAuthError(cancelError.message));
+      return;
+    }
+    setInfo("Anmodningen er trukket tilbage.");
     await load();
   }
 
@@ -666,36 +738,118 @@ export function League() {
             ) : null}
 
             {!myTeam && signupOpen ? (
-              <form
-                onSubmit={(event) => void handleJoin(event)}
-                className="mt-8 space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6"
-              >
-                <h2 className="font-display text-3xl tracking-wide">Tilmeld</h2>
-                <label className="block text-sm">
-                  Makker
-                  <select
-                    required
-                    value={partnerId}
-                    onChange={(event) => setPartnerId(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+              <div className="mt-8 space-y-4">
+                {incomingJoins.length > 0 ? (
+                  <section className="space-y-3 rounded-3xl border border-ball/30 bg-court-mid p-6">
+                    <h2 className="font-display text-3xl tracking-wide">
+                      Anmodninger til dig
+                    </h2>
+                    <p className="text-sm text-line/65">
+                      Accepter kun, hvis du vil spille liga med dem.
+                    </p>
+                    <ul className="space-y-3">
+                      {incomingJoins.map((request) => (
+                        <li
+                          key={request.id}
+                          className="flex flex-col gap-3 rounded-2xl border border-line/10 bg-court px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            {request.other ? (
+                              <MemberAvatar person={request.other} size="sm" />
+                            ) : null}
+                            <div>
+                              {request.other ? (
+                                <MemberNameLink person={request.other} />
+                              ) : (
+                                <p className="font-semibold">Ukendt</p>
+                              )}
+                              <p className="text-sm text-line/60">
+                                vil tilmelde jer som hold
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleAcceptJoin(request.id)}
+                              className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
+                            >
+                              Acceptér
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeclineJoin(request.id)}
+                              className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                            >
+                              Afvis
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+
+                {outgoingJoin ? (
+                  <section className="rounded-3xl border border-line/10 bg-court-mid p-6">
+                    <h2 className="font-display text-3xl tracking-wide">
+                      Afventer svar
+                    </h2>
+                    <p className="mt-2 text-sm text-line/65">
+                      Du har sendt en anmodning til{" "}
+                      {outgoingJoin.other
+                        ? fullName(outgoingJoin.other)
+                        : "makkeren"}
+                      . I er først tilmeldt, når de accepterer.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleCancelJoin(outgoingJoin.id)}
+                      className="mt-4 rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                    >
+                      Annuller anmodning
+                    </button>
+                  </section>
+                ) : (
+                  <form
+                    onSubmit={(event) => void handleJoin(event)}
+                    className="space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6"
                   >
-                    <option value="">Vælg makker</option>
-                    {members.map((member) => (
-                      <option key={member.id} value={member.id}>
-                        {fullName(member)}
-                        {member.id === clubPartnerId ? " (din partner)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="submit"
-                  disabled={joining}
-                  className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
-                >
-                  {joining ? "Tilmelder…" : "Tilmeld hold"}
-                </button>
-              </form>
+                    <h2 className="font-display text-3xl tracking-wide">
+                      Tilmeld
+                    </h2>
+                    <p className="text-sm text-line/65">
+                      Vælg en makker. De skal acceptere, før holdet oprettes.
+                    </p>
+                    <label className="block text-sm">
+                      Makker
+                      <select
+                        required
+                        value={partnerId}
+                        onChange={(event) => setPartnerId(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      >
+                        <option value="">Vælg makker</option>
+                        {members.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {fullName(member)}
+                            {member.id === clubPartnerId
+                              ? " (din partner)"
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={joining}
+                      className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
+                    >
+                      {joining ? "Sender…" : "Send anmodning"}
+                    </button>
+                  </form>
+                )}
+              </div>
             ) : null}
 
             {!myTeam && !signupOpen ? (
