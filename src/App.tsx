@@ -7,6 +7,7 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { FindPartner } from "./pages/FindPartner";
+import { Members } from "./pages/Members";
 import { MatchCreate } from "./pages/MatchCreate";
 import { MatchDetail } from "./pages/MatchDetail";
 import { Matches } from "./pages/Matches";
@@ -38,6 +39,7 @@ function App() {
         <Route path="/profil/:username/kampe" element={<PlayerMatches />} />
         <Route path="/profil/:username" element={<Profile />} />
         <Route path="/find-partner" element={<FindPartner />} />
+        <Route path="/medlemmer" element={<Members />} />
         <Route path="/liga" element={<League />} />
         <Route path="/kampe" element={<Matches />} />
         <Route path="/kampe/ny" element={<MatchCreate />} />

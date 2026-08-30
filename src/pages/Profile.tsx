@@ -165,8 +165,8 @@ export function Profile() {
           <p className="mt-2 text-sm text-line/65">
             Der findes ikke et medlem med det brugernavn.
           </p>
-          <Link to="/profil" className="mt-6 text-sm font-semibold text-ball">
-            Tilbage til din profil
+          <Link to="/medlemmer" className="mt-6 text-sm font-semibold text-ball">
+            Tilbage til medlemslisten
           </Link>
         </main>
       </SiteShell>

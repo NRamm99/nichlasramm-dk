@@ -24,11 +24,17 @@ export function SiteShell({ children }: SiteShellProps) {
           Padel By Ramm
         </Link>
 
-        <nav className="flex items-center gap-3">
+        <nav className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {loading ? (
             <span className="text-sm text-line/60">Indlæser…</span>
           ) : user ? (
             <>
+              <Link
+                to="/medlemmer"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball"
+              >
+                Medlemmer
+              </Link>
               <Link
                 to="/liga"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball"
