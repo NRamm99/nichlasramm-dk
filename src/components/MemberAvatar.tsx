@@ -3,11 +3,13 @@ import { fullName, profilePath, type PartnerPreview } from "../lib/profile";
 
 type MemberAvatarProps = {
   person: PartnerPreview;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 };
 
 export function MemberAvatar({ person, size = "md" }: MemberAvatarProps) {
-  const dim = size === "sm" ? "h-11 w-11" : "h-16 w-16";
+  const dim =
+    size === "sm" ? "h-11 w-11" : size === "lg" ? "h-28 w-28" : "h-16 w-16";
+  const initialsSize = size === "lg" ? "text-2xl" : "text-sm";
   const name = fullName(person);
 
   if (person.avatar_url) {
@@ -22,7 +24,7 @@ export function MemberAvatar({ person, size = "md" }: MemberAvatarProps) {
 
   return (
     <div
-      className={`flex ${dim} items-center justify-center rounded-full bg-court text-sm font-semibold text-line/50 ring-2 ring-line/10`}
+      className={`flex ${dim} items-center justify-center rounded-full bg-court ${initialsSize} font-semibold text-line/50 ring-2 ring-line/10`}
     >
       {(person.first_name?.[0] ?? person.username?.[0] ?? "?").toUpperCase()}
     </div>

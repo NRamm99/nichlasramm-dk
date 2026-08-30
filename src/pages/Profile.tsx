@@ -395,9 +395,25 @@ export function Profile() {
         ) : null}
 
         {profile ? (
-          <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-8">
-            <div className="flex items-center gap-4">
+          <section className="relative mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-8">
+            {isOwn && !editing ? (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                aria-label="Rediger profil"
+                title="Rediger profil"
+                className="absolute top-5 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-line/20 text-line/80 transition hover:border-ball/50 hover:text-ball"
+              >
+                <PencilIcon />
+              </button>
+            ) : null}
+            <div
+              className={`flex items-start gap-4 ${
+                isOwn && !editing ? "pr-12" : ""
+              }`}
+            >
               <MemberAvatar
+                size="lg"
                 person={{
                   ...profile,
                   avatar_url: avatarPreview ?? profile.avatar_url,
@@ -410,33 +426,22 @@ export function Profile() {
                 <h1 className="mt-1 font-display text-4xl leading-none tracking-wide sm:text-5xl">
                   {fullName(profile)}
                 </h1>
-                {profile.username ? (
-                  <p className="mt-1 text-sm text-line/60">@{profile.username}</p>
+                {!editing && (profile.bio || isOwn) ? (
+                  <BioBubble text={profile.bio} showEmpty={isOwn} />
                 ) : null}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {profile.username ? (
-                    <Link
-                      to={profileMatchesPath(profile.username)}
-                      className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
-                    >
-                      Se kampe
-                    </Link>
-                  ) : null}
-                  {isOwn && !editing ? (
-                    <button
-                      type="button"
-                      onClick={() => setEditing(true)}
-                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                    >
-                      Rediger profil
-                    </button>
-                  ) : null}
-                </div>
               </div>
             </div>
 
             <div className="mt-6">
               <MatchRecord record={record} />
+              {profile.username ? (
+                <Link
+                  to={profileMatchesPath(profile.username)}
+                  className="mt-3 flex w-full items-center justify-center rounded-full bg-ball px-4 py-2.5 text-xs font-semibold text-court"
+                >
+                  Se kampe
+                </Link>
+              ) : null}
             </div>
 
             {isOwn && editing ? (
@@ -557,19 +562,7 @@ export function Profile() {
               </form>
               </>
             ) : (
-              <div className="mt-6 space-y-5">
-                <div className="rounded-2xl border border-line/15 bg-court px-5 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
-                    Bio
-                  </p>
-                  <p
-                    className={`mt-2 whitespace-pre-wrap text-sm leading-relaxed ${
-                      profile.bio ? "text-line/90" : "text-line/50 italic"
-                    }`}
-                  >
-                    {profile.bio || "Ingen bio endnu."}
-                  </p>
-                </div>
+              <div className="mt-6">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
                     Partner
@@ -675,5 +668,49 @@ export function Profile() {
         )}
       </main>
     </SiteShell>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function BioBubble({
+  text,
+  showEmpty,
+}: {
+  text: string | null;
+  showEmpty: boolean;
+}) {
+  if (!text && !showEmpty) return null;
+
+  return (
+    <div className="mt-2 flex min-w-0 max-w-sm items-start">
+      <span
+        aria-hidden
+        className="mt-2.5 h-0 w-0 shrink-0 border-y-[6px] border-y-transparent border-r-[7px] border-r-court"
+      />
+      <p
+        className={`min-w-0 rounded-2xl rounded-tl-md bg-court px-3 py-1.5 text-sm leading-relaxed whitespace-pre-wrap ${
+          text ? "text-line/90" : "text-line/50 italic"
+        }`}
+      >
+        {text || "Ingen bio endnu."}
+      </p>
+    </div>
   );
 }
