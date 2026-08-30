@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { SiteShell } from "../components/SiteShell";
@@ -7,6 +7,10 @@ import { SiteShell } from "../components/SiteShell";
 export function Login() {
   const { user, loading, signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const passwordReset = Boolean(
+    (location.state as { passwordReset?: boolean } | null)?.passwordReset,
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +75,12 @@ export function Login() {
             />
           </label>
 
+          {passwordReset ? (
+            <p className="mt-4 text-sm text-ball" role="status">
+              Adgangskoden er opdateret. Log ind med den nye kode.
+            </p>
+          ) : null}
+
           {error ? (
             <p className="mt-4 text-sm text-red-300" role="alert">
               {error}
@@ -86,6 +96,15 @@ export function Login() {
           </button>
 
           <p className="mt-6 text-center text-sm text-line/60">
+            <Link
+              to="/glemt-adgangskode"
+              className="font-semibold text-ball hover:underline"
+            >
+              Glemt adgangskode?
+            </Link>
+          </p>
+
+          <p className="mt-3 text-center text-sm text-line/60">
             Ny i klubben?{" "}
             <Link to="/register" className="font-semibold text-ball hover:underline">
               Opret konto

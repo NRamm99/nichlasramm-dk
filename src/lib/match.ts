@@ -119,6 +119,8 @@ export function resultForTeam(sets: MatchSet[], team: 1 | 2) {
   return winner === team ? ("V" as const) : ("T" as const);
 }
 
+export type FormLetter = "W" | "U" | "L";
+
 export type PlayerRecord = {
   wins: number;
   draws: number;
@@ -126,6 +128,7 @@ export type PlayerRecord = {
   played: number;
   recentPlayed: number;
   recentWinRate: number | null;
+  recentForm: FormLetter[];
 };
 
 export function emptyPlayerRecord(): PlayerRecord {
@@ -136,7 +139,14 @@ export function emptyPlayerRecord(): PlayerRecord {
     played: 0,
     recentPlayed: 0,
     recentWinRate: null,
+    recentForm: [],
   };
+}
+
+function resultToForm(result: "V" | "U" | "T"): FormLetter {
+  if (result === "V") return "W";
+  if (result === "T") return "L";
+  return "U";
 }
 
 export function recordFromResults(results: Array<"V" | "U" | "T">): PlayerRecord {
@@ -144,6 +154,7 @@ export function recordFromResults(results: Array<"V" | "U" | "T">): PlayerRecord
   const draws = results.filter((row) => row === "U").length;
   const losses = results.filter((row) => row === "T").length;
   const recent = results.slice(0, 10);
+  const lastFive = results.slice(0, 5).reverse();
   return {
     wins,
     draws,
@@ -154,13 +165,66 @@ export function recordFromResults(results: Array<"V" | "U" | "T">): PlayerRecord
       recent.length === 0
         ? null
         : Math.round((recent.filter((row) => row === "V").length / recent.length) * 100),
+    recentForm: lastFive.map(resultToForm),
   };
 }
 
 export type MatchCard = MatchRow & {
   players: MatchPlayer[];
   sets: MatchSet[];
+  disputed?: boolean;
 };
+
+export type ProposedSetScore = { team1: number; team2: number };
+
+export type MatchResultCorrection = {
+  match_id: string;
+  proposed_by: string;
+  sets: ProposedSetScore[];
+  created_at: string;
+};
+
+export function matchSetsToForm(sets: MatchSet[]) {
+  return [...sets]
+    .sort((a, b) => a.set_number - b.set_number)
+    .map((row) => ({
+      team1: String(row.team1_games),
+      team2: String(row.team2_games),
+    }));
+}
+
+export function proposedSetScoreLine(sets: ProposedSetScore[]) {
+  return setScoreLine(
+    sets.map((row, index) => ({
+      id: String(index),
+      match_id: "",
+      set_number: index + 1,
+      team1_games: row.team1,
+      team2_games: row.team2,
+    })),
+  );
+}
+
+export function parseProposedSets(value: unknown): ProposedSetScore[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const team1 = Number((row as { team1?: unknown }).team1);
+    const team2 = Number((row as { team2?: unknown }).team2);
+    if (!Number.isInteger(team1) || !Number.isInteger(team2)) return [];
+    return [{ team1, team2 }];
+  });
+}
+
+export async function fetchDisputedMatchIds(ids: string[]) {
+  if (ids.length === 0) return new Set<string>();
+  const { data, error } = await supabase
+    .from("match_result_corrections")
+    .select("match_id")
+    .in("match_id", ids);
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.match_id as string));
+}
 
 export async function fetchPlayerMatches(profileId: string): Promise<MatchCard[]> {
   const { data: appearances, error: appearanceError } = await supabase
@@ -172,7 +236,7 @@ export async function fetchPlayerMatches(profileId: string): Promise<MatchCard[]
   if (!appearances || appearances.length === 0) return [];
 
   const ids = [...new Set(appearances.map((row) => row.match_id))];
-  const [{ data: matches }, { data: playerRows }, { data: setRows }] =
+  const [{ data: matches }, { data: playerRows }, { data: setRows }, disputed] =
     await Promise.all([
       supabase
         .from("matches")
@@ -180,10 +244,12 @@ export async function fetchPlayerMatches(profileId: string): Promise<MatchCard[]
         .in("id", ids),
       supabase.from("match_players").select("*").in("match_id", ids),
       supabase.from("match_sets").select("*").in("match_id", ids),
+      fetchDisputedMatchIds(ids),
     ]);
 
   return ((matches ?? []) as MatchRow[]).map((row) => ({
     ...row,
+    disputed: disputed.has(row.id),
     players: ((playerRows ?? []) as MatchPlayer[]).filter(
       (player) => player.match_id === row.id,
     ),
@@ -198,7 +264,7 @@ export function recordFromPlayerMatches(
   matches: MatchCard[],
 ): PlayerRecord {
   const results = [...matches]
-    .filter((row) => row.status === "played" && row.sets.length > 0)
+    .filter((row) => row.status === "played" && row.sets.length > 0 && !row.disputed)
     .sort(
       (a, b) =>
         new Date(b.played_at).getTime() - new Date(a.played_at).getTime(),

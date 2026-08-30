@@ -53,6 +53,9 @@ export function Profile() {
   const [bio, setBio] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const isOwn = Boolean(
     user &&
@@ -292,6 +295,37 @@ export function Profile() {
     }
     setInfo("Partnerskabet er fjernet.");
     await load();
+  }
+
+  async function handleChangePassword(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setInfo(null);
+
+    if (newPassword !== confirmPassword) {
+      setError("Adgangskoderne er ikke ens.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError(danishAuthError("PASSWORD_TOO_SHORT"));
+      return;
+    }
+
+    setSavingPassword(true);
+    const { error: passwordError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    setSavingPassword(false);
+
+    if (passwordError) {
+      setError(danishAuthError(passwordError.message));
+      return;
+    }
+
+    setNewPassword("");
+    setConfirmPassword("");
+    setInfo("Adgangskoden er opdateret.");
   }
 
   const partner = profile?.partner ?? null;
@@ -546,6 +580,45 @@ export function Profile() {
                     )}
                   </div>
                 </div>
+                <form
+                  onSubmit={(event) => void handleChangePassword(event)}
+                  className="space-y-3"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
+                    Adgangskode
+                  </p>
+                  <label className="block text-sm font-medium text-line/80">
+                    Ny adgangskode
+                    <input
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-line/80">
+                    Gentag adgangskode
+                    <input
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(event) =>
+                        setConfirmPassword(event.target.value)
+                      }
+                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={savingPassword}
+                    className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                  >
+                    {savingPassword ? "Gemmer…" : "Skift adgangskode"}
+                  </button>
+                </form>
               </div>
             )}
 

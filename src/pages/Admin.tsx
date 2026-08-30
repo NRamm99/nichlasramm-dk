@@ -33,6 +33,11 @@ export function Admin() {
   const [working, setWorking] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [pendingBanId, setPendingBanId] = useState<string | null>(null);
+  const [pendingResetId, setPendingResetId] = useState<string | null>(null);
+  const [issuedReset, setIssuedReset] = useState<{
+    label: string;
+    code: string;
+  } | null>(null);
   const [showArchive, setShowArchive] = useState(false);
 
   const loadCodes = useCallback(async () => {
@@ -146,6 +151,46 @@ export function Admin() {
     await loadCodes();
   }
 
+  async function handleReset(invite: InviteCode) {
+    if (!invite.used_by) return;
+
+    const name = [
+      invite.member_first_name ?? invite.member?.first_name,
+      invite.member_last_name ?? invite.member?.last_name,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const label =
+      name ||
+      invite.member_username ||
+      invite.member?.username ||
+      "dette medlem";
+
+    setError(null);
+    setInfo(null);
+    const { data, error: resetError } = await supabase.rpc(
+      "create_password_reset_code",
+      { p_user_id: invite.used_by },
+    );
+
+    setPendingResetId(null);
+
+    if (resetError) {
+      setError(danishAuthError(resetError.message));
+      return;
+    }
+
+    if (typeof data !== "string" || !data) {
+      setError("Nulstillingskoden kunne ikke oprettes.");
+      return;
+    }
+
+    setIssuedReset({ label, code: data });
+    setInfo(
+      `Nulstillingskode til ${label}: ${data}. Giv den personligt — den virker i 24 timer.`,
+    );
+  }
+
   async function handleArchive(id: string) {
     setError(null);
     setInfo(null);
@@ -213,7 +258,8 @@ export function Admin() {
         <h1 className="mt-2 font-display text-6xl tracking-wide">Invitationer</h1>
         <p className="mt-2 max-w-xl text-sm text-line/65">
           Hver kode kan kun bruges én gang. Når den er brugt, kan du se hvem der
-          er med, spærre adgangen, eller rydde dem fra oversigten til arkivet.
+          er med, spærre adgangen, nulstille en glemt adgangskode, eller rydde
+          dem fra oversigten til arkivet.
         </p>
 
         {!isAdmin ? (
@@ -263,6 +309,28 @@ export function Admin() {
               <p className="mt-4 text-sm text-ball" role="status">
                 {info}
               </p>
+            ) : null}
+            {issuedReset ? (
+              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-ball/25 bg-ball/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
+                    Nulstillingskode
+                  </p>
+                  <p className="mt-1 font-mono text-lg tracking-wider text-line">
+                    {issuedReset.code}
+                  </p>
+                  <p className="mt-1 text-xs text-line/55">
+                    Til {issuedReset.label} · gyldig 24 timer · én gang
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleCopy(issuedReset.code)}
+                  className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                >
+                  {copied === issuedReset.code ? "Kopieret" : "Kopiér"}
+                </button>
+              </div>
             ) : null}
 
             <h2 className="mt-10 font-display text-3xl tracking-wide">
@@ -320,7 +388,9 @@ export function Admin() {
                 used.map((invite) => {
                   const { firstName, username, avatar, banned, fullName } =
                     memberLabel(invite);
-                  const confirming = pendingBanId === invite.id;
+                  const confirmingBan = pendingBanId === invite.id;
+                  const confirmingReset = pendingResetId === invite.id;
+                  const confirming = confirmingBan || confirmingReset;
 
                   return (
                     <li
@@ -362,7 +432,29 @@ export function Admin() {
                           <span className="rounded-full border border-red-400/30 px-4 py-2 text-center text-xs font-semibold text-red-300">
                             Spærret
                           </span>
-                        ) : confirming ? (
+                        ) : confirmingReset ? (
+                          <>
+                            <p className="text-xs text-line/70">
+                              Opret nulstillingskode?
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPendingResetId(null)}
+                                className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                              >
+                                Annuller
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleReset(invite)}
+                                className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
+                              >
+                                Ja, opret
+                              </button>
+                            </div>
+                          </>
+                        ) : confirmingBan ? (
                           <>
                             <p className="text-xs text-line/70">Er du sikker?</p>
                             <div className="flex gap-2">
@@ -383,13 +475,28 @@ export function Admin() {
                             </div>
                           </>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => setPendingBanId(invite.id)}
-                            className="rounded-full border border-red-400/30 px-4 py-2 text-xs font-semibold text-red-300"
-                          >
-                            Spær adgang
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingBanId(null);
+                                setPendingResetId(invite.id);
+                              }}
+                              className="rounded-full border border-ball/40 px-4 py-2 text-xs font-semibold text-ball"
+                            >
+                              Nulstil kode
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingResetId(null);
+                                setPendingBanId(invite.id);
+                              }}
+                              className="rounded-full border border-red-400/30 px-4 py-2 text-xs font-semibold text-red-300"
+                            >
+                              Spær adgang
+                            </button>
+                          </>
                         )}
                         {!confirming ? (
                           <button

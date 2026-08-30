@@ -62,6 +62,10 @@ export function MatchList({
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-ball/80">
                     Du spiller
                   </p>
+                ) : row.disputed ? (
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-amber-200/90">
+                    Uenighed
+                  </p>
                 ) : result ? (
                   <p
                     className={`text-[0.65rem] font-semibold uppercase tracking-[0.16em] ${
@@ -95,6 +99,11 @@ export function MatchList({
                   {teamNames(row.players, 2)}
                 </p>
               )}
+              {row.disputed && isOwn ? (
+                <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-amber-200/90">
+                  Uenighed om resultatet
+                </p>
+              ) : null}
             </Link>
           </li>
         );

@@ -100,6 +100,7 @@ export function leagueStandings(
   matchPlayers: MatchPlayer[],
   setsByMatch: Map<string, MatchSet[]>,
   matchStatus: Map<string, "scheduled" | "played">,
+  disputedMatchIds: Set<string> = new Set(),
 ): StandingRow[] {
   const rows = new Map<string, StandingRow>();
   const playerIds = new Map<string, Set<string>>();
@@ -121,6 +122,7 @@ export function leagueStandings(
 
   for (const fixture of fixtures) {
     if (!fixture.match_id) continue;
+    if (disputedMatchIds.has(fixture.match_id)) continue;
     if (matchStatus.get(fixture.match_id) !== "played") continue;
     const sets = setsByMatch.get(fixture.match_id) ?? [];
     if (sets.length === 0) continue;
@@ -164,6 +166,13 @@ export function leagueStandings(
       b.wins - a.wins ||
       a.name.localeCompare(b.name, "da"),
   );
+}
+
+export function leagueIsRunning(league: League) {
+  const end = league.ends_on.includes("T")
+    ? new Date(league.ends_on)
+    : new Date(`${league.ends_on}T23:59:59`);
+  return end.getTime() >= Date.now();
 }
 
 export async function fetchLatestLeague() {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { LeaguePlace } from "../components/LeaguePlace";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -8,6 +9,7 @@ import {
   fixtureHasUnread,
   formatLeagueDay,
   formatLeagueWhen,
+  leagueIsRunning,
   leagueStandings,
   messageAuthorName,
   teamName,
@@ -19,6 +21,7 @@ import {
 } from "../lib/league";
 import {
   formatMatchWhen,
+  toDatetimeLocalValue,
   type MatchPlayer,
   type MatchRow,
   type MatchSet,
@@ -55,6 +58,19 @@ export function League() {
   const [endsOn, setEndsOn] = useState("");
   const [deadline, setDeadline] = useState("");
   const [unreadFixtures, setUnreadFixtures] = useState<Set<string>>(new Set());
+  const [disputedMatchIds, setDisputedMatchIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [editingSeason, setEditingSeason] = useState(false);
+  const [creatingNext, setCreatingNext] = useState(false);
+  const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
+
+  function fillSeasonFromLeague(current: League) {
+    setName(current.name);
+    setStartsOn(current.starts_on.slice(0, 10));
+    setEndsOn(current.ends_on.slice(0, 10));
+    setDeadline(toDatetimeLocalValue(new Date(current.signup_deadline)));
+  }
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -120,15 +136,20 @@ export function League() {
       .map((row) => row.match_id)
       .filter((id): id is string => Boolean(id));
     if (matchIds.length > 0) {
-      const [{ data: matchRows }, { data: playerRows }, { data: setRows }] =
-        await Promise.all([
-          supabase
-            .from("matches")
-            .select("id, status")
-            .in("id", matchIds),
-          supabase.from("match_players").select("*").in("match_id", matchIds),
-          supabase.from("match_sets").select("*").in("match_id", matchIds),
-        ]);
+      const [
+        { data: matchRows },
+        { data: playerRows },
+        { data: setRows },
+        { data: correctionRows },
+      ] = await Promise.all([
+        supabase.from("matches").select("id, status").in("id", matchIds),
+        supabase.from("match_players").select("*").in("match_id", matchIds),
+        supabase.from("match_sets").select("*").in("match_id", matchIds),
+        supabase
+          .from("match_result_corrections")
+          .select("match_id")
+          .in("match_id", matchIds),
+      ]);
       setPlayers((playerRows ?? []) as MatchPlayer[]);
       const status = new Map<string, "scheduled" | "played">();
       for (const row of (matchRows ?? []) as Pick<MatchRow, "id" | "status">[]) {
@@ -142,10 +163,14 @@ export function League() {
         sets.set(row.match_id, list);
       }
       setSetsByMatch(sets);
+      setDisputedMatchIds(
+        new Set((correctionRows ?? []).map((row) => row.match_id as string)),
+      );
     } else {
       setPlayers([]);
       setMatchStatus(new Map());
       setSetsByMatch(new Map());
+      setDisputedMatchIds(new Set());
     }
 
     const myTeamIds = new Set(
@@ -220,8 +245,16 @@ export function League() {
   const signupOpen = Boolean(
     league && new Date(league.signup_deadline).getTime() >= Date.now(),
   );
+  const seasonRunning = Boolean(league && leagueIsRunning(league));
   const standings = league
-    ? leagueStandings(teams, fixtures, players, setsByMatch, matchStatus)
+    ? leagueStandings(
+        teams,
+        fixtures,
+        players,
+        setsByMatch,
+        matchStatus,
+        disputedMatchIds,
+      )
     : [];
   const myFixtures = fixtures
     .filter(
@@ -250,6 +283,80 @@ export function League() {
       return;
     }
     setInfo("Ligaen er oprettet.");
+    setCreatingNext(false);
+    setEditingSeason(false);
+    await load();
+  }
+
+  async function handleUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!league) return;
+    setError(null);
+    setSaving(true);
+    const { error: updateError } = await supabase.rpc("update_league", {
+      p_league_id: league.id,
+      p_name: name,
+      p_starts_on: startsOn,
+      p_ends_on: endsOn,
+      p_signup_deadline: new Date(deadline).toISOString(),
+    });
+    setSaving(false);
+    if (updateError) {
+      setError(danishAuthError(updateError.message));
+      return;
+    }
+    setInfo("Sæsonen er opdateret.");
+    setEditingSeason(false);
+    await load();
+  }
+
+  async function handleCloseSignup() {
+    if (!league) return;
+    if (
+      !window.confirm(
+        "Luk tilmelding nu? Hold kan ikke tilmelde sig bagefter, medmindre du ændrer fristen.",
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    const { error: closeError } = await supabase.rpc("close_league_signup", {
+      p_league_id: league.id,
+    });
+    setSaving(false);
+    if (closeError) {
+      setError(danishAuthError(closeError.message));
+      return;
+    }
+    setInfo("Tilmeldingen er lukket.");
+    await load();
+  }
+
+  async function handleRemoveTeam(team: LeagueTeam) {
+    const played = fixtures.filter(
+      (row) =>
+        (row.team_a_id === team.id || row.team_b_id === team.id) &&
+        row.match_id,
+    ).length;
+    const label = teamName(team.players);
+    const ok = window.confirm(
+      played > 0
+        ? `${label} har ${played} spillede ligakampe. Holdet fjernes, og de kampe bliver almindelige klubkampe. Fortsæt?`
+        : `Fjern ${label} fra ligaen?`,
+    );
+    if (!ok) return;
+    setError(null);
+    setRemovingTeamId(team.id);
+    const { error: removeError } = await supabase.rpc("remove_league_team", {
+      p_team_id: team.id,
+    });
+    setRemovingTeamId(null);
+    if (removeError) {
+      setError(danishAuthError(removeError.message));
+      return;
+    }
+    setInfo(`${label} er fjernet fra ligaen.`);
     await load();
   }
 
@@ -345,65 +452,6 @@ export function League() {
           </form>
         ) : null}
 
-        {isAdmin && league ? (
-          <form
-            onSubmit={(event) => void handleCreate(event)}
-            className="mt-8 space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6"
-          >
-            <h2 className="font-display text-2xl tracking-wide">Ny sæson</h2>
-            <p className="text-sm text-line/60">
-              Opretter en ny liga. Den seneste vises som den aktuelle.
-            </p>
-            <label className="block text-sm">
-              Navn
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm">
-                Start
-                <input
-                  type="date"
-                  required
-                  value={startsOn}
-                  onChange={(event) => setStartsOn(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                />
-              </label>
-              <label className="block text-sm">
-                Slut
-                <input
-                  type="date"
-                  required
-                  value={endsOn}
-                  onChange={(event) => setEndsOn(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                />
-              </label>
-            </div>
-            <label className="block text-sm">
-              Tilmeldelsesfrist
-              <input
-                type="datetime-local"
-                required
-                value={deadline}
-                onChange={(event) => setDeadline(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-full border border-line/20 px-5 py-2 text-sm font-semibold disabled:opacity-60"
-            >
-              {saving ? "Opretter…" : "Opret ny liga"}
-            </button>
-          </form>
-        ) : null}
-
         {league ? (
           <>
             <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid p-6">
@@ -413,6 +461,7 @@ export function League() {
               </p>
               <p className="mt-1 text-sm text-line/55">
                 Tilmelding senest {formatLeagueWhen(league.signup_deadline)}
+                {signupOpen ? " · åben" : " · lukket"}
               </p>
               <p className="mt-4 text-sm text-line/75">
                 3 point for sejr, 1 for uafgjort, 0 for nederlag. Inden sæsonens
@@ -420,6 +469,201 @@ export function League() {
                 finder selv dato og skriver sammen i kamp-dialogerne.
               </p>
             </section>
+
+            {isAdmin ? (
+              <section className="mt-8 space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6">
+                <h2 className="font-display text-3xl tracking-wide">
+                  Liga-admin
+                </h2>
+                <p className="text-sm text-line/60">
+                  Ret datoer, luk tilmelding eller fjern et hold, der tilmeldte
+                  forkert.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fillSeasonFromLeague(league);
+                      setCreatingNext(false);
+                      setEditingSeason((open) => !open);
+                    }}
+                    className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold"
+                  >
+                    {editingSeason ? "Annuller" : "Ret sæson"}
+                  </button>
+                  {signupOpen ? (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void handleCloseSignup()}
+                      className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                    >
+                      Luk tilmelding
+                    </button>
+                  ) : null}
+                  {!seasonRunning ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setName("Liga");
+                        setStartsOn("");
+                        setEndsOn("");
+                        setDeadline("");
+                        setEditingSeason(false);
+                        setCreatingNext((open) => !open);
+                      }}
+                      className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold"
+                    >
+                      {creatingNext ? "Annuller" : "Ny sæson"}
+                    </button>
+                  ) : null}
+                </div>
+
+                {editingSeason ? (
+                  <form
+                    onSubmit={(event) => void handleUpdate(event)}
+                    className="space-y-4 border-t border-line/10 pt-4"
+                  >
+                    <label className="block text-sm">
+                      Navn
+                      <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">
+                        Start
+                        <input
+                          type="date"
+                          required
+                          value={startsOn}
+                          onChange={(event) => setStartsOn(event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                        />
+                      </label>
+                      <label className="block text-sm">
+                        Slut
+                        <input
+                          type="date"
+                          required
+                          value={endsOn}
+                          onChange={(event) => setEndsOn(event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                        />
+                      </label>
+                    </div>
+                    <label className="block text-sm">
+                      Tilmeldelsesfrist
+                      <input
+                        type="datetime-local"
+                        required
+                        value={deadline}
+                        onChange={(event) => setDeadline(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
+                    >
+                      {saving ? "Gemmer…" : "Gem ændringer"}
+                    </button>
+                  </form>
+                ) : null}
+
+                {creatingNext ? (
+                  <form
+                    onSubmit={(event) => void handleCreate(event)}
+                    className="space-y-4 border-t border-line/10 pt-4"
+                  >
+                    <h3 className="text-sm font-semibold">Ny sæson</h3>
+                    <p className="text-sm text-line/60">
+                      Opretter en ny liga. Den vises som den aktuelle.
+                    </p>
+                    <label className="block text-sm">
+                      Navn
+                      <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">
+                        Start
+                        <input
+                          type="date"
+                          required
+                          value={startsOn}
+                          onChange={(event) => setStartsOn(event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                        />
+                      </label>
+                      <label className="block text-sm">
+                        Slut
+                        <input
+                          type="date"
+                          required
+                          value={endsOn}
+                          onChange={(event) => setEndsOn(event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                        />
+                      </label>
+                    </div>
+                    <label className="block text-sm">
+                      Tilmeldelsesfrist
+                      <input
+                        type="datetime-local"
+                        required
+                        value={deadline}
+                        onChange={(event) => setDeadline(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
+                    >
+                      {saving ? "Opretter…" : "Opret ny liga"}
+                    </button>
+                  </form>
+                ) : null}
+
+                <div className="border-t border-line/10 pt-4">
+                  <h3 className="text-sm font-semibold">Hold</h3>
+                  {teams.length === 0 ? (
+                    <p className="mt-2 text-sm text-line/55">
+                      Ingen hold tilmeldt.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {teams.map((team) => (
+                        <li
+                          key={team.id}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-line/10 bg-court px-4 py-3"
+                        >
+                          <span className="text-sm font-semibold">
+                            {teamName(team.players)}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={removingTeamId === team.id}
+                            onClick={() => void handleRemoveTeam(team)}
+                            className="shrink-0 text-sm text-red-300/90 hover:text-red-200 disabled:opacity-60"
+                          >
+                            {removingTeamId === team.id ? "Fjerner…" : "Fjern"}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
+            ) : null}
 
             {!myTeam && signupOpen ? (
               <form
@@ -470,7 +714,8 @@ export function League() {
                 <table className="w-full text-left text-sm">
                   <thead className="text-[0.65rem] uppercase tracking-[0.16em] text-line/40">
                     <tr>
-                      <th className="px-4 py-3 font-semibold">Hold</th>
+                      <th className="w-16 px-3 py-3 font-semibold">Plads</th>
+                      <th className="px-2 py-3 font-semibold">Hold</th>
                       <th className="px-2 py-3 font-semibold">K</th>
                       <th className="px-2 py-3 font-semibold">V</th>
                       <th className="px-2 py-3 font-semibold">U</th>
@@ -479,21 +724,35 @@ export function League() {
                     </tr>
                   </thead>
                   <tbody>
-                    {standings.map((row) => (
-                      <tr
-                        key={row.teamId}
-                        className="border-t border-line/10"
-                      >
-                        <td className="px-4 py-3 font-semibold">{row.name}</td>
-                        <td className="px-2 py-3 text-line/70">{row.played}</td>
-                        <td className="px-2 py-3 text-line/70">{row.wins}</td>
-                        <td className="px-2 py-3 text-line/70">{row.draws}</td>
-                        <td className="px-2 py-3 text-line/70">{row.losses}</td>
-                        <td className="px-4 py-3 text-right font-display text-2xl leading-none text-ball">
-                          {row.points}
-                        </td>
-                      </tr>
-                    ))}
+                    {standings.map((row, index) => {
+                      const place = index + 1;
+                      return (
+                        <tr
+                          key={row.teamId}
+                          className={`border-t border-line/10 ${
+                            place === 1
+                              ? "bg-ball/[0.07]"
+                              : place === 2
+                                ? "bg-line/[0.04]"
+                                : place === 3
+                                  ? "bg-amber-700/15"
+                                  : ""
+                          }`}
+                        >
+                          <td className="px-3 py-3">
+                            <LeaguePlace place={place} />
+                          </td>
+                          <td className="px-2 py-3 font-semibold">{row.name}</td>
+                          <td className="px-2 py-3 text-line/70">{row.played}</td>
+                          <td className="px-2 py-3 text-line/70">{row.wins}</td>
+                          <td className="px-2 py-3 text-line/70">{row.draws}</td>
+                          <td className="px-2 py-3 text-line/70">{row.losses}</td>
+                          <td className="px-4 py-3 text-right font-display text-2xl leading-none text-ball">
+                            {row.points}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -536,6 +795,10 @@ export function League() {
                         }
                         userId={user.id}
                         hasUnread={unreadFixtures.has(fixture.id)}
+                        hasDispute={Boolean(
+                          fixture.match_id &&
+                            disputedMatchIds.has(fixture.match_id),
+                        )}
                         onRead={(id) => {
                           setUnreadFixtures((current) => {
                             const next = new Set(current);
@@ -570,6 +833,7 @@ function FixtureDialog({
   hasResult,
   userId,
   hasUnread,
+  hasDispute,
   onRead,
   onSent,
 }: {
@@ -581,6 +845,7 @@ function FixtureDialog({
   hasResult: boolean;
   userId: string;
   hasUnread: boolean;
+  hasDispute: boolean;
   onRead: (fixtureId: string) => void;
   onSent: () => void;
 }) {
@@ -670,14 +935,16 @@ function FixtureDialog({
         </div>
         <p
           className={`text-[0.65rem] font-semibold uppercase tracking-[0.16em] ${
-            done ? "text-ball" : "text-line/45"
+            hasDispute ? "text-amber-200/90" : done ? "text-ball" : "text-line/45"
           }`}
         >
-          {done
-            ? "Klaret"
-            : matchStatus === "scheduled"
-              ? "Planlagt"
-              : "Åben"}
+          {hasDispute
+            ? "Uenighed"
+            : done
+              ? "Klaret"
+              : matchStatus === "scheduled"
+                ? "Planlagt"
+                : "Åben"}
         </p>
       </button>
       {open ? (
@@ -694,7 +961,11 @@ function FixtureDialog({
               to={`/kampe/${fixture.match_id}`}
               className="text-sm font-semibold text-ball"
             >
-              {done ? "Se resultatet" : "Se den planlagte kamp"}
+              {hasDispute
+                ? "Løs uenigheden"
+                : done
+                  ? "Se resultatet"
+                  : "Se den planlagte kamp"}
             </Link>
           )}
           <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto">

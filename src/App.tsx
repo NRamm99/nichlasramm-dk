@@ -3,6 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { Admin } from "./pages/Admin";
 import { Landing } from "./pages/Landing";
 import { League } from "./pages/League";
+import { ForgotPassword } from "./pages/ForgotPassword";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { FindPartner } from "./pages/FindPartner";
@@ -30,6 +31,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/glemt-adgangskode" element={<ForgotPassword />} />
         <Route path="/register" element={<Register />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/profil" element={<Profile />} />

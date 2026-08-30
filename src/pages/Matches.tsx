@@ -38,14 +38,23 @@ export function Matches() {
     }
 
     const ids = list.map((row) => row.id);
-    const [{ data: playerRows }, { data: setRows }] = await Promise.all([
-      supabase.from("match_players").select("*").in("match_id", ids),
-      supabase.from("match_sets").select("*").in("match_id", ids),
-    ]);
+    const [{ data: playerRows }, { data: setRows }, { data: correctionRows }] =
+      await Promise.all([
+        supabase.from("match_players").select("*").in("match_id", ids),
+        supabase.from("match_sets").select("*").in("match_id", ids),
+        supabase
+          .from("match_result_corrections")
+          .select("match_id")
+          .in("match_id", ids),
+      ]);
+    const disputed = new Set(
+      (correctionRows ?? []).map((row) => row.match_id as string),
+    );
 
     setMatches(
       list.map((row) => ({
         ...row,
+        disputed: disputed.has(row.id),
         players: ((playerRows ?? []) as MatchPlayer[]).filter(
           (player) => player.match_id === row.id,
         ),
