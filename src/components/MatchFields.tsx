@@ -182,3 +182,44 @@ export function SetScores({
     </div>
   );
 }
+
+const ROSTER_LABELS = [
+  "Hold 1 · spiller 1",
+  "Hold 1 · spiller 2",
+  "Hold 2 · spiller 1",
+  "Hold 2 · spiller 2",
+];
+
+export function MatchRosterFields({
+  members,
+  picks,
+  onChange,
+}: {
+  members: PartnerPreview[];
+  picks: Array<PlayerPick | null>;
+  onChange: (picks: Array<PlayerPick | null>) => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {ROSTER_LABELS.map((label, index) => {
+        const excludeIds = picks.flatMap((pick, pickIndex) =>
+          pickIndex !== index && pick?.kind === "member" ? [pick.id] : [],
+        );
+        return (
+          <PlayerPicker
+            key={label}
+            label={label}
+            members={members}
+            excludeIds={excludeIds}
+            value={picks[index] ?? null}
+            onChange={(value) => {
+              const next = [...picks];
+              next[index] = value;
+              onChange(next);
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}

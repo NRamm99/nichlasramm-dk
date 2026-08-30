@@ -48,6 +48,44 @@ export function playerPickToJson(pick: PlayerPick | null) {
   return { guest_name: pick.name.trim() };
 }
 
+export function matchPlayerToPick(player: MatchPlayer): PlayerPick {
+  if (player.profile_id) return { kind: "member", id: player.profile_id };
+  return { kind: "guest", name: player.guest_name ?? player.display_name };
+}
+
+export function orderedMatchPlayers(players: MatchPlayer[]) {
+  return [...players].sort((a, b) => a.team - b.team || a.slot - b.slot);
+}
+
+export function picksFromMatchPlayers(players: MatchPlayer[]) {
+  const ordered = orderedMatchPlayers(players);
+  return [0, 1, 2, 3].map((index) => {
+    const row = ordered[index];
+    return row ? matchPlayerToPick(row) : null;
+  }) as [
+    PlayerPick | null,
+    PlayerPick | null,
+    PlayerPick | null,
+    PlayerPick | null,
+  ];
+}
+
+export function rosterPicksToJson(
+  picks: Array<PlayerPick | null>,
+): Array<Record<string, unknown>> | null {
+  const payload = picks.map((pick, index) => {
+    const json = playerPickToJson(pick);
+    if (!json) return null;
+    return {
+      team: index < 2 ? 1 : 2,
+      slot: index % 2 === 0 ? 1 : 2,
+      ...json,
+    };
+  });
+  if (payload.some((row) => row === null)) return null;
+  return payload as Array<Record<string, unknown>>;
+}
+
 export function isValidSetScore(team1: number, team2: number) {
   return (
     Number.isInteger(team1) &&
@@ -198,8 +236,48 @@ export type MatchResultCorrection = {
   match_id: string;
   proposed_by: string;
   sets: ProposedSetScore[];
+  players: ProposedMatchPlayer[] | null;
   created_at: string;
 };
+
+export type ProposedMatchPlayer = {
+  team: number;
+  slot: number;
+  profile_id: string | null;
+  guest_name: string | null;
+};
+
+export function parseProposedPlayers(value: unknown): ProposedMatchPlayer[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const rows = value.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const data = row as {
+      team?: unknown;
+      slot?: unknown;
+      profile_id?: unknown;
+      guest_name?: unknown;
+    };
+    const team = Number(data.team);
+    const slot = Number(data.slot);
+    if (team !== 1 && team !== 2) return [];
+    if (slot !== 1 && slot !== 2) return [];
+    return [
+      {
+        team,
+        slot,
+        profile_id:
+          typeof data.profile_id === "string" && data.profile_id
+            ? data.profile_id
+            : null,
+        guest_name:
+          typeof data.guest_name === "string" && data.guest_name
+            ? data.guest_name
+            : null,
+      },
+    ];
+  });
+  return rows.length === 4 ? rows : null;
+}
 
 export function matchSetsToForm(sets: MatchSet[]) {
   return [...sets]

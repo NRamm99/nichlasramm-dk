@@ -40,7 +40,9 @@ const messages: Record<string, string> = {
   INVALID_STATUS: "Vælg om kampen er spillet eller planlagt.",
   COMMENT_REQUIRED: "Skriv en kommentar.",
   RESULT_ALREADY_SET: "Kampen har allerede et resultat.",
-  RESULT_UNCHANGED: "Det nye resultat er det samme som det nuværende.",
+  RESULT_UNCHANGED: "Intet er ændret i sæt eller spillere.",
+  MUST_STAY_IN_MATCH: "Du skal stadig være med i kampen.",
+  LEAGUE_ROSTER_LOCKED: "Ligakampens spillere kan ikke ændres.",
   CORRECTION_NEEDS_RESULT: "Kampen har ikke et resultat at rette endnu.",
   CORRECTION_PENDING:
     "Der er allerede en uenighed. Afvis eller træk den tilbage først.",

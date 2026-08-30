@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { SetScores } from "../components/MatchFields";
+import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
@@ -8,8 +8,11 @@ import { danishAuthError } from "../lib/authErrors";
 import {
   formatMatchWhen,
   matchSetsToForm,
+  parseProposedPlayers,
   parseProposedSets,
+  picksFromMatchPlayers,
   proposedSetScoreLine,
+  rosterPicksToJson,
   teamPlayers,
   validateMatchSets,
   type MatchComment,
@@ -17,8 +20,15 @@ import {
   type MatchResultCorrection,
   type MatchRow,
   type MatchSet,
+  type PlayerPick,
+  type ProposedMatchPlayer,
 } from "../lib/match";
-import { fetchMembersByIds, fullName, profilePath } from "../lib/profile";
+import {
+  fetchMembersByIds,
+  fullName,
+  profilePath,
+  type PartnerPreview,
+} from "../lib/profile";
 import { supabase } from "../lib/supabase";
 
 export function MatchDetail() {
@@ -43,6 +53,15 @@ export function MatchDetail() {
   );
   const [editingResult, setEditingResult] = useState(false);
   const [savingCorrection, setSavingCorrection] = useState(false);
+  const [members, setMembers] = useState<PartnerPreview[]>([]);
+  const [isLeagueMatch, setIsLeagueMatch] = useState(false);
+  const [rosterPicks, setRosterPicks] = useState<Array<PlayerPick | null>>([
+    null,
+    null,
+    null,
+    null,
+  ]);
+  const [editingRoster, setEditingRoster] = useState(false);
 
   const load = useCallback(async () => {
     if (!matchId) return;
@@ -68,6 +87,8 @@ export function MatchDetail() {
       { data: setRows },
       { data: commentRows },
       { data: correctionRow },
+      { data: fixtureRow },
+      { data: memberRows },
     ] = await Promise.all([
       supabase.from("match_players").select("*").eq("match_id", matchId),
       supabase
@@ -82,9 +103,19 @@ export function MatchDetail() {
         .order("created_at"),
       supabase
         .from("match_result_corrections")
-        .select("match_id, proposed_by, sets, created_at")
+        .select("match_id, proposed_by, sets, players, created_at")
         .eq("match_id", matchId)
         .maybeSingle(),
+      supabase
+        .from("league_fixtures")
+        .select("id")
+        .eq("match_id", matchId)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id, username, first_name, last_name, avatar_url")
+        .is("banned_at", null)
+        .order("first_name"),
     ]);
 
     const people = await fetchMembersByIds([
@@ -108,12 +139,15 @@ export function MatchDetail() {
         author: people.get(row.author_id) ?? null,
       })),
     );
+    setIsLeagueMatch(Boolean(fixtureRow));
+    setMembers((memberRows ?? []) as PartnerPreview[]);
     setCorrection(
       correctionRow
         ? {
             match_id: correctionRow.match_id,
             proposed_by: correctionRow.proposed_by,
             sets: parseProposedSets(correctionRow.sets),
+            players: parseProposedPlayers(correctionRow.players),
             created_at: correctionRow.created_at,
           }
         : null,
@@ -175,6 +209,11 @@ export function MatchDetail() {
       team1: Number(row.team1),
       team2: Number(row.team2),
     }));
+  }
+
+  function rosterPayload() {
+    if (isLeagueMatch) return null;
+    return rosterPicksToJson(rosterPicks);
   }
 
   async function handleComment(event: FormEvent<HTMLFormElement>) {
@@ -250,6 +289,11 @@ export function MatchDetail() {
       setError(danishAuthError(setErrorCode));
       return;
     }
+    const playersPayload = rosterPayload();
+    if (!isLeagueMatch && !playersPayload) {
+      setError(danishAuthError("PLAYER_REQUIRED"));
+      return;
+    }
     setError(null);
     setSavingCorrection(true);
     const { error: proposeError } = await supabase.rpc(
@@ -257,6 +301,7 @@ export function MatchDetail() {
       {
         p_match_id: matchId,
         p_sets: parsed,
+        p_players: playersPayload,
       },
     );
     setSavingCorrection(false);
@@ -266,7 +311,7 @@ export function MatchDetail() {
     }
     setEditingResult(false);
     setInfo(
-      "Rettelsen er sendt. Det andet hold skal godkende, før stillingen ændres.",
+      "Rettelsen er sendt. Det andet hold skal godkende, før den træder i kraft.",
     );
     await load();
   }
@@ -279,11 +324,17 @@ export function MatchDetail() {
       setError(danishAuthError(setErrorCode));
       return;
     }
+    const playersPayload = rosterPayload();
+    if (!isLeagueMatch && !playersPayload) {
+      setError(danishAuthError("PLAYER_REQUIRED"));
+      return;
+    }
     setError(null);
     setSavingCorrection(true);
     const { error: forceError } = await supabase.rpc("replace_match_result", {
       p_match_id: matchId,
       p_sets: parsed,
+      p_players: playersPayload,
     });
     setSavingCorrection(false);
     if (forceError) {
@@ -292,6 +343,36 @@ export function MatchDetail() {
     }
     setEditingResult(false);
     setInfo("Resultatet er rettet.");
+    await load();
+  }
+
+  async function handleProposeRoster(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!matchId || isLeagueMatch) return;
+    const playersPayload = rosterPayload();
+    if (!playersPayload) {
+      setError(danishAuthError("PLAYER_REQUIRED"));
+      return;
+    }
+    setError(null);
+    setSavingCorrection(true);
+    const { error: proposeError } = await supabase.rpc(
+      "propose_match_result_correction",
+      {
+        p_match_id: matchId,
+        p_sets: [],
+        p_players: playersPayload,
+      },
+    );
+    setSavingCorrection(false);
+    if (proposeError) {
+      setError(danishAuthError(proposeError.message));
+      return;
+    }
+    setEditingRoster(false);
+    setInfo(
+      "Rettelsen er sendt. Det andet hold skal godkende, før den træder i kraft.",
+    );
     await load();
   }
 
@@ -385,15 +466,29 @@ export function MatchDetail() {
             {correction ? (
               <div className="mt-4 rounded-3xl border border-amber-200/30 bg-amber-200/5 p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/90">
-                  Uenighed om resultatet
+                  Uenighed om kampen
                 </p>
                 <p className="mt-2 text-sm text-line/75">
-                  Foreslået nyt resultat:{" "}
-                  <span className="font-semibold text-line">
-                    {proposedSetScoreLine(correction.sets)}
-                  </span>
-                  . I en liga tæller kampen ikke i stillingen, før det andet hold
-                  godkender — eller en administrator retter det.
+                  {correction.sets.length > 0 ? (
+                    <>
+                      Foreslået resultat:{" "}
+                      <span className="font-semibold text-line">
+                        {proposedSetScoreLine(correction.sets)}
+                      </span>
+                      .{" "}
+                    </>
+                  ) : null}
+                  {correction.players ? (
+                    <>
+                      Foreslåede spillere:{" "}
+                      <span className="font-semibold text-line">
+                        {proposedRosterLine(correction.players, members)}
+                      </span>
+                      .{" "}
+                    </>
+                  ) : null}
+                  Det andet hold skal godkende — eller en administrator retter
+                  det.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {canConfirm ? (
@@ -404,7 +499,7 @@ export function MatchDetail() {
                         disabled={savingCorrection}
                         className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
                       >
-                        {savingCorrection ? "Gemmer…" : "Godkend nyt resultat"}
+                        {savingCorrection ? "Gemmer…" : "Godkend"}
                       </button>
                       <button
                         type="button"
@@ -440,12 +535,22 @@ export function MatchDetail() {
                     className="rounded-3xl border border-line/10 bg-court-mid/80 p-6"
                   >
                     <h2 className="font-display text-3xl tracking-wide">
-                      Ret sæt
+                      Ret kamp
                     </h2>
                     <p className="mt-2 text-sm text-line/65">
-                      Det andet hold skal godkende, før det tæller i ligaen.
-                      Slet kampen kun hvis I spillede en anden kamp.
+                      {isLeagueMatch
+                        ? "Ligakampens spillere er låst. I kan rette sættene. Det andet hold skal godkende."
+                        : "Ret sæt og spillere — fx hvis en gæst nu er medlem. Det andet hold skal godkende."}
                     </p>
+                    {!isLeagueMatch ? (
+                      <div className="mt-4">
+                        <MatchRosterFields
+                          members={members}
+                          picks={rosterPicks}
+                          onChange={setRosterPicks}
+                        />
+                      </div>
+                    ) : null}
                     <div className="mt-4">
                       <SetScores
                         sets={resultSets}
@@ -467,7 +572,7 @@ export function MatchDetail() {
                         disabled={savingCorrection}
                         className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
                       >
-                        {savingCorrection ? "Sender…" : "Foreslå nyt resultat"}
+                        {savingCorrection ? "Sender…" : "Foreslå ændring"}
                       </button>
                       {isAdmin ? (
                         <button
@@ -486,11 +591,12 @@ export function MatchDetail() {
                     type="button"
                     onClick={() => {
                       setResultSets(matchSetsToForm(sets));
+                      setRosterPicks(picksFromMatchPlayers(players));
                       setEditingResult(true);
                     }}
                     className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
                   >
-                    Ret sæt
+                    Ret kamp
                   </button>
                 )}
               </div>
@@ -510,6 +616,116 @@ export function MatchDetail() {
                 usernames={usernames}
               />
             </section>
+
+            {correction ? (
+              <div className="mt-4 rounded-3xl border border-amber-200/30 bg-amber-200/5 p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/90">
+                  Uenighed om kampen
+                </p>
+                <p className="mt-2 text-sm text-line/75">
+                  {correction.players ? (
+                    <>
+                      Foreslåede spillere:{" "}
+                      <span className="font-semibold text-line">
+                        {proposedRosterLine(correction.players, members)}
+                      </span>
+                      .
+                    </>
+                  ) : (
+                    "Der ligger en rettelse, der skal godkendes."
+                  )}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {canConfirm ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void handleAcceptCorrection()}
+                        disabled={savingCorrection}
+                        className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
+                      >
+                        {savingCorrection ? "Gemmer…" : "Godkend"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleRejectCorrection()}
+                        disabled={savingCorrection}
+                        className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                      >
+                        Afvis
+                      </button>
+                    </>
+                  ) : null}
+                  {correction.proposed_by === user.id || isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleWithdrawCorrection()}
+                      disabled={savingCorrection}
+                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                    >
+                      Træk tilbage
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {(isPlayer || isAdmin) &&
+            !isLeagueMatch &&
+            (!correction ||
+              correction.proposed_by === user.id ||
+              isAdmin) ? (
+              <div className="mt-4">
+                {editingRoster ? (
+                  <form
+                    onSubmit={(event) => void handleProposeRoster(event)}
+                    className="rounded-3xl border border-line/10 bg-court-mid/80 p-6"
+                  >
+                    <h2 className="font-display text-3xl tracking-wide">
+                      Ret spillere
+                    </h2>
+                    <p className="mt-2 text-sm text-line/65">
+                      Skift en gæst til medlem, eller ret de øvrige pladser. Du
+                      skal selv blive på holdet.
+                    </p>
+                    <div className="mt-4">
+                      <MatchRosterFields
+                        members={members}
+                        picks={rosterPicks}
+                        onChange={setRosterPicks}
+                      />
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingRoster(false)}
+                        className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                      >
+                        Annuller
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingCorrection}
+                        className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
+                      >
+                        {savingCorrection ? "Sender…" : "Foreslå spillere"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRosterPicks(picksFromMatchPlayers(players));
+                      setEditingRoster(true);
+                    }}
+                    className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                  >
+                    Ret spillere
+                  </button>
+                )}
+              </div>
+            ) : null}
 
             <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-6">
               <h2 className="font-display text-3xl tracking-wide">Resultat</h2>
@@ -604,6 +820,22 @@ export function MatchDetail() {
       </main>
     </SiteShell>
   );
+}
+
+function proposedRosterLine(
+  players: ProposedMatchPlayer[],
+  members: PartnerPreview[],
+) {
+  return [...players]
+    .sort((a, b) => a.team - b.team || a.slot - b.slot)
+    .map((player) => {
+      if (player.profile_id) {
+        const member = members.find((row) => row.id === player.profile_id);
+        return member ? fullName(member) : "Medlem";
+      }
+      return player.guest_name || "Gæst";
+    })
+    .join(" · ");
 }
 
 function TeamCard({
