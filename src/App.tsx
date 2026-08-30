@@ -1,28 +1,48 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import Navbar from "./components/NavBar";
+import { Link, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { Admin } from "./pages/Admin";
+import { Landing } from "./pages/Landing";
+import { League } from "./pages/League";
+import { Login } from "./pages/Login";
+import { Register } from "./pages/Register";
+import { FindPartner } from "./pages/FindPartner";
+import { MatchCreate } from "./pages/MatchCreate";
+import { MatchDetail } from "./pages/MatchDetail";
+import { Matches } from "./pages/Matches";
+import { PlayerMatches } from "./pages/PlayerMatches";
+import { Profile } from "./pages/Profile";
 
-import Home from "./pages/Home";
-import Projects from "./pages/Projects";
-import Blog from "./pages/Blog";
-import About from "./pages/About";
-import Admin from "./pages/Admin";
-
-import "./App.css";
+function NotFound() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-court px-6 text-center text-line">
+      <h1 className="font-display text-7xl">404</h1>
+      <p className="mt-2 text-line/70">Siden findes ikke.</p>
+      <Link to="/" className="mt-6 text-sm font-semibold text-ball hover:underline">
+        Tilbage til Padel By Ramm
+      </Link>
+    </main>
+  );
+}
 
 function App() {
   return (
-    <>
-      <Navbar />
+    <AuthProvider>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/about" element={<About />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/Admin" element={<Navigate to="/admin" replace />} />
-        <Route path="*" element={<main><h1>404</h1><p>Page not found</p></main>} />
+        <Route path="/profil" element={<Profile />} />
+        <Route path="/profil/:username/kampe" element={<PlayerMatches />} />
+        <Route path="/profil/:username" element={<Profile />} />
+        <Route path="/find-partner" element={<FindPartner />} />
+        <Route path="/liga" element={<League />} />
+        <Route path="/kampe" element={<Matches />} />
+        <Route path="/kampe/ny" element={<MatchCreate />} />
+        <Route path="/kampe/:matchId" element={<MatchDetail />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
+    </AuthProvider>
   );
 }
 

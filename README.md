@@ -1,42 +1,16 @@
-# 🌐 NichlasRamm.dk
+# Padel By Ramm
 
-Personal portfolio website built with **React, TypeScript, and Vite**.
+Local padel league site for [nichlasramm.dk](https://nichlasramm.dk).
 
----
+## Stack
 
-## 🚀 About
+- Frontend: React + TypeScript + Vite
+- Styling: Tailwind CSS
+- Auth & database: Supabase (PostgreSQL)
+- Hosting: Vercel
 
-This is my personal website where I:
+## Setup
 
-- Showcase my projects
-- Share blog posts & devlogs
-- Display my GitHub activity
-- Experiment with modern web development
-
----
-
-## 🛠️ Tech Stack
-
-- ⚛️ React
-- 🟦 TypeScript
-- ⚡ Vite
-- 🎨 Tailwind CSS
-- 🌍 Vercel (deployment)
-
----
-
-## 🧠 What I’m learning
-
-This project is part of my journey into modern frontend development:
-
-- Component-based architecture
-- Routing with React Router
-- Styling with Tailwind
-- Working with APIs
-- Deployment workflows (CI/CD)
-
----
-
-## 🖥️ Live Demo
-
-👉 [nichlasramm.dk](https://nichlasramm.dk) _(coming soon)_
+1. Copy `.env.example` to `.env.local`
+2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+3. Run `npm install` then `npm run dev`

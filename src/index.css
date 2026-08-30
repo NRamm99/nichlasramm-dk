@@ -1,31 +1,37 @@
 @import "tailwindcss";
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+
+@theme {
+  --font-display: "Bebas Neue", sans-serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --color-court: #07140f;
+  --color-court-mid: #0d2419;
+  --color-line: #e8f5e3;
+  --color-ball: #d6ff3d;
+  --color-glass: #9fd4c4;
 }
 
-.fade-up {
-  animation: fadeUp 0.8s ease-out forwards;
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-court);
+  color: var(--color-line);
 }
 
-.float {
-  animation: float 4s ease-in-out infinite;
+.court-grid {
+  background-image:
+    linear-gradient(rgba(232, 245, 227, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 245, 227, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.court-lines {
+  background:
+    linear-gradient(90deg, transparent 0 8%, rgba(214, 255, 61, 0.18) 8% 8.4%, transparent 8.4% 91.6%, rgba(214, 255, 61, 0.18) 91.6% 92%, transparent 92%),
+    linear-gradient(transparent 0 12%, rgba(232, 245, 227, 0.22) 12% 12.35%, transparent 12.35% 50%, rgba(232, 245, 227, 0.35) 50% 50.4%, transparent 50.4% 87.65%, rgba(232, 245, 227, 0.22) 87.65% 88%, transparent 88%);
 }
