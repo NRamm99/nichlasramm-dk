@@ -299,6 +299,7 @@ export function Profile() {
 
   async function handleChangePassword(event: FormEvent) {
     event.preventDefault();
+    if (!user || !isOwn) return;
     setError(null);
     setInfo(null);
 
@@ -580,45 +581,47 @@ export function Profile() {
                     )}
                   </div>
                 </div>
-                <form
-                  onSubmit={(event) => void handleChangePassword(event)}
-                  className="space-y-3"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                    Adgangskode
-                  </p>
-                  <label className="block text-sm font-medium text-line/80">
-                    Ny adgangskode
-                    <input
-                      type="password"
-                      required
-                      autoComplete="new-password"
-                      value={newPassword}
-                      onChange={(event) => setNewPassword(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                    />
-                  </label>
-                  <label className="block text-sm font-medium text-line/80">
-                    Gentag adgangskode
-                    <input
-                      type="password"
-                      required
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(event) =>
-                        setConfirmPassword(event.target.value)
-                      }
-                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={savingPassword}
-                    className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                {isOwn ? (
+                  <form
+                    onSubmit={(event) => void handleChangePassword(event)}
+                    className="space-y-3"
                   >
-                    {savingPassword ? "Gemmer…" : "Skift adgangskode"}
-                  </button>
-                </form>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
+                      Adgangskode
+                    </p>
+                    <label className="block text-sm font-medium text-line/80">
+                      Ny adgangskode
+                      <input
+                        type="password"
+                        required
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <label className="block text-sm font-medium text-line/80">
+                      Gentag adgangskode
+                      <input
+                        type="password"
+                        required
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(event) =>
+                          setConfirmPassword(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={savingPassword}
+                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                    >
+                      {savingPassword ? "Gemmer…" : "Skift adgangskode"}
+                    </button>
+                  </form>
+                ) : null}
               </div>
             )}
 
