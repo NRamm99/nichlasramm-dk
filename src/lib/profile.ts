@@ -12,6 +12,8 @@ export type PublicProfile = PartnerPreview & {
   bio: string | null;
   partner_id: string | null;
   partner: PartnerPreview | null;
+  seeking_partner?: boolean;
+  seeking_note?: string | null;
 };
 
 export type PartnershipRequest = {
@@ -24,7 +26,7 @@ export type PartnershipRequest = {
 };
 
 export const PROFILE_SELECT =
-  "id, username, first_name, last_name, avatar_url, bio, partner_id";
+  "id, username, first_name, last_name, avatar_url, bio, partner_id, seeking_partner, seeking_note";
 
 export const REQUEST_SELECT =
   "id, requester_id, recipient_id, created_at";

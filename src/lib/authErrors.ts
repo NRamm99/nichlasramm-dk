@@ -18,6 +18,7 @@ const messages: Record<string, string> = {
   NOT_AUTHENTICATED: "Du skal være logget ind.",
   CANNOT_PARTNER_SELF: "Du kan ikke være partner med dig selv.",
   HAS_PARTNER: "Du har allerede en partner.",
+  SEEKING_NOTE_REQUIRED: "Skriv en kort beskrivelse af, hvem du søger.",
   TARGET_HAS_PARTNER: "Den spiller har allerede en partner.",
   MEMBER_NOT_FOUND: "Medlemmet findes ikke.",
   PASSWORD_TOO_SHORT: "Adgangskoden skal være mindst 6 tegn.",
