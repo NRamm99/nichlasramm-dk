@@ -440,6 +440,7 @@ export function Profile() {
             </div>
 
             {isOwn && editing ? (
+              <>
               <form
                 onSubmit={(event) => void handleSave(event)}
                 className="mt-6 space-y-4"
@@ -499,6 +500,8 @@ export function Profile() {
                       setFirstName(profile.first_name ?? "");
                       setLastName(profile.last_name ?? "");
                       setBio(profile.bio ?? "");
+                      setNewPassword("");
+                      setConfirmPassword("");
                     }}
                     className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
                   >
@@ -513,13 +516,57 @@ export function Profile() {
                   </button>
                 </div>
               </form>
+              <form
+                onSubmit={(event) => void handleChangePassword(event)}
+                className="mt-6 space-y-3 rounded-2xl border border-line/15 bg-court px-5 py-4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
+                  Adgangskode
+                </p>
+                <label className="block text-sm font-medium text-line/80">
+                  Ny adgangskode
+                  <input
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 outline-none focus:border-ball"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-line/80">
+                  Gentag adgangskode
+                  <input
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) =>
+                      setConfirmPassword(event.target.value)
+                    }
+                    className="mt-2 w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 outline-none focus:border-ball"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                >
+                  {savingPassword ? "Gemmer…" : "Skift adgangskode"}
+                </button>
+              </form>
+              </>
             ) : (
               <div className="mt-6 space-y-5">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
+                <div className="rounded-2xl border border-line/15 bg-court px-5 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
                     Bio
                   </p>
-                  <p className="mt-2 text-sm text-line/80">
+                  <p
+                    className={`mt-2 whitespace-pre-wrap text-sm leading-relaxed ${
+                      profile.bio ? "text-line/90" : "text-line/50 italic"
+                    }`}
+                  >
                     {profile.bio || "Ingen bio endnu."}
                   </p>
                 </div>
@@ -581,47 +628,6 @@ export function Profile() {
                     )}
                   </div>
                 </div>
-                {isOwn ? (
-                  <form
-                    onSubmit={(event) => void handleChangePassword(event)}
-                    className="space-y-3"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                      Adgangskode
-                    </p>
-                    <label className="block text-sm font-medium text-line/80">
-                      Ny adgangskode
-                      <input
-                        type="password"
-                        required
-                        autoComplete="new-password"
-                        value={newPassword}
-                        onChange={(event) => setNewPassword(event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                      />
-                    </label>
-                    <label className="block text-sm font-medium text-line/80">
-                      Gentag adgangskode
-                      <input
-                        type="password"
-                        required
-                        autoComplete="new-password"
-                        value={confirmPassword}
-                        onChange={(event) =>
-                          setConfirmPassword(event.target.value)
-                        }
-                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={savingPassword}
-                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
-                    >
-                      {savingPassword ? "Gemmer…" : "Skift adgangskode"}
-                    </button>
-                  </form>
-                ) : null}
               </div>
             )}
 
