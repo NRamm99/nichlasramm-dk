@@ -9,7 +9,15 @@ export type MatchRow = {
   created_by: string;
   played_at: string;
   status: MatchStatus;
+  league_fixture_id?: string | null;
 };
+
+export const MATCH_SELECT =
+  "id, created_at, created_by, played_at, status, league_fixture_id";
+
+export function isLeagueMatch(row: Pick<MatchRow, "league_fixture_id">) {
+  return Boolean(row.league_fixture_id);
+}
 
 export type MatchPlayer = {
   id: string;
@@ -335,7 +343,7 @@ export async function fetchPlayerMatches(profileId: string): Promise<MatchCard[]
     await Promise.all([
       supabase
         .from("matches")
-        .select("id, created_at, created_by, played_at, status")
+        .select(MATCH_SELECT)
         .in("id", ids),
       supabase.from("match_players").select("*").in("match_id", ids),
       supabase.from("match_sets").select("*").in("match_id", ids),

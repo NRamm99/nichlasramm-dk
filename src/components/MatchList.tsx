@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { MatchScoreboard } from "./MatchScoreboard";
 import {
   formatMatchWhen,
+  isLeagueMatch,
   resultForTeam,
   teamNames,
   type MatchCard,
@@ -51,13 +52,23 @@ export function MatchList({
               className={`block rounded-2xl border bg-court-mid px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition ${
                 isOwn
                   ? "border-ball/35 hover:border-ball/55"
-                  : "border-line/10 hover:border-ball/40"
+                  : isLeagueMatch(row)
+                    ? "border-ball/20 hover:border-ball/40"
+                    : "border-line/10 hover:border-ball/40"
               }`}
             >
               <div className="flex items-baseline justify-between gap-3">
-                <p className="text-xs text-line/55">
-                  {formatMatchWhen(row.played_at)}
-                </p>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="text-xs text-line/55">
+                    {formatMatchWhen(row.played_at)}
+                  </p>
+                  {isLeagueMatch(row) ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-ball/15 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ball">
+                      <LeagueMark />
+                      Liga
+                    </span>
+                  ) : null}
+                </div>
                 {isOwn ? (
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-ball/80">
                     Du spiller
@@ -109,5 +120,24 @@ export function MatchList({
         );
       })}
     </ul>
+  );
+}
+
+function LeagueMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-3 w-3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 4h8v3a4 4 0 0 1-8 0V4Z" />
+      <path d="M12 11v2.5" />
+      <path d="M9 19h6" />
+    </svg>
   );
 }

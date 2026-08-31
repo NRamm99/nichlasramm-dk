@@ -540,6 +540,12 @@ export function League() {
                 slut skal I have spillet én ligakamp mod hvert andet hold. I
                 finder selv dato og skriver sammen i kamp-dialogerne.
               </p>
+              <Link
+                to="/liga/kampe"
+                className="mt-5 flex w-full items-center justify-center rounded-full bg-ball px-4 py-2.5 text-xs font-semibold text-court"
+              >
+                Se kampe
+              </Link>
             </section>
 
             {isAdmin ? (

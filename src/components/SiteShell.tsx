@@ -7,7 +7,7 @@ type SiteShellProps = {
 };
 
 export function SiteShell({ children }: SiteShellProps) {
-  const { user, loading, isAdmin, username, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-court text-line">
@@ -24,57 +24,17 @@ export function SiteShell({ children }: SiteShellProps) {
           Padel By Ramm
         </Link>
 
-        <nav className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <nav className="flex items-center gap-2 sm:gap-3">
           {loading ? (
             <span className="text-sm text-line/60">Indlæser…</span>
           ) : user ? (
-            <>
-              <Link
-                to="/medlemmer"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball"
-              >
-                Medlemmer
-              </Link>
-              <Link
-                to="/liga"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball"
-              >
-                Liga
-              </Link>
-              <Link
-                to="/kampe"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball"
-              >
-                Kampe
-              </Link>
-              {isAdmin ? (
-                <Link
-                  to="/admin"
-                  className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball"
-                >
-                  Invitationer
-                </Link>
-              ) : null}
-              <Link
-                to="/profil"
-                className="hidden max-w-48 truncate text-sm text-line/70 hover:text-ball sm:inline"
-              >
-                {username}
-              </Link>
-              <Link
-                to="/profil"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-line/80 transition hover:text-ball sm:hidden"
-              >
-                Profil
-              </Link>
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold text-line transition hover:border-ball hover:text-ball"
-              >
-                Log ud
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold text-line transition hover:border-ball hover:text-ball"
+            >
+              Log ud
+            </button>
           ) : (
             <>
               <Link

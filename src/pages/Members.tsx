@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
@@ -19,6 +19,7 @@ export function Members() {
   const [members, setMembers] = useState<PublicProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     const { data: rows, error: listError } = await supabase
@@ -46,6 +47,16 @@ export function Members() {
     }
   }, [load, loading, user]);
 
+  const query = search.trim().toLowerCase();
+  const visibleMembers = useMemo(() => {
+    if (!query) return members;
+    return members.filter((member) => {
+      const name = fullName(member).toLowerCase();
+      const username = (member.username ?? "").toLowerCase();
+      return name.includes(query) || username.includes(query);
+    });
+  }, [members, query]);
+
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
@@ -67,9 +78,17 @@ export function Members() {
           Klubben
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">Medlemmer</h1>
-        <p className="mt-2 text-sm text-line/65">
-          Alle aktive medlemmer. Åbn en profil for at se mere.
-        </p>
+        <label className="mt-4 block">
+          <span className="sr-only">Søg blandt medlemmer</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Søg efter navn…"
+            autoComplete="off"
+            className="w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 text-sm text-line outline-none placeholder:text-line/40 focus:border-ball"
+          />
+        </label>
 
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
@@ -77,13 +96,15 @@ export function Members() {
           </p>
         ) : null}
 
-        <ul className="mt-8 space-y-3">
-          {members.length === 0 ? (
+        <ul className="mt-6 space-y-3">
+          {visibleMembers.length === 0 ? (
             <li className="rounded-2xl border border-line/10 bg-court-mid/60 px-5 py-4 text-sm text-line/60">
-              Ingen medlemmer at vise.
+              {members.length === 0
+                ? "Ingen medlemmer at vise."
+                : "Ingen medlemmer matcher søgningen."}
             </li>
           ) : (
-            members.map((member) => {
+            visibleMembers.map((member) => {
               const href = profilePath(member.username);
               const partnerName = member.partner
                 ? fullName(member.partner)

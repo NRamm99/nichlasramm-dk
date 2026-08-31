@@ -12,6 +12,12 @@ import {
   validateMatchSets,
   type PlayerPick,
 } from "../lib/match";
+import {
+  listingGoingIds,
+  listingOccupied,
+  type MatchmakerListing,
+  type MatchmakerRsvp,
+} from "../lib/matchmaker";
 import { fetchMembersByIds, fullName, type PartnerPreview } from "../lib/profile";
 import { supabase } from "../lib/supabase";
 
@@ -22,6 +28,7 @@ export function MatchCreate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fixtureId = searchParams.get("liga");
+  const listingId = searchParams.get("annonce");
   const [kind, setKind] = useState<Kind | null>(null);
   const [members, setMembers] = useState<PartnerPreview[]>([]);
   const [clubPartnerId, setClubPartnerId] = useState<string | null>(null);
@@ -35,6 +42,7 @@ export function MatchCreate() {
   const [leagueHome, setLeagueHome] = useState<PartnerPreview[]>([]);
   const [leagueAway, setLeagueAway] = useState<PartnerPreview[]>([]);
   const [leagueReady, setLeagueReady] = useState(false);
+  const [listingLocked, setListingLocked] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -59,6 +67,45 @@ export function MatchCreate() {
       }
     });
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !listingId) return;
+    void (async () => {
+      const { data: listingRow } = await supabase
+        .from("matchmaker_listings")
+        .select("*")
+        .eq("id", listingId)
+        .maybeSingle();
+      if (!listingRow) {
+        setError("Annoncen findes ikke.");
+        return;
+      }
+      const listing = listingRow as MatchmakerListing;
+      if (listing.host_id !== user.id) {
+        setError("Kun værten kan oprette kampen.");
+        return;
+      }
+      const { data: rsvpRows } = await supabase
+        .from("matchmaker_rsvps")
+        .select("*")
+        .eq("listing_id", listingId);
+      const rsvps = (rsvpRows ?? []) as MatchmakerRsvp[];
+      const going = listingGoingIds(listing, rsvps);
+      if (listingOccupied(listing, rsvps) !== 4 || going.length !== 4) {
+        setError(danishAuthError("LISTING_NOT_FULL"));
+        return;
+      }
+      const others = going.filter((id) => id !== user.id);
+      const partnerId = listing.brought_partner_id ?? others[0];
+      const rest = others.filter((id) => id !== partnerId);
+      setKind("scheduled");
+      setWhen(toDatetimeLocalValue(new Date(listing.starts_at)));
+      setPartner({ kind: "member", id: partnerId });
+      setOpponent1({ kind: "member", id: rest[0] });
+      setOpponent2({ kind: "member", id: rest[1] });
+      setListingLocked(true);
+    })();
+  }, [listingId, user]);
 
   useEffect(() => {
     if (!user || !fixtureId) return;
@@ -206,6 +253,16 @@ export function MatchCreate() {
       return;
     }
 
+    if (listingId && data) {
+      const { error: convertError } = await supabase.rpc(
+        "convert_matchmaker_listing",
+        { p_listing_id: listingId, p_match_id: data },
+      );
+      if (convertError) {
+        setError(danishAuthError(convertError.message));
+      }
+    }
+
     navigate(`/kampe/${data}`, { replace: true });
   }
 
@@ -213,16 +270,20 @@ export function MatchCreate() {
     <SiteShell>
       <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-          {fixtureId ? "Liga" : "Kampe"}
+          {fixtureId ? "Liga" : listingId ? "Find kamp" : "Kampe"}
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">
-          {fixtureId ? "Ny ligakamp" : "Ny kamp"}
+          {fixtureId ? "Ny ligakamp" : listingId ? "Kamp fra annonce" : "Ny kamp"}
         </h1>
         <Link
-          to={fixtureId ? "/liga" : "/kampe"}
+          to={fixtureId ? "/liga" : listingId ? `/matchmaker/${listingId}` : "/kampe"}
           className="mt-2 text-sm font-semibold text-ball"
         >
-          {fixtureId ? "Tilbage til liga" : "Tilbage til kampe"}
+          {fixtureId
+            ? "Tilbage til liga"
+            : listingId
+              ? "Tilbage til annonce"
+              : "Tilbage til kampe"}
         </Link>
 
         {!kind ? (
@@ -269,14 +330,20 @@ export function MatchCreate() {
           >
             <p className="text-sm text-line/70">
               {kind === "played" ? "Allerede spillet" : "Planlagt kamp"}
-              {" · "}
-              <button
-                type="button"
-                onClick={() => setKind(null)}
-                className="font-semibold text-ball hover:underline"
-              >
-                Skift
-              </button>
+              {!listingLocked ? (
+                <>
+                  {" · "}
+                  <button
+                    type="button"
+                    onClick={() => setKind(null)}
+                    className="font-semibold text-ball hover:underline"
+                  >
+                    Skift
+                  </button>
+                </>
+              ) : (
+                " · spillere fra annoncen"
+              )}
             </p>
 
             <label className="block text-sm font-medium text-line/80">
@@ -314,6 +381,35 @@ export function MatchCreate() {
                 </ul>
                 <p className="mt-3 text-xs text-line/50">
                   Spillere kan ikke ændres på en ligakamp.
+                </p>
+              </div>
+            ) : listingLocked ? (
+              <div className="rounded-2xl border border-line/10 bg-court px-4 py-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
+                  Spillere fra annoncen
+                </p>
+                <p className="mt-2">Dig</p>
+                <p className="text-line/70">
+                  {partner?.kind === "member"
+                    ? (members.find((row) => row.id === partner.id)
+                      ? fullName(members.find((row) => row.id === partner.id)!)
+                      : "Makker")
+                    : "Makker"}
+                </p>
+                <p className="mt-3 text-line/45">vs</p>
+                <p className="text-line/70">
+                  {opponent1?.kind === "member"
+                    ? (members.find((row) => row.id === opponent1.id)
+                      ? fullName(members.find((row) => row.id === opponent1.id)!)
+                      : "Modstander")
+                    : "Modstander"}
+                </p>
+                <p className="text-line/70">
+                  {opponent2?.kind === "member"
+                    ? (members.find((row) => row.id === opponent2.id)
+                      ? fullName(members.find((row) => row.id === opponent2.id)!)
+                      : "Modstander")
+                    : "Modstander"}
                 </p>
               </div>
             ) : (

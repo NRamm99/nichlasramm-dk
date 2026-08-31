@@ -3,6 +3,11 @@ import { AuthProvider } from "./context/AuthContext";
 import { Admin } from "./pages/Admin";
 import { Landing } from "./pages/Landing";
 import { League } from "./pages/League";
+import { LeagueMatches } from "./pages/LeagueMatches";
+import { MatchmakerCreate } from "./pages/MatchmakerCreate";
+import { MatchmakerDetail } from "./pages/MatchmakerDetail";
+import { MatchmakerList } from "./pages/MatchmakerList";
+import { Notifications } from "./pages/Notifications";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -40,7 +45,12 @@ function App() {
         <Route path="/profil/:username" element={<Profile />} />
         <Route path="/find-partner" element={<FindPartner />} />
         <Route path="/medlemmer" element={<Members />} />
+        <Route path="/liga/kampe" element={<LeagueMatches />} />
         <Route path="/liga" element={<League />} />
+        <Route path="/nyt" element={<Notifications />} />
+        <Route path="/matchmaker/ny" element={<MatchmakerCreate />} />
+        <Route path="/matchmaker/:listingId" element={<MatchmakerDetail />} />
+        <Route path="/matchmaker" element={<MatchmakerList />} />
         <Route path="/kampe" element={<Matches />} />
         <Route path="/kampe/ny" element={<MatchCreate />} />
         <Route path="/kampe/:matchId" element={<MatchDetail />} />

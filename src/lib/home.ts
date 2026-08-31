@@ -5,11 +5,13 @@ import {
   type LeagueTeamPlayer,
 } from "./league";
 import {
+  MATCH_SELECT,
   type MatchCard,
   type MatchPlayer,
   type MatchRow,
   type MatchSet,
 } from "./match";
+import { fetchUnreadNotificationCount } from "./matchmaker";
 import { supabase } from "./supabase";
 
 export type HomeDashboard = {
@@ -21,13 +23,8 @@ export type HomeDashboard = {
   inLeague: boolean;
   signupOpen: boolean;
   leagueInvites: number;
+  unreadNotifications: number;
 };
-
-export function unreadDialogCopy(count: number) {
-  if (count === 0) return "Ingen ulæste dialoger";
-  if (count === 1) return "1 ulæst dialog";
-  return `${count} ulæste dialoger`;
-}
 
 export function remainingLeagueCopy(count: number) {
   if (count === 0) return "I mangler ingen ligakampe";
@@ -40,7 +37,7 @@ async function fetchMatchCard(matchId: string): Promise<MatchCard | null> {
     await Promise.all([
       supabase
         .from("matches")
-        .select("id, created_at, created_by, played_at, status")
+        .select(MATCH_SELECT)
         .eq("id", matchId)
         .maybeSingle(),
       supabase.from("match_players").select("*").eq("match_id", matchId),
@@ -109,10 +106,12 @@ function fixtureIsDone(
 export async function fetchHomeDashboard(
   userId: string,
 ): Promise<HomeDashboard> {
-  const [{ data: profile }, next, league] = await Promise.all([
+  const [{ data: profile }, next, league, unreadNotifications] =
+    await Promise.all([
     supabase.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
     fetchNextScheduledMatch(userId),
     fetchLatestLeague(),
+    fetchUnreadNotificationCount(),
   ]);
 
   const empty: HomeDashboard = {
@@ -124,6 +123,7 @@ export async function fetchHomeDashboard(
     inLeague: false,
     signupOpen: false,
     leagueInvites: 0,
+    unreadNotifications,
   };
 
   if (!league) return empty;
@@ -226,5 +226,6 @@ export async function fetchHomeDashboard(
     inLeague: true,
     signupOpen,
     leagueInvites: 0,
+    unreadNotifications,
   };
 }

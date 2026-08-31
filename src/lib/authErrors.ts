@@ -65,6 +65,17 @@ const messages: Record<string, string> = {
   FIXTURE_NOT_FOUND: "Kampen i ligaen findes ikke.",
   NOT_FIXTURE_PLAYER: "Du er ikke med i den ligakamp.",
   LEAGUE_MATCH_ALREADY_SET: "Der er allerede registreret en ligakamp mod holdet.",
+  LISTING_NOT_FOUND: "Annoncen findes ikke.",
+  LISTING_CLOSED: "Annoncen er lukket eller udløbet.",
+  LISTING_FULL: "Der er ikke flere pladser.",
+  INVALID_RSVP: "Vælg Deltager, Interesseret eller Kan ikke.",
+  CANNOT_RSVP_OWN: "Du er allerede med på annoncen.",
+  WINDOW_TOO_LONG: "Tidsvinduet skal være samme dag og højst 8 timer.",
+  NOT_LISTING_HOST: "Kun den der oprettede annoncen kan gøre det.",
+  NOT_CHAT_MEMBER: "Kun deltagere og interesserede kan skrive.",
+  LISTING_NOT_FULL: "I skal være 4, før kampen kan oprettes.",
+  LISTING_ALREADY_CONVERTED: "Annoncen er allerede blevet til en kamp.",
+  CANNOT_REMOVE_HOST: "Vært og medbragt makker kan ikke fjernes.",
 };
 
 export function danishAuthError(message: string | null | undefined): string {
