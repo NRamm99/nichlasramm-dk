@@ -140,7 +140,7 @@ export function Register() {
       <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 pb-16">
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          className="w-full max-w-md rounded-3xl border border-line/10 bg-court-mid/80 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur"
+          className="w-full max-w-md rounded-3xl border border-line/10 bg-court-mid/80 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur sm:p-8"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
             Lukket klub

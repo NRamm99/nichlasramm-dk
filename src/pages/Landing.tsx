@@ -33,11 +33,11 @@ export function Landing() {
 
 function GuestLanding() {
   return (
-    <main className="flex min-h-[calc(100vh-5.5rem)] flex-col items-center justify-center px-6 pb-16 text-center">
+    <main className="flex min-h-[calc(100vh-5.5rem)] w-full max-w-full flex-col items-center justify-center px-6 pb-16 text-center">
       <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-ball">
         Lukket padelklub
       </p>
-      <h1 className="font-display text-[clamp(4.2rem,16vw,10rem)] leading-[0.85] tracking-[0.04em]">
+      <h1 className="max-w-full font-display text-[clamp(2.75rem,14vw,10rem)] leading-[0.85] tracking-[0.04em]">
         Padel By Ramm
       </h1>
       <p className="mt-6 max-w-lg text-base text-line/75 sm:text-lg">

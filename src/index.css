@@ -10,17 +10,36 @@
   --color-glass: #9fd4c4;
 }
 
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body,
 #root {
   min-height: 100%;
+  max-width: 100%;
 }
 
 body {
   margin: 0;
+  overflow-x: clip;
   font-family: var(--font-sans);
   background: var(--color-court);
   color: var(--color-line);
+}
+
+/* iOS zooms the page when a focused field is smaller than 16px. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not(
+      [type="file"]
+    ):not([type="range"]),
+  select,
+  textarea {
+    font-size: 1rem;
+  }
 }
 
 .court-grid {
