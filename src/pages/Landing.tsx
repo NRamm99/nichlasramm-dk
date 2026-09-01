@@ -9,6 +9,8 @@ import {
   type HomeDashboard,
 } from "../lib/home";
 import { formatMatchWhen } from "../lib/match";
+import { PushNotifications } from "../components/PushNotifications";
+import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 
 export function Landing() {
   const { user, loading, username } = useAuth();
@@ -123,6 +125,12 @@ function HomeDashboardView({
       ) : null}
 
       {data ? (
+        <div className="mt-6">
+          <PushNotifications />
+        </div>
+      ) : null}
+
+      {data ? (
         <nav aria-label="Hovedmenu" className="mt-6">
           <ul className="space-y-2">
             <NavRow
@@ -169,6 +177,12 @@ function HomeDashboardView({
           </p>
           <ul className="space-y-2">
             <NavRow
+              to="/beskeder"
+              icon={<ChatIcon />}
+              label="Beskeder"
+              notify={data.unreadMessages}
+            />
+            <NavRow
               to="/medlemmer"
               icon={<MembersIcon />}
               label="Medlemsliste"
@@ -178,7 +192,7 @@ function HomeDashboardView({
               <NavRow
                 to="/admin"
                 icon={<AdminIcon />}
-                label="Invitationer"
+                label="Administration"
               />
             ) : null}
           </ul>
@@ -262,6 +276,10 @@ function BellIcon() {
       <path d="M10 20a2 2 0 0 0 4 0" />
     </svg>
   );
+}
+
+function ChatIcon() {
+  return <ChatBubbleIcon className={iconClass()} />;
 }
 
 function SearchIcon() {

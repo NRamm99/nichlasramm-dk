@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 
 import './index.css';
 import App from './App.tsx';
+import { registerAppWorker } from './lib/push';
+
+void registerAppWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

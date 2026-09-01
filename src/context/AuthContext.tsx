@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { syncPushSubscription } from "../lib/push";
 import {
   isValidUsername,
   normalizeUsername,
@@ -84,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void loadProfile(data.session?.user.id).finally(() => {
         if (isMounted) setLoading(false);
       });
+      if (data.session?.user) {
+        void syncPushSubscription().catch(() => {});
+      }
     });
 
     const {
@@ -91,6 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       void loadProfile(nextSession?.user.id);
+      if (nextSession?.user) {
+        void syncPushSubscription().catch(() => {});
+      }
     });
 
     return () => {

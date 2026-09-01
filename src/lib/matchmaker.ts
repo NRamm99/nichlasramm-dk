@@ -38,7 +38,13 @@ export type MatchmakerMessage = {
 export type AppNotification = {
   id: string;
   kind: string;
-  payload: { href?: string; listing_id?: string; match_id?: string };
+  payload: {
+    href?: string;
+    listing_id?: string;
+    match_id?: string;
+    thread_id?: string;
+    body?: string;
+  };
   created_at: string;
   read_at: string | null;
 };
@@ -157,6 +163,18 @@ export function notificationCopy(row: AppNotification) {
       return "Ny kommentar på en kamp.";
     case "league_message":
       return "Ny besked i en ligadialog.";
+    case "admin_broadcast": {
+      const body = row.payload?.body;
+      if (typeof body === "string" && body.trim()) return body.trim();
+      return "Besked fra klubben.";
+    }
+    case "direct_message": {
+      const body = row.payload?.body;
+      if (typeof body === "string" && body.trim()) {
+        return `Ny besked: ${body.trim()}`;
+      }
+      return "Ny privatbesked.";
+    }
     default:
       return "Noget nyt i klubben.";
   }

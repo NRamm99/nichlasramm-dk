@@ -12,6 +12,7 @@ import {
   type MatchSet,
 } from "./match";
 import { fetchUnreadNotificationCount } from "./matchmaker";
+import { fetchUnreadDirectCount } from "./messages";
 import { supabase } from "./supabase";
 
 export type HomeDashboard = {
@@ -24,6 +25,7 @@ export type HomeDashboard = {
   signupOpen: boolean;
   leagueInvites: number;
   unreadNotifications: number;
+  unreadMessages: number;
 };
 
 export function remainingLeagueCopy(count: number) {
@@ -106,12 +108,13 @@ function fixtureIsDone(
 export async function fetchHomeDashboard(
   userId: string,
 ): Promise<HomeDashboard> {
-  const [{ data: profile }, next, league, unreadNotifications] =
+  const [{ data: profile }, next, league, unreadNotifications, unreadMessages] =
     await Promise.all([
     supabase.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
     fetchNextScheduledMatch(userId),
     fetchLatestLeague(),
     fetchUnreadNotificationCount(),
+    fetchUnreadDirectCount(),
   ]);
 
   const empty: HomeDashboard = {
@@ -124,6 +127,7 @@ export async function fetchHomeDashboard(
     signupOpen: false,
     leagueInvites: 0,
     unreadNotifications,
+    unreadMessages,
   };
 
   if (!league) return empty;
@@ -227,5 +231,6 @@ export async function fetchHomeDashboard(
     signupOpen,
     leagueInvites: 0,
     unreadNotifications,
+    unreadMessages,
   };
 }

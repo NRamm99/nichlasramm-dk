@@ -4,6 +4,7 @@ import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
+import { messagePath } from "../lib/messages";
 import {
   PROFILE_SELECT,
   REQUEST_SELECT,
@@ -351,31 +352,41 @@ function MemberSection({
                     ) : null}
                   </div>
                 </div>
-                {incoming ? (
-                  <button
-                    type="button"
-                    onClick={() => onAccept(incoming.id)}
-                    className="shrink-0 rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
-                  >
-                    Acceptér anmodning
-                  </button>
-                ) : outgoing ? (
-                  <button
-                    type="button"
-                    onClick={() => onCancel(outgoing.id)}
-                    className="shrink-0 rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                  >
-                    Annuller anmodning
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onRequest(member.id)}
-                    className="shrink-0 rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                  >
-                    Anmod
-                  </button>
-                )}
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {member.username ? (
+                    <Link
+                      to={messagePath(member.username)}
+                      className="rounded-full border border-ball/50 px-4 py-2 text-xs font-semibold text-ball"
+                    >
+                      Send besked
+                    </Link>
+                  ) : null}
+                  {incoming ? (
+                    <button
+                      type="button"
+                      onClick={() => onAccept(incoming.id)}
+                      className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
+                    >
+                      Acceptér anmodning
+                    </button>
+                  ) : outgoing ? (
+                    <button
+                      type="button"
+                      onClick={() => onCancel(outgoing.id)}
+                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                    >
+                      Annuller anmodning
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onRequest(member.id)}
+                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                    >
+                      Anmod
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })

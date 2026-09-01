@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { AdminPushBroadcast } from "../components/AdminPushBroadcast";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -289,6 +290,8 @@ export function Admin() {
           </section>
         ) : (
           <>
+            <AdminPushBroadcast />
+
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <button
                 type="button"

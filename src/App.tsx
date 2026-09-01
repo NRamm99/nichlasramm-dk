@@ -17,6 +17,9 @@ import { MatchCreate } from "./pages/MatchCreate";
 import { MatchDetail } from "./pages/MatchDetail";
 import { Matches } from "./pages/Matches";
 import { PlayerMatches } from "./pages/PlayerMatches";
+import { MessageOpen } from "./pages/MessageOpen";
+import { MessageThread } from "./pages/MessageThread";
+import { MessagesInbox } from "./pages/MessagesInbox";
 import { Profile } from "./pages/Profile";
 
 function NotFound() {
@@ -45,6 +48,9 @@ function App() {
         <Route path="/profil/:username" element={<Profile />} />
         <Route path="/find-partner" element={<FindPartner />} />
         <Route path="/medlemmer" element={<Members />} />
+        <Route path="/beskeder/til/:username" element={<MessageOpen />} />
+        <Route path="/beskeder/:threadId" element={<MessageThread />} />
+        <Route path="/beskeder" element={<MessagesInbox />} />
         <Route path="/liga/kampe" element={<LeagueMatches />} />
         <Route path="/liga" element={<League />} />
         <Route path="/nyt" element={<Notifications />} />

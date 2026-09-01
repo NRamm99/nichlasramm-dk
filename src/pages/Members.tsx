@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
+import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -12,6 +13,7 @@ import {
   profilePath,
   type PublicProfile,
 } from "../lib/profile";
+import { messagePath } from "../lib/messages";
 import { supabase } from "../lib/supabase";
 
 export function Members() {
@@ -112,10 +114,10 @@ export function Members() {
               const isYou = member.id === user.id;
 
               return (
-                <li key={member.id}>
+                <li key={member.id} className="flex items-stretch gap-2">
                   <Link
                     to={href}
-                    className="flex items-center gap-3 rounded-2xl border border-line/10 bg-court-mid/80 px-5 py-4 transition hover:border-ball/40"
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-line/10 bg-court-mid/80 px-5 py-4 transition hover:border-ball/40"
                   >
                     <MemberAvatar person={member} size="sm" />
                     <div className="min-w-0 flex-1">
@@ -139,6 +141,16 @@ export function Members() {
                       ) : null}
                     </div>
                   </Link>
+                  {!isYou && member.username ? (
+                    <Link
+                      to={messagePath(member.username)}
+                      aria-label={`Send besked til ${fullName(member)}`}
+                      title="Send besked"
+                      className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-line/10 bg-court-mid/80 text-ball transition hover:border-ball/40"
+                    >
+                      <ChatBubbleIcon />
+                    </Link>
+                  ) : null}
                 </li>
               );
             })

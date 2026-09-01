@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { MatchRecord } from "../components/MatchRecord";
+import { PushNotifications } from "../components/PushNotifications";
+import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
@@ -21,6 +23,7 @@ import {
   type PartnershipRequest,
   type PublicProfile,
 } from "../lib/profile";
+import { messagePath } from "../lib/messages";
 import { supabase } from "../lib/supabase";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -406,10 +409,19 @@ export function Profile() {
               >
                 <PencilIcon />
               </button>
+            ) : !isOwn && profile.username ? (
+              <Link
+                to={messagePath(profile.username)}
+                aria-label="Send besked"
+                title="Send besked"
+                className="absolute top-5 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-line/20 text-ball transition hover:border-ball/50"
+              >
+                <ChatBubbleIcon className="h-4 w-4" />
+              </Link>
             ) : null}
             <div
               className={`flex items-start gap-4 ${
-                isOwn && !editing ? "pr-12" : ""
+                (isOwn && !editing) || (!isOwn && profile.username) ? "pr-12" : ""
               }`}
             >
               <MemberAvatar
@@ -443,6 +455,19 @@ export function Profile() {
                 </Link>
               ) : null}
             </div>
+            {!isOwn && profile.username ? (
+              <Link
+                to={messagePath(profile.username)}
+                className="mt-6 flex w-full items-center justify-center rounded-full border border-ball/50 px-4 py-2.5 text-xs font-semibold text-ball"
+              >
+                Send besked
+              </Link>
+            ) : null}
+            {isOwn ? (
+              <div className="mt-6">
+                <PushNotifications />
+              </div>
+            ) : null}
 
             {isOwn && editing ? (
               <>

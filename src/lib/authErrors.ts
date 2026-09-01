@@ -79,6 +79,15 @@ const messages: Record<string, string> = {
   LISTING_NOT_FULL: "I skal være 4 på banen, før kampen kan oprettes.",
   LISTING_ALREADY_CONVERTED: "Annoncen er allerede blevet til en kamp.",
   CANNOT_REMOVE_HOST: "Vært og medbragt makker kan ikke fjernes.",
+  PUSH_UNSUPPORTED: "Din browser understøtter ikke push-beskeder.",
+  PUSH_DENIED: "Beskeder blev ikke tilladt.",
+  PUSH_SUBSCRIBE_FAILED: "Push-beskeder kunne ikke slås til.",
+  PUSH_BODY_REQUIRED: "Skriv en besked.",
+  PUSH_RECIPIENTS_REQUIRED: "Vælg mindst ét medlem.",
+  NO_PUSH_RECIPIENTS: "Ingen aktive medlemmer at sende til.",
+  CANNOT_MESSAGE_SELF: "Du kan ikke sende besked til dig selv.",
+  THREAD_NOT_FOUND: "Samtalen findes ikke.",
+  MESSAGE_REQUIRED: "Skriv en besked.",
 };
 
 export function danishAuthError(message: string | null | undefined): string {
