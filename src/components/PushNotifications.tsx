@@ -10,8 +10,13 @@ import {
   syncPushSubscription,
 } from "../lib/push";
 
-export function PushNotifications() {
+export function PushNotifications({
+  hideWhenEnabled = false,
+}: {
+  hideWhenEnabled?: boolean;
+}) {
   const [enabled, setEnabled] = useState(false);
+  const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supported = pushSupported();
@@ -26,6 +31,8 @@ export function PushNotifications() {
         if (!cancelled) setEnabled(on);
       } catch {
         if (!cancelled) setEnabled(false);
+      } finally {
+        if (!cancelled) setReady(true);
       }
     })();
     return () => {
@@ -60,6 +67,9 @@ export function PushNotifications() {
     }
     setBusy(false);
   }
+
+  if (!ready) return null;
+  if (hideWhenEnabled && enabled && !error) return null;
 
   return (
     <div className="rounded-2xl border border-line/10 bg-court px-4 py-3">

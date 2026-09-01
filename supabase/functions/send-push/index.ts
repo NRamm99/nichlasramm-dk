@@ -55,10 +55,14 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabase = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: { Authorization: `Bearer ${serviceKey}` },
+    },
+  });
 
   const { data: settingsRows, error: settingsError } = await supabase.rpc(
     "read_push_settings",

@@ -125,8 +125,8 @@ function HomeDashboardView({
       ) : null}
 
       {data ? (
-        <div className="mt-6">
-          <PushNotifications />
+        <div className="mt-6 empty:mt-0 empty:hidden">
+          <PushNotifications hideWhenEnabled />
         </div>
       ) : null}
 

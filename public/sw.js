@@ -25,7 +25,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Padel By Ramm", {
       body: data.body,
-      icon: "/icons/icon-192.png",
+      icon: "/apple-touch-icon.png",
       badge: "/icons/icon-192.png",
       data: { href: data.href || "/nyt" },
     }),
