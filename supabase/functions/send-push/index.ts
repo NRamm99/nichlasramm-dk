@@ -28,7 +28,7 @@ function copy(kind: string | undefined) {
     case "matchmaker_converted":
       return "En find-kamp-annonce blev til en planlagt kamp.";
     case "matchmaker_listing":
-      return "Nyt opslag på Find kamp.";
+      return "Nogen søger kamp!";
     case "matchmaker_message":
       return "Ny besked i en find-kamp-tråd.";
     case "partnership_request":
@@ -46,9 +46,11 @@ function copy(kind: string | undefined) {
   }
 }
 
-function title(_kind: string | undefined, payload: Payload["payload"]) {
-  const from = typeof payload?.from === "string" ? payload.from.trim() : "";
-  if (from) return from;
+function title(kind: string | undefined, payload: Payload["payload"]) {
+  if (kind === "direct_message") {
+    const from = typeof payload?.from === "string" ? payload.from.trim() : "";
+    if (from) return from;
+  }
   return "Padel By Ramm";
 }
 
@@ -115,11 +117,16 @@ Deno.serve(async (req) => {
   const { data: unread } = await supabase.rpc("unread_badge_count_for", {
     p_profile_id: body.recipient_id,
   });
+  const unreadCount = Math.max(
+    1,
+    Math.floor(typeof unread === "number" ? unread : Number(unread ?? 1) || 1),
+  );
   const payload = JSON.stringify({
     title: title(body.kind, body.payload),
     body: message(body.kind, body.payload),
     href,
-    unread: typeof unread === "number" ? unread : Number(unread ?? 1) || 1,
+    unread: unreadCount,
+    app_badge: unreadCount,
   });
 
   for (const row of rows ?? []) {
@@ -130,6 +137,7 @@ Deno.serve(async (req) => {
           keys: { p256dh: row.p256dh, auth: row.auth },
         },
         payload,
+        { urgency: "high", TTL: 86400 },
       );
     } catch (sendError) {
       const status = (sendError as { statusCode?: number }).statusCode;

@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   formatMatchWhen,
+  isSinglesMatch,
   matchSetsToForm,
   parseProposedPlayers,
   parseProposedSets,
@@ -436,7 +437,9 @@ export function MatchDetail() {
         <p className="mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {match?.status === "played" ? "Spillet" : "Planlagt"}
         </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">Kamp</h1>
+        <h1 className="mt-2 font-display text-6xl tracking-wide">
+          {isSinglesMatch(players) ? "Single" : "Kamp"}
+        </h1>
         {match ? (
           <p className="mt-2 text-sm text-line/70">
             {formatMatchWhen(match.played_at)}

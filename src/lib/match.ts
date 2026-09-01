@@ -65,7 +65,19 @@ export function orderedMatchPlayers(players: MatchPlayer[]) {
   return [...players].sort((a, b) => a.team - b.team || a.slot - b.slot);
 }
 
+export function isSinglesMatch(players: MatchPlayer[]) {
+  return players.length === 2;
+}
+
 export function picksFromMatchPlayers(players: MatchPlayer[]) {
+  if (isSinglesMatch(players)) {
+    const team1 = players.find((row) => row.team === 1 && row.slot === 1);
+    const team2 = players.find((row) => row.team === 2 && row.slot === 1);
+    return [
+      team1 ? matchPlayerToPick(team1) : null,
+      team2 ? matchPlayerToPick(team2) : null,
+    ];
+  }
   const ordered = orderedMatchPlayers(players);
   return [0, 1, 2, 3].map((index) => {
     const row = ordered[index];
@@ -81,6 +93,15 @@ export function picksFromMatchPlayers(players: MatchPlayer[]) {
 export function rosterPicksToJson(
   picks: Array<PlayerPick | null>,
 ): Array<Record<string, unknown>> | null {
+  if (picks.length === 2) {
+    const first = playerPickToJson(picks[0] ?? null);
+    const second = playerPickToJson(picks[1] ?? null);
+    if (!first || !second) return null;
+    return [
+      { team: 1, slot: 1, ...first },
+      { team: 2, slot: 1, ...second },
+    ];
+  }
   const payload = picks.map((pick, index) => {
     const json = playerPickToJson(pick);
     if (!json) return null;
@@ -284,7 +305,7 @@ export function parseProposedPlayers(value: unknown): ProposedMatchPlayer[] | nu
       },
     ];
   });
-  return rows.length === 4 ? rows : null;
+  return rows.length === 2 || rows.length === 4 ? rows : null;
 }
 
 export function matchSetsToForm(sets: MatchSet[]) {

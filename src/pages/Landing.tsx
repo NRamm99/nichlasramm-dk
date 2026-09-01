@@ -78,17 +78,30 @@ function HomeDashboardView({
 
   useEffect(() => {
     let cancelled = false;
-    fetchHomeDashboard(userId)
-      .then((dashboard) => {
+
+    async function loadDashboard() {
+      try {
+        const dashboard = await fetchHomeDashboard(userId);
         if (cancelled) return;
         setData(dashboard);
         void setAppBadgeCount(dashboard.unreadNotifications);
-      })
-      .catch((loadError: Error) => {
-        if (!cancelled) setError(danishAuthError(loadError.message));
-      });
+      } catch (loadError) {
+        if (!cancelled) setError(danishAuthError((loadError as Error).message));
+      }
+    }
+
+    void loadDashboard();
+
+    function onVisible() {
+      if (document.visibilityState === "visible") void loadDashboard();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onVisible);
+
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onVisible);
     };
   }, [userId]);
 

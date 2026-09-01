@@ -6,18 +6,40 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+function unreadFromPayload(data) {
+  const raw = data.unread ?? data.app_badge ?? data.badge;
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
 async function setUnreadBadge(count) {
-  const n = Number(count);
+  const n = Math.max(0, Math.floor(Number(count) || 0));
   try {
-    if (n > 0 && self.registration.setAppBadge) {
-      await self.registration.setAppBadge(n);
-      return;
-    }
-    if (self.registration.clearAppBadge) {
-      await self.registration.clearAppBadge();
+    if (n > 0) {
+      if (self.navigator?.setAppBadge) {
+        await self.navigator.setAppBadge(n);
+      }
+      if (self.registration.setAppBadge) {
+        await self.registration.setAppBadge(n);
+      }
+    } else {
+      if (self.navigator?.clearAppBadge) {
+        await self.navigator.clearAppBadge();
+      }
+      if (self.registration.clearAppBadge) {
+        await self.registration.clearAppBadge();
+      }
     }
   } catch {
     /* iOS only shows a home-screen badge for an installed web app. */
+  }
+
+  const windows = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  for (const client of windows) {
+    client.postMessage({ type: "APP_BADGE", count: n });
   }
 }
 
@@ -38,15 +60,16 @@ self.addEventListener("push", (event) => {
     }
   }
 
+  const unread = unreadFromPayload(data);
+
   event.waitUntil(
     (async () => {
+      await setUnreadBadge(unread);
       await self.registration.showNotification(data.title || "Padel By Ramm", {
         body: data.body,
         icon: "/apple-touch-icon.png",
-        badge: "/icons/icon-192.png",
         data: { href: data.href || "/nyt" },
       });
-      await setUnreadBadge(data.unread ?? 1);
     })(),
   );
 });

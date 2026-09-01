@@ -183,13 +183,6 @@ export function SetScores({
   );
 }
 
-const ROSTER_LABELS = [
-  "Hold 1 · spiller 1",
-  "Hold 1 · spiller 2",
-  "Hold 2 · spiller 1",
-  "Hold 2 · spiller 2",
-];
-
 export function MatchRosterFields({
   members,
   picks,
@@ -199,9 +192,19 @@ export function MatchRosterFields({
   picks: Array<PlayerPick | null>;
   onChange: (picks: Array<PlayerPick | null>) => void;
 }) {
+  const labels =
+    picks.length === 2
+      ? ["Spiller 1", "Spiller 2"]
+      : [
+          "Hold 1 · spiller 1",
+          "Hold 1 · spiller 2",
+          "Hold 2 · spiller 1",
+          "Hold 2 · spiller 2",
+        ];
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {ROSTER_LABELS.map((label, index) => {
+      {labels.map((label, index) => {
         const excludeIds = picks.flatMap((pick, pickIndex) =>
           pickIndex !== index && pick?.kind === "member" ? [pick.id] : [],
         );

@@ -9,7 +9,7 @@ import {
   type AppNotification,
 } from "../lib/matchmaker";
 import { supabase } from "../lib/supabase";
-import { syncAppBadge } from "../lib/appBadge";
+import { setAppBadgeCount, syncAppBadge } from "../lib/appBadge";
 
 export function Notifications() {
   const { user, loading } = useAuth();
@@ -17,6 +17,7 @@ export function Notifications() {
   const [rows, setRows] = useState<AppNotification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase
@@ -69,6 +70,19 @@ export function Notifications() {
     void syncAppBadge();
   }
 
+  async function clearAll() {
+    setError(null);
+    setClearing(true);
+    const { error: clearError } = await supabase.rpc("clear_notifications");
+    setClearing(false);
+    if (clearError) {
+      setError(danishAuthError(clearError.message));
+      return;
+    }
+    await load();
+    void setAppBadgeCount(0);
+  }
+
   const unread = rows.filter((row) => !row.read_at).length;
 
   return (
@@ -78,14 +92,26 @@ export function Notifications() {
         <p className="mt-2 text-sm text-line/65">
           Det der vedrører dig, siden sidst du kiggede her.
         </p>
-        {unread > 0 ? (
-          <button
-            type="button"
-            onClick={() => void markAll()}
-            className="mt-4 self-start text-sm font-semibold text-ball"
-          >
-            Marker alle som læst
-          </button>
+        {rows.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {unread > 0 ? (
+              <button
+                type="button"
+                onClick={() => void markAll()}
+                className="text-sm font-semibold text-ball"
+              >
+                Marker alle som læst
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={clearing}
+              onClick={() => void clearAll()}
+              className="text-sm font-semibold text-line/70 disabled:opacity-60"
+            >
+              {clearing ? "Ryddes…" : "Ryd"}
+            </button>
+          </div>
         ) : null}
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">

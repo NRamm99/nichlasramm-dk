@@ -156,8 +156,13 @@ export function notificationCopy(row: AppNotification) {
       return "En find-kamp-annonce blev lukket.";
     case "matchmaker_converted":
       return "En find-kamp-annonce blev til en planlagt kamp.";
-    case "matchmaker_listing":
-      return "Nyt opslag på Find kamp.";
+    case "matchmaker_listing": {
+      const from = row.payload?.from;
+      if (typeof from === "string" && from.trim()) {
+        return `${from.trim()} søger kamp!`;
+      }
+      return "Nogen søger kamp!";
+    }
     case "matchmaker_message":
       return "Ny besked i en find-kamp-tråd.";
     case "partnership_request":

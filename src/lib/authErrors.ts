@@ -31,7 +31,7 @@ const messages: Record<string, string> = {
   TOO_MANY_SETS: "Der kan højst registreres 5 sæt.",
   UNFINISHED_SET_NOT_LAST: "Kun det sidste sæt kan være ufærdigt.",
   INVALID_SET: "Partier skal være et tal mellem 0 og 7.",
-  PLAYER_REQUIRED: "Alle fire spillere skal udfyldes.",
+  PLAYER_REQUIRED: "Udfyld alle spillere.",
   DUPLICATE_PLAYER: "Samme spiller kan ikke stå flere gange i kampen.",
   NOT_MATCH_PLAYER: "Kun spillere i kampen kan gøre det.",
   CANNOT_DELETE_MATCH: "Kun spillere i kampen eller en administrator kan slette den.",

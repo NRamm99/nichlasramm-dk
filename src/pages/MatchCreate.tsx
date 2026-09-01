@@ -46,6 +46,7 @@ export function MatchCreate() {
   const [listingLocked, setListingLocked] = useState(false);
   const [listingHostPlays, setListingHostPlays] = useState(true);
   const [listingCourtPlayers, setListingCourtPlayers] = useState<string[]>([]);
+  const [format, setFormat] = useState<"singles" | "doubles">("doubles");
 
   useEffect(() => {
     if (!user) return;
@@ -237,9 +238,15 @@ export function MatchCreate() {
       setError("Ligakampen kunne ikke indlæses.");
       return;
     }
-    if (!fixtureId && !listingId && (!partnerJson || !opp1Json || !opp2Json)) {
-      setError("Vælg partner og begge modstandere — medlem eller gæst.");
-      return;
+    if (!fixtureId && !listingId) {
+      if (!opp1Json || (format === "doubles" && (!partnerJson || !opp2Json))) {
+        setError(
+          format === "singles"
+            ? "Vælg en modstander — medlem eller gæst."
+            : "Vælg partner og begge modstandere — medlem eller gæst.",
+        );
+        return;
+      }
     }
     if (listingId && listingCourtPlayers.length !== 4) {
       setError(danishAuthError("LISTING_NOT_FULL"));
@@ -298,9 +305,9 @@ export function MatchCreate() {
       : await supabase.rpc("create_match", {
           p_status: kind,
           p_played_at: playedAt,
-          p_partner: partnerJson,
+          p_partner: format === "singles" ? null : partnerJson,
           p_opponent1: opp1Json,
-          p_opponent2: opp2Json,
+          p_opponent2: format === "singles" ? null : opp2Json,
           p_sets: setPayload,
         });
     setSaving(false);
@@ -398,6 +405,50 @@ export function MatchCreate() {
                 " · spillere fra annoncen"
               )}
             </p>
+
+            {!fixtureId && !listingId ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
+                  Kampform
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormat("doubles");
+                      if (
+                        clubPartnerId &&
+                        (partner === null || format === "singles")
+                      ) {
+                        setPartner({ kind: "member", id: clubPartnerId });
+                      }
+                    }}
+                    className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                      format === "doubles"
+                        ? "bg-ball text-court"
+                        : "border border-line/20 text-line/80"
+                    }`}
+                  >
+                    Double
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormat("singles");
+                      setPartner(null);
+                      setOpponent2(null);
+                    }}
+                    className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                      format === "singles"
+                        ? "bg-ball text-court"
+                        : "border border-line/20 text-line/80"
+                    }`}
+                  >
+                    Single
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <label className="block text-sm font-medium text-line/80">
               Dato og tid
@@ -504,10 +555,15 @@ export function MatchCreate() {
               <>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                Dit hold
+                {format === "singles" ? "Dig" : "Dit hold"}
               </p>
-              <p className="mt-2 text-sm text-line/80">Dig</p>
-              {clubPartnerId &&
+              {format === "doubles" ? (
+                <p className="mt-2 text-sm text-line/80">Dig</p>
+              ) : (
+                <p className="mt-2 text-sm text-line/80">Du spiller single.</p>
+              )}
+              {format === "doubles" &&
+              clubPartnerId &&
               partner?.kind === "member" &&
               partner.id === clubPartnerId ? (
                 <p className="mt-1 text-xs text-line/50">
@@ -515,36 +571,40 @@ export function MatchCreate() {
                   anden kombination.
                 </p>
               ) : null}
-              <div className="mt-3">
-                <PlayerPicker
-                  label="Partner"
-                  members={members}
-                  excludeIds={excludePartner}
-                  value={partner}
-                  onChange={setPartner}
-                />
-              </div>
+              {format === "doubles" ? (
+                <div className="mt-3">
+                  <PlayerPicker
+                    label="Partner"
+                    members={members}
+                    excludeIds={excludePartner}
+                    value={partner}
+                    onChange={setPartner}
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                Modstandere
+                {format === "singles" ? "Modstander" : "Modstandere"}
               </p>
               <div className="mt-3 space-y-4">
                 <PlayerPicker
-                  label="Modstander 1"
+                  label={format === "singles" ? "Modstander" : "Modstander 1"}
                   members={members}
                   excludeIds={excludeOpp1}
                   value={opponent1}
                   onChange={setOpponent1}
                 />
-                <PlayerPicker
-                  label="Modstander 2"
-                  members={members}
-                  excludeIds={excludeOpp2}
-                  value={opponent2}
-                  onChange={setOpponent2}
-                />
+                {format === "doubles" ? (
+                  <PlayerPicker
+                    label="Modstander 2"
+                    members={members}
+                    excludeIds={excludeOpp2}
+                    value={opponent2}
+                    onChange={setOpponent2}
+                  />
+                ) : null}
               </div>
             </div>
               </>
@@ -559,8 +619,10 @@ export function MatchCreate() {
                   <SetScores
                     sets={sets}
                     onChange={setSets}
-                    team1Label="Dit hold"
-                    team2Label="Modstandere"
+                    team1Label={format === "singles" ? "Dig" : "Dit hold"}
+                    team2Label={
+                      format === "singles" ? "Modstander" : "Modstandere"
+                    }
                   />
                 </div>
               </div>

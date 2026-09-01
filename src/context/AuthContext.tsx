@@ -108,12 +108,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     function onVisibility() {
       if (document.visibilityState === "visible") void syncAppBadge();
     }
+    function onPageShow() {
+      void syncAppBadge();
+    }
+    function onWorkerMessage(event: MessageEvent) {
+      if (event.data?.type === "APP_BADGE") {
+        void setAppBadgeCount(Number(event.data.count) || 0);
+      }
+    }
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+    navigator.serviceWorker?.addEventListener("message", onWorkerMessage);
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
+      navigator.serviceWorker?.removeEventListener("message", onWorkerMessage);
     };
   }, []);
 

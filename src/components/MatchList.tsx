@@ -3,6 +3,7 @@ import { MatchScoreboard } from "./MatchScoreboard";
 import {
   formatMatchWhen,
   isLeagueMatch,
+  isSinglesMatch,
   resultForTeam,
   teamNames,
   type MatchCard,
@@ -66,6 +67,10 @@ export function MatchList({
                     <span className="inline-flex items-center gap-1 rounded-full bg-ball/15 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ball">
                       <LeagueMark />
                       Liga
+                    </span>
+                  ) : isSinglesMatch(row.players) ? (
+                    <span className="inline-flex items-center rounded-full bg-line/10 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-line/70">
+                      Single
                     </span>
                   ) : null}
                 </div>
