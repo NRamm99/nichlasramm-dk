@@ -44,6 +44,7 @@ export type AppNotification = {
     match_id?: string;
     thread_id?: string;
     body?: string;
+    from?: string;
   };
   created_at: string;
   read_at: string | null;
@@ -155,6 +156,8 @@ export function notificationCopy(row: AppNotification) {
       return "En find-kamp-annonce blev lukket.";
     case "matchmaker_converted":
       return "En find-kamp-annonce blev til en planlagt kamp.";
+    case "matchmaker_listing":
+      return "Nyt opslag på Find kamp.";
     case "matchmaker_message":
       return "Ny besked i en find-kamp-tråd.";
     case "partnership_request":
@@ -169,7 +172,14 @@ export function notificationCopy(row: AppNotification) {
       return "Besked fra klubben.";
     }
     case "direct_message": {
+      const from = row.payload?.from;
       const body = row.payload?.body;
+      if (typeof from === "string" && from.trim() && typeof body === "string" && body.trim()) {
+        return `${from.trim()}: ${body.trim()}`;
+      }
+      if (typeof from === "string" && from.trim()) {
+        return `Ny besked fra ${from.trim()}`;
+      }
       if (typeof body === "string" && body.trim()) {
         return `Ny besked: ${body.trim()}`;
       }
@@ -184,6 +194,23 @@ export function notificationHref(row: AppNotification) {
   const href = row.payload?.href;
   if (typeof href === "string" && href.startsWith("/")) return href;
   return "/";
+}
+
+export async function fetchFollowsNewListings() {
+  const { data, error } = await supabase
+    .from("matchmaker_listing_follows")
+    .select("profile_id")
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data?.profile_id);
+}
+
+export async function setFollowNewListings(follow: boolean) {
+  const { data, error } = await supabase.rpc("set_follow_new_listings", {
+    p_follow: follow,
+  });
+  if (error) throw error;
+  return Boolean(data);
 }
 
 export async function fetchUnreadNotificationCount() {

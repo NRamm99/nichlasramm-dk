@@ -11,6 +11,7 @@ import {
 import { formatMatchWhen } from "../lib/match";
 import { PushNotifications } from "../components/PushNotifications";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
+import { setAppBadgeCount } from "../lib/appBadge";
 
 export function Landing() {
   const { user, loading, username } = useAuth();
@@ -79,7 +80,9 @@ function HomeDashboardView({
     let cancelled = false;
     fetchHomeDashboard(userId)
       .then((dashboard) => {
-        if (!cancelled) setData(dashboard);
+        if (cancelled) return;
+        setData(dashboard);
+        void setAppBadgeCount(dashboard.unreadNotifications);
       })
       .catch((loadError: Error) => {
         if (!cancelled) setError(danishAuthError(loadError.message));

@@ -39,7 +39,7 @@ function urlBase64ToUint8Array(base64: string) {
 
 export async function registerAppWorker() {
   if (!("serviceWorker" in navigator)) return null;
-  return navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
 }
 
 export async function enablePushNotifications() {

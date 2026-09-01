@@ -13,6 +13,7 @@ import {
   type DirectMessage,
 } from "../lib/messages";
 import { fetchMembersByIds, fullName, profilePath } from "../lib/profile";
+import { syncAppBadge } from "../lib/appBadge";
 
 export function MessageThread() {
   const { threadId } = useParams();
@@ -50,6 +51,7 @@ export function MessageThread() {
       setMissing(false);
       setError(null);
       await markDirectThreadRead(threadId);
+      void syncAppBadge();
     } catch (loadError) {
       setError(danishAuthError((loadError as Error).message));
     } finally {

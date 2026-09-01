@@ -10,6 +10,8 @@ import {
   listingOccupied,
   listingOccupancyLabel,
   personLabel,
+  fetchFollowsNewListings,
+  setFollowNewListings,
   type MatchmakerListing,
   type MatchmakerRsvp,
 } from "../lib/matchmaker";
@@ -22,6 +24,8 @@ export function MatchmakerList() {
   const [rsvps, setRsvps] = useState<MatchmakerRsvp[]>([]);
   const [people, setPeople] = useState<PartnerPreview[]>([]);
   const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -40,7 +44,7 @@ export function MatchmakerList() {
     }
     const rows = (listingRows ?? []) as MatchmakerListing[];
     const ids = rows.map((row) => row.id);
-    const [{ data: rsvpRows }, { data: messageRows }, { data: readRows }] =
+    const [{ data: rsvpRows }, { data: messageRows }, { data: readRows }, followOn] =
       await Promise.all([
         ids.length
           ? supabase.from("matchmaker_rsvps").select("*").in("listing_id", ids)
@@ -58,6 +62,7 @@ export function MatchmakerList() {
               .eq("profile_id", user.id)
               .in("listing_id", ids)
           : Promise.resolve({ data: [] }),
+        fetchFollowsNewListings().catch(() => false),
       ]);
     const nextRsvps = (rsvpRows ?? []) as MatchmakerRsvp[];
     const peopleMap = await fetchMembersByIds([
@@ -85,6 +90,7 @@ export function MatchmakerList() {
           .map((row) => row.id),
       ),
     );
+    setFollowing(followOn);
     setReady(true);
   }, [user]);
 
@@ -104,6 +110,20 @@ export function MatchmakerList() {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  async function toggleFollow() {
+    const next = !following;
+    setFollowBusy(true);
+    setError(null);
+    setFollowing(next);
+    try {
+      await setFollowNewListings(next);
+    } catch (toggleError) {
+      setFollowing(!next);
+      setError(danishAuthError((toggleError as Error).message));
+    }
+    setFollowBusy(false);
+  }
+
   return (
     <SiteShell>
       <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-4 pb-16 sm:px-6">
@@ -119,6 +139,34 @@ export function MatchmakerList() {
         >
           Opret annonce
         </Link>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={following}
+          disabled={followBusy}
+          onClick={() => void toggleFollow()}
+          className="mt-3 flex w-full min-h-14 items-center justify-between gap-4 rounded-2xl border border-line/10 bg-court-mid px-4 py-3 text-left touch-manipulation disabled:opacity-60"
+        >
+          <span className="min-w-0">
+            <span className="block font-semibold">Følg nye kampe</span>
+            <span className="mt-0.5 block text-sm text-line/60">
+              {following
+                ? "Du får besked, når nogen opretter et opslag."
+                : "Slå til for at få besked om nye opslag."}
+            </span>
+          </span>
+          <span
+            className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
+              following ? "bg-ball" : "bg-line/20"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-line shadow transition-transform ${
+                following ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </span>
+        </button>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}

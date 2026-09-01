@@ -9,6 +9,7 @@ import {
   type AppNotification,
 } from "../lib/matchmaker";
 import { supabase } from "../lib/supabase";
+import { syncAppBadge } from "../lib/appBadge";
 
 export function Notifications() {
   const { user, loading } = useAuth();
@@ -51,6 +52,7 @@ export function Notifications() {
   async function openRow(row: AppNotification) {
     if (!row.read_at) {
       await supabase.rpc("mark_notification_read", { p_id: row.id });
+      void syncAppBadge();
     }
     navigate(notificationHref(row));
   }
@@ -64,6 +66,7 @@ export function Notifications() {
       return;
     }
     await load();
+    void syncAppBadge();
   }
 
   const unread = rows.filter((row) => !row.read_at).length;

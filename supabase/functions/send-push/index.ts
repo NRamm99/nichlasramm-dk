@@ -7,7 +7,7 @@ const push = (webpush as { default?: typeof webpush }).default ?? webpush;
 type Payload = {
   recipient_id?: string;
   kind?: string;
-  payload?: { href?: string; body?: string };
+  payload?: { href?: string; body?: string; from?: string };
 };
 
 type PushSettings = {
@@ -27,6 +27,8 @@ function copy(kind: string | undefined) {
       return "En find-kamp-annonce blev lukket.";
     case "matchmaker_converted":
       return "En find-kamp-annonce blev til en planlagt kamp.";
+    case "matchmaker_listing":
+      return "Nyt opslag på Find kamp.";
     case "matchmaker_message":
       return "Ny besked i en find-kamp-tråd.";
     case "partnership_request":
@@ -42,6 +44,12 @@ function copy(kind: string | undefined) {
     default:
       return "Noget nyt i klubben.";
   }
+}
+
+function title(_kind: string | undefined, payload: Payload["payload"]) {
+  const from = typeof payload?.from === "string" ? payload.from.trim() : "";
+  if (from) return from;
+  return "Padel By Ramm";
 }
 
 function message(kind: string | undefined, payload: Payload["payload"]) {
@@ -104,10 +112,14 @@ Deno.serve(async (req) => {
 
   const href =
     typeof body.payload?.href === "string" ? body.payload.href : "/nyt";
+  const { data: unread } = await supabase.rpc("unread_badge_count_for", {
+    p_profile_id: body.recipient_id,
+  });
   const payload = JSON.stringify({
-    title: "Padel By Ramm",
+    title: title(body.kind, body.payload),
     body: message(body.kind, body.payload),
     href,
+    unread: typeof unread === "number" ? unread : Number(unread ?? 1) || 1,
   });
 
   for (const row of rows ?? []) {

@@ -6,11 +6,27 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+async function setUnreadBadge(count) {
+  const n = Number(count);
+  try {
+    if (n > 0 && self.registration.setAppBadge) {
+      await self.registration.setAppBadge(n);
+      return;
+    }
+    if (self.registration.clearAppBadge) {
+      await self.registration.clearAppBadge();
+    }
+  } catch {
+    /* iOS only shows a home-screen badge for an installed web app. */
+  }
+}
+
 self.addEventListener("push", (event) => {
   let data = {
     title: "Padel By Ramm",
     body: "Der er nyt i klubben.",
     href: "/nyt",
+    unread: 1,
   };
   try {
     if (event.data) {
@@ -23,12 +39,15 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Padel By Ramm", {
-      body: data.body,
-      icon: "/apple-touch-icon.png",
-      badge: "/icons/icon-192.png",
-      data: { href: data.href || "/nyt" },
-    }),
+    (async () => {
+      await self.registration.showNotification(data.title || "Padel By Ramm", {
+        body: data.body,
+        icon: "/apple-touch-icon.png",
+        badge: "/icons/icon-192.png",
+        data: { href: data.href || "/nyt" },
+      });
+      await setUnreadBadge(data.unread ?? 1);
+    })(),
   );
 });
 

@@ -9,6 +9,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { syncPushSubscription } from "../lib/push";
+import { setAppBadgeCount, syncAppBadge } from "../lib/appBadge";
 import {
   isValidUsername,
   normalizeUsername,
@@ -87,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (data.session?.user) {
         void syncPushSubscription().catch(() => {});
+        void syncAppBadge();
       }
     });
 
@@ -97,12 +99,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void loadProfile(nextSession?.user.id);
       if (nextSession?.user) {
         void syncPushSubscription().catch(() => {});
+        void syncAppBadge();
+      } else {
+        void setAppBadgeCount(0);
       }
     });
+
+    function onVisibility() {
+      if (document.visibilityState === "visible") void syncAppBadge();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
