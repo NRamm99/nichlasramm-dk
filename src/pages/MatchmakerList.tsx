@@ -8,6 +8,7 @@ import {
   listingHasUnreadChat,
   listingIsLive,
   listingOccupied,
+  listingOccupancyLabel,
   personLabel,
   type MatchmakerListing,
   type MatchmakerRsvp,
@@ -154,7 +155,7 @@ export function MatchmakerList() {
                       </span>
                     </span>
                     <span className="shrink-0 rounded-full bg-ball/15 px-2.5 py-1 text-sm font-semibold text-ball">
-                      {occupied}/4
+                      {listingOccupancyLabel(occupied)}
                     </span>
                   </Link>
                 </li>

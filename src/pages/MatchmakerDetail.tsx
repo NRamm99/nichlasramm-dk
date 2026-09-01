@@ -6,11 +6,15 @@ import { danishAuthError } from "../lib/authErrors";
 import {
   canChat,
   formatListingWindow,
+  listingCourts,
   listingGoingIds,
   listingIsLive,
   listingOccupied,
+  listingOccupancyLabel,
+  matchIdForCourt,
   personLabel,
   type MatchmakerListing,
+  type MatchmakerListingMatch,
   type MatchmakerMessage,
   type MatchmakerRsvp,
   type MatchmakerRsvpStatus,
@@ -23,6 +27,7 @@ export function MatchmakerDetail() {
   const { user, loading } = useAuth();
   const [listing, setListing] = useState<MatchmakerListing | null>(null);
   const [rsvps, setRsvps] = useState<MatchmakerRsvp[]>([]);
+  const [courtMatches, setCourtMatches] = useState<MatchmakerListingMatch[]>([]);
   const [messages, setMessages] = useState<MatchmakerMessage[]>([]);
   const [people, setPeople] = useState<PartnerPreview[]>([]);
   const [missing, setMissing] = useState(false);
@@ -32,7 +37,7 @@ export function MatchmakerDetail() {
 
   const load = useCallback(async () => {
     if (!listingId || !user) return;
-    const [{ data: row }, { data: rsvpRows }, { data: messageRows }] =
+    const [{ data: row }, { data: rsvpRows }, { data: messageRows }, { data: courtRows }] =
       await Promise.all([
         supabase.from("matchmaker_listings").select("*").eq("id", listingId).maybeSingle(),
         supabase.from("matchmaker_rsvps").select("*").eq("listing_id", listingId),
@@ -41,6 +46,10 @@ export function MatchmakerDetail() {
           .select("*")
           .eq("listing_id", listingId)
           .order("created_at"),
+        supabase
+          .from("matchmaker_listing_matches")
+          .select("listing_id, court_number, match_id")
+          .eq("listing_id", listingId),
       ]);
     if (!row) {
       setMissing(true);
@@ -50,6 +59,7 @@ export function MatchmakerDetail() {
     const nextRsvps = (rsvpRows ?? []) as MatchmakerRsvp[];
     setListing(next);
     setRsvps(nextRsvps);
+    setCourtMatches((courtRows ?? []) as MatchmakerListingMatch[]);
     setMessages((messageRows ?? []) as MatchmakerMessage[]);
     const peopleMap = await fetchMembersByIds([
       next.host_id,
@@ -104,11 +114,14 @@ export function MatchmakerDetail() {
 
   const live = listingIsLive(listing);
   const occupied = listingOccupied(listing, rsvps);
+  const courts = listingCourts(listing, rsvps);
+  const assignedIds = new Set(
+    courtMatches.flatMap((row) => courts[row.court_number - 1] ?? []),
+  );
   const isHost = listing.host_id === user.id;
   const isLockedSeat =
     isHost || listing.brought_partner_id === user.id;
   const mine = rsvps.find((row) => row.profile_id === user.id);
-  const going = rsvps.filter((row) => row.status === "going");
   const interested = rsvps.filter((row) => row.status === "interested");
   const declined = rsvps.filter((row) => row.status === "declined");
   const chatOk = canChat(listing, rsvps, user.id);
@@ -191,7 +204,9 @@ export function MatchmakerDetail() {
           {formatListingWindow(listing.starts_at, listing.ends_at)}
           {listing.location ? ` · ${listing.location}` : ""}
         </p>
-        <p className="mt-1 text-sm font-semibold text-ball">{occupied}/4 pladser</p>
+        <p className="mt-1 text-sm font-semibold text-ball">
+          {listingOccupancyLabel(occupied)}
+        </p>
         {listing.note ? (
           <p className="mt-4 whitespace-pre-wrap rounded-2xl bg-court px-4 py-3 text-sm text-line/85">
             {listing.note}
@@ -217,7 +232,7 @@ export function MatchmakerDetail() {
             <RsvpButton
               label="Deltager"
               active={mine?.status === "going"}
-              disabled={saving || (occupied >= 4 && mine?.status !== "going")}
+              disabled={saving}
               onClick={() => void setRsvp("going")}
             />
             <RsvpButton
@@ -235,31 +250,66 @@ export function MatchmakerDetail() {
           </div>
         ) : null}
 
-        <section className="mt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-            Deltager
-          </h2>
-          <ul className="mt-2 space-y-2 text-sm">
-            <li>{personLabel(listing.host_id, people)} · vært</li>
-            {listing.brought_partner_id ? (
-              <li>{personLabel(listing.brought_partner_id, people)} · makker</li>
-            ) : null}
-            {going.map((row) => (
-              <li key={row.profile_id} className="flex items-center justify-between gap-2">
-                <span>{personLabel(row.profile_id, people)}</span>
-                {isHost && live ? (
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => void handleRemove(row.profile_id)}
-                    className="text-xs font-semibold text-red-300"
+        <section className="mt-8 space-y-5">
+          {courts.map((court, index) => {
+            const courtNumber = index + 1;
+            const matchId = matchIdForCourt(courtNumber, courtMatches);
+            const roleFor = (id: string) => {
+              if (id === listing.host_id) return " · vært";
+              if (id === listing.brought_partner_id) return " · makker";
+              return "";
+            };
+            return (
+              <div key={courtNumber}>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
+                  Bane {courtNumber} · {court.length}/4
+                </h2>
+                <ul className="mt-2 space-y-2 text-sm">
+                  {court.length === 0 ? (
+                    <li className="text-line/55">Ingen deltagere endnu.</li>
+                  ) : (
+                    court.map((id) => (
+                      <li key={id} className="flex items-center justify-between gap-2">
+                        <span>
+                          {personLabel(id, people)}
+                          {roleFor(id)}
+                        </span>
+                        {isHost &&
+                        live &&
+                        id !== listing.host_id &&
+                        id !== listing.brought_partner_id &&
+                        !assignedIds.has(id) ? (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => void handleRemove(id)}
+                            className="text-xs font-semibold text-red-300"
+                          >
+                            Fjern
+                          </button>
+                        ) : null}
+                      </li>
+                    ))
+                  )}
+                </ul>
+                {matchId ? (
+                  <Link
+                    to={`/kampe/${matchId}`}
+                    className="mt-3 inline-block text-sm font-semibold text-ball"
                   >
-                    Fjern
-                  </button>
+                    Åbn kamp
+                  </Link>
+                ) : isHost && live && court.length === 4 ? (
+                  <Link
+                    to={`/kampe/ny?annonce=${listing.id}&bane=${courtNumber}`}
+                    className="mt-3 inline-block rounded-full bg-ball px-4 py-2.5 text-center text-xs font-semibold text-court"
+                  >
+                    Opret kamp
+                  </Link>
                 ) : null}
-              </li>
-            ))}
-          </ul>
+              </div>
+            );
+          })}
         </section>
 
         <section className="mt-6">
@@ -291,15 +341,6 @@ export function MatchmakerDetail() {
             )}
           </ul>
         </section>
-
-        {isHost && live && occupied === 4 ? (
-          <Link
-            to={`/kampe/ny?annonce=${listing.id}`}
-            className="mt-6 rounded-full bg-ball px-4 py-2.5 text-center text-xs font-semibold text-court"
-          >
-            Opret kamp
-          </Link>
-        ) : null}
 
         {isHost && live ? (
           <button

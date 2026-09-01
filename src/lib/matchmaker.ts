@@ -47,6 +47,12 @@ export function listingIsLive(listing: MatchmakerListing) {
   return listing.status === "open" && new Date(listing.ends_at).getTime() > Date.now();
 }
 
+export type MatchmakerListingMatch = {
+  listing_id: string;
+  court_number: number;
+  match_id: string;
+};
+
 export function listingOccupied(
   listing: MatchmakerListing,
   rsvps: MatchmakerRsvp[],
@@ -66,12 +72,43 @@ export function listingGoingIds(
 ) {
   const ids = [listing.host_id];
   if (listing.brought_partner_id) ids.push(listing.brought_partner_id);
-  for (const row of rsvps) {
-    if (row.status === "going" && !ids.includes(row.profile_id)) {
-      ids.push(row.profile_id);
-    }
+  const extras = rsvps
+    .filter(
+      (row) => row.status === "going" && !ids.includes(row.profile_id),
+    )
+    .sort((a, b) =>
+      a.created_at === b.created_at
+        ? a.profile_id.localeCompare(b.profile_id)
+        : a.created_at.localeCompare(b.created_at),
+    );
+  return [...ids, ...extras.map((row) => row.profile_id)];
+}
+
+export function listingCourts(
+  listing: MatchmakerListing,
+  rsvps: MatchmakerRsvp[],
+) {
+  const ids = listingGoingIds(listing, rsvps);
+  const courts: string[][] = [];
+  for (let i = 0; i < ids.length; i += 4) {
+    courts.push(ids.slice(i, i + 4));
   }
-  return ids;
+  if (courts.length === 0) courts.push([]);
+  return courts;
+}
+
+export function listingOccupancyLabel(occupied: number) {
+  if (occupied <= 4) return `${occupied}/4`;
+  const courts = Math.ceil(occupied / 4);
+  const last = occupied % 4 === 0 ? 4 : occupied % 4;
+  return `${occupied} · bane ${courts} (${last}/4)`;
+}
+
+export function matchIdForCourt(
+  courtNumber: number,
+  rows: MatchmakerListingMatch[],
+) {
+  return rows.find((row) => row.court_number === courtNumber)?.match_id;
 }
 
 export function canChat(
