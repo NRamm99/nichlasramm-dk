@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { MatchRecord } from "../components/MatchRecord";
 import { PushNotifications } from "../components/PushNotifications";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
@@ -27,6 +27,7 @@ import { messagePath } from "../lib/messages";
 import { supabase } from "../lib/supabase";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const ACCOUNT_DELETE_WORD = "SLET";
 
 function fileExtension(file: File) {
   const fromType = file.type.split("/")[1];
@@ -39,7 +40,8 @@ function fileExtension(file: File) {
 
 export function Profile() {
   const { username: usernameParam } = useParams();
-  const { user, loading, username: myUsername, setOwnAvatar } = useAuth();
+  const { user, loading, username: myUsername, setOwnAvatar, signOut } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [record, setRecord] = useState<PlayerRecord>(emptyPlayerRecord());
   const [incoming, setIncoming] = useState<PartnershipRequest[]>([]);
@@ -59,6 +61,10 @@ export function Profile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const isOwn = Boolean(
     user &&
@@ -332,6 +338,54 @@ export function Profile() {
     setInfo("Adgangskoden er opdateret.");
   }
 
+  function resetDeleteForm() {
+    setConfirmingDelete(false);
+    setDeleteConfirm("");
+    setDeletePassword("");
+    setDeleting(false);
+  }
+
+  async function handleDeleteAccount(event: FormEvent) {
+    event.preventDefault();
+    if (!user || !isOwn) return;
+    setError(null);
+    setInfo(null);
+
+    if (deleteConfirm.trim() !== ACCOUNT_DELETE_WORD) {
+      setError(danishAuthError("ACCOUNT_DELETE_CONFIRM"));
+      return;
+    }
+
+    if (!deletePassword) {
+      setError(danishAuthError("INVALID_PASSWORD"));
+      return;
+    }
+
+    setDeleting(true);
+
+    const { data: avatarFiles } = await supabase.storage
+      .from("avatars")
+      .list(user.id);
+    if (avatarFiles?.length) {
+      await supabase.storage.from("avatars").remove(
+        avatarFiles.map((file) => `${user.id}/${file.name}`),
+      );
+    }
+
+    const { error: deleteError } = await supabase.rpc("delete_own_account", {
+      p_confirm: deleteConfirm.trim(),
+      p_password: deletePassword,
+    });
+    if (deleteError) {
+      setDeleting(false);
+      setError(danishAuthError(deleteError.message));
+      return;
+    }
+
+    await signOut();
+    navigate("/login", { replace: true });
+  }
+
   const partner = profile?.partner ?? null;
   const pendingIncoming = incoming[0] ?? null;
   const pendingOutgoing = outgoing[0] ?? null;
@@ -532,6 +586,7 @@ export function Profile() {
                       setBio(profile.bio ?? "");
                       setNewPassword("");
                       setConfirmPassword("");
+                      resetDeleteForm();
                     }}
                     className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
                   >
@@ -584,6 +639,84 @@ export function Profile() {
                 >
                   {savingPassword ? "Gemmer…" : "Skift adgangskode"}
                 </button>
+              </form>
+              <form
+                onSubmit={(event) => void handleDeleteAccount(event)}
+                className="mt-6 space-y-3 rounded-2xl border border-red-400/25 bg-court px-5 py-4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
+                  Slet konto
+                </p>
+                {!confirmingDelete ? (
+                  <>
+                    <p className="text-sm text-line/65">
+                      Kontoen forsvinder permanent. Kampe du har spillet bliver
+                      stående med dit navn.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(true)}
+                      className="rounded-full border border-red-400/40 px-4 py-2 text-xs font-semibold text-red-300"
+                    >
+                      Slet min konto…
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-line/70">
+                      Det kan ikke fortrydes. Skriv{" "}
+                      <span className="font-semibold text-red-200">
+                        {ACCOUNT_DELETE_WORD}
+                      </span>{" "}
+                      og din adgangskode for at bekræfte.
+                    </p>
+                    <label className="block text-sm font-medium text-line/80">
+                      Skriv {ACCOUNT_DELETE_WORD}
+                      <input
+                        value={deleteConfirm}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        onChange={(event) =>
+                          setDeleteConfirm(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-red-400/20 bg-court-mid px-4 py-3 outline-none focus:border-red-300"
+                      />
+                    </label>
+                    <label className="block text-sm font-medium text-line/80">
+                      Adgangskode
+                      <input
+                        type="password"
+                        autoComplete="current-password"
+                        value={deletePassword}
+                        onChange={(event) =>
+                          setDeletePassword(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-red-400/20 bg-court-mid px-4 py-3 outline-none focus:border-red-300"
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => resetDeleteForm()}
+                        className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
+                      >
+                        Annuller
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={
+                          deleting ||
+                          deleteConfirm.trim() !== ACCOUNT_DELETE_WORD ||
+                          deletePassword.length === 0
+                        }
+                        className="rounded-full bg-red-400 px-4 py-2 text-xs font-semibold text-court disabled:opacity-40"
+                      >
+                        {deleting ? "Sletter…" : "Slet kontoen permanent"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </form>
               </>
             ) : (

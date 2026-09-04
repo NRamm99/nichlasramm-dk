@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { AdminPushBroadcast } from "../components/AdminPushBroadcast";
 import { SiteShell } from "../components/SiteShell";
@@ -26,6 +26,36 @@ function formatWhen(value: string | null) {
   }).format(new Date(value));
 }
 
+function AdminFold({
+  title,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mt-10">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="font-display text-3xl tracking-wide">{title}</h2>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold text-line/80"
+        >
+          {open ? "Skjul" : count ? `Vis (${count})` : "Vis"}
+        </button>
+      </div>
+      {open ? children : null}
+    </section>
+  );
+}
+
 export function Admin() {
   const { user, loading, isAdmin, refreshProfile } = useAuth();
   const [codes, setCodes] = useState<InviteCode[]>([]);
@@ -40,6 +70,8 @@ export function Admin() {
     code: string;
   } | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  const [showUnused, setShowUnused] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   const loadCodes = useCallback(async () => {
     const { data, error: loadError } = await supabase
@@ -84,7 +116,12 @@ export function Admin() {
   }
 
   const unused = codes.filter((invite) => !invite.used_at);
-  const used = codes.filter((invite) => invite.used_at && !invite.archived_at);
+  const used = codes.filter(
+    (invite) =>
+      Boolean(invite.used_at) &&
+      !invite.archived_at &&
+      (Boolean(invite.used_by) || Boolean(invite.banned_at)),
+  );
   const archived = codes.filter((invite) => Boolean(invite.archived_at));
 
   async function handleCreate() {
@@ -100,6 +137,7 @@ export function Admin() {
     }
 
     setInfo(`Ny kode: ${data}`);
+    setShowUnused(true);
     await loadCodes();
   }
 
@@ -336,9 +374,12 @@ export function Admin() {
               </div>
             ) : null}
 
-            <h2 className="mt-10 font-display text-3xl tracking-wide">
-              Ledige koder
-            </h2>
+            <AdminFold
+              title="Ledige koder"
+              count={unused.length}
+              open={showUnused}
+              onToggle={() => setShowUnused((open) => !open)}
+            >
             <ul className="mt-4 space-y-3">
               {unused.length === 0 ? (
                 <li className="rounded-2xl border border-line/10 bg-court-mid/60 px-5 py-4 text-sm text-line/60">
@@ -378,10 +419,14 @@ export function Admin() {
                 ))
               )}
             </ul>
+            </AdminFold>
 
-            <h2 className="mt-10 font-display text-3xl tracking-wide">
-              Medlemmer
-            </h2>
+            <AdminFold
+              title="Medlemmer"
+              count={used.length}
+              open={showMembers}
+              onToggle={() => setShowMembers((open) => !open)}
+            >
             <ul className="mt-4 space-y-3">
               {used.length === 0 ? (
                 <li className="rounded-2xl border border-line/10 bg-court-mid/60 px-5 py-4 text-sm text-line/60">
@@ -516,22 +561,14 @@ export function Admin() {
                 })
               )}
             </ul>
+            </AdminFold>
 
-            <div className="mt-10 flex items-center justify-between gap-4">
-              <h2 className="font-display text-3xl tracking-wide">Arkiv</h2>
-              <button
-                type="button"
-                onClick={() => setShowArchive((open) => !open)}
-                className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold text-line/80"
-              >
-                {showArchive
-                  ? "Skjul arkiv"
-                  : archived.length
-                    ? `Vis arkiv (${archived.length})`
-                    : "Vis arkiv"}
-              </button>
-            </div>
-            {showArchive ? (
+            <AdminFold
+              title="Arkiv"
+              count={archived.length}
+              open={showArchive}
+              onToggle={() => setShowArchive((open) => !open)}
+            >
               <ul className="mt-4 space-y-3">
                 {archived.length === 0 ? (
                   <li className="rounded-2xl border border-line/10 bg-court-mid/60 px-5 py-4 text-sm text-line/60">
@@ -541,6 +578,7 @@ export function Admin() {
                   archived.map((invite) => {
                     const { firstName, username, avatar, banned, fullName } =
                       memberLabel(invite);
+                    const deleted = !invite.used_by && !banned;
 
                     return (
                       <li
@@ -567,7 +605,11 @@ export function Admin() {
                               {username ? `@${username}` : "Intet brugernavn"}
                             </p>
                             <p className="mt-1 text-xs text-line/45">
-                              {banned ? "Spærret · " : ""}
+                              {banned
+                                ? "Spærret · "
+                                : deleted
+                                  ? "Slettet konto · "
+                                  : ""}
                               Arkiveret {formatWhen(invite.archived_at)}
                               {" · "}
                               <span className="font-mono tracking-wider">
@@ -576,6 +618,7 @@ export function Admin() {
                             </p>
                           </div>
                         </div>
+                        {deleted ? null : (
                         <button
                           type="button"
                           onClick={() => void handleUnarchive(invite.id)}
@@ -583,12 +626,13 @@ export function Admin() {
                         >
                           Gendan
                         </button>
+                        )}
                       </li>
                     );
                   })
                 )}
               </ul>
-            ) : null}
+            </AdminFold>
           </>
         )}
       </main>

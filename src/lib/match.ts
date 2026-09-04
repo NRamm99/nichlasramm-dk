@@ -6,7 +6,7 @@ export type MatchStatus = "scheduled" | "played";
 export type MatchRow = {
   id: string;
   created_at: string;
-  created_by: string;
+  created_by: string | null;
   played_at: string;
   status: MatchStatus;
   league_fixture_id?: string | null;

@@ -31,7 +31,7 @@ export type LeagueTeam = {
   id: string;
   league_id: string;
   created_at: string;
-  created_by: string;
+  created_by: string | null;
   players: PartnerPreview[];
 };
 
