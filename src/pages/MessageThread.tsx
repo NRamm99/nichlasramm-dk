@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
@@ -31,6 +32,7 @@ export function MessageThread() {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [ready, setReady] = useState(false);
+  const [pin, setPin] = useState(0);
 
   const load = useCallback(async () => {
     if (!user || !threadId) return;
@@ -73,8 +75,8 @@ export function MessageThread() {
 
   if (loading || (!ready && user)) {
     return (
-      <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
+      <SiteShell fill>
+        <main className="flex flex-1 items-center justify-center px-6 text-sm text-line/60">
           Indlæser…
         </main>
       </SiteShell>
@@ -99,14 +101,14 @@ export function MessageThread() {
     );
   }
 
-  async function handleSend(event: FormEvent) {
-    event.preventDefault();
+  async function handleSend() {
     if (!threadId) return;
     setError(null);
     setSending(true);
     try {
       await sendDirectMessage(threadId, body);
       setBody("");
+      setPin((value) => value + 1);
       await load();
     } catch (sendError) {
       setError(danishAuthError((sendError as Error).message));
@@ -116,96 +118,96 @@ export function MessageThread() {
   }
 
   const title = other ? fullName(other) : "Besked";
+  const lastId = messages[messages.length - 1]?.id ?? "empty";
 
   return (
-    <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-4 pb-16 sm:px-6">
-        <div className="flex items-center gap-3">
-          {other ? <MemberAvatar person={other} size="sm" /> : null}
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-              Besked
-            </p>
-            {other?.username ? (
+    <SiteShell fill>
+      <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6">
+        <ChatThread
+          fill
+          scrollKey={`${messages.length}:${lastId}`}
+          pin={pin}
+          header={
+            <div className="shrink-0 pb-3 pt-1">
+              <div className="flex items-center gap-3">
+                {other ? <MemberAvatar person={other} size="sm" /> : null}
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+                    Besked
+                  </p>
+                  {other?.username ? (
+                    <Link
+                      to={profilePath(other.username)}
+                      className="font-display text-3xl tracking-wide hover:text-ball sm:text-4xl"
+                    >
+                      {title}
+                    </Link>
+                  ) : (
+                    <h1 className="font-display text-3xl tracking-wide sm:text-4xl">
+                      {title}
+                    </h1>
+                  )}
+                </div>
+              </div>
               <Link
-                to={profilePath(other.username)}
-                className="font-display text-4xl tracking-wide hover:text-ball"
+                to="/beskeder"
+                className="mt-2 inline-block text-sm font-semibold text-ball"
               >
-                {title}
+                Alle samtaler
               </Link>
+              {error ? (
+                <p className="mt-2 text-sm text-red-300" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          }
+          footer={
+            <ChatComposer
+              id="direct-message"
+              value={body}
+              onChange={setBody}
+              onSubmit={() => void handleSend()}
+              sending={sending}
+            />
+          }
+        >
+          <ul className="space-y-2 py-2">
+            {messages.length === 0 ? (
+              <li className="text-sm text-line/55">Skriv den første besked.</li>
             ) : (
-              <h1 className="font-display text-4xl tracking-wide">{title}</h1>
-            )}
-          </div>
-        </div>
-
-        {error ? (
-          <p className="mt-4 text-sm text-red-300" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <ul className="mt-6 space-y-2">
-          {messages.length === 0 ? (
-            <li className="text-sm text-line/55">Skriv den første besked.</li>
-          ) : (
-            messages.map((message) => {
-              const mine = message.author_id === user.id;
-              return (
-                <li
-                  key={message.id}
-                  className={`flex ${mine ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
-                      mine
-                        ? "rounded-br-md bg-ball text-court"
-                        : "rounded-bl-md bg-court-mid text-line"
-                    }`}
+              messages.map((message) => {
+                const mine = message.author_id === user.id;
+                return (
+                  <li
+                    key={message.id}
+                    className={`flex ${mine ? "justify-end" : "justify-start"}`}
                   >
-                    <p>{message.body}</p>
-                    <p
-                      className={`mt-1 text-[0.65rem] ${
-                        mine ? "text-court/70" : "text-line/45"
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                        mine
+                          ? "rounded-br-md bg-ball text-court"
+                          : "rounded-bl-md bg-court-mid text-line"
                       }`}
                     >
-                      {new Intl.DateTimeFormat("da-DK", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }).format(new Date(message.created_at))}
-                    </p>
-                  </div>
-                </li>
-              );
-            })
-          )}
-        </ul>
-
-        <form onSubmit={(event) => void handleSend(event)} className="mt-6 space-y-2">
-          <label className="sr-only" htmlFor="direct-message">
-            Besked
-          </label>
-          <textarea
-            id="direct-message"
-            required
-            maxLength={1000}
-            rows={3}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            className="w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 text-base outline-none focus:border-ball"
-          />
-          <button
-            type="submit"
-            disabled={sending}
-            className="rounded-full bg-ball px-5 py-3 text-sm font-semibold text-court disabled:opacity-60"
-          >
-            {sending ? "Sender…" : "Send"}
-          </button>
-        </form>
-
-        <Link to="/beskeder" className="mt-8 text-sm font-semibold text-ball">
-          Alle samtaler
-        </Link>
+                      <p>{message.body}</p>
+                      <p
+                        className={`mt-1 text-[0.65rem] ${
+                          mine ? "text-court/70" : "text-line/45"
+                        }`}
+                      >
+                        {new Intl.DateTimeFormat("da-DK", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(new Date(message.created_at))}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </ChatThread>
       </main>
     </SiteShell>
   );

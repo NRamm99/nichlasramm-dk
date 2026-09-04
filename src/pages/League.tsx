@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
@@ -1014,6 +1015,7 @@ function FixtureDialog({
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pin, setPin] = useState(0);
   const opponentId =
     fixture.team_a_id === myTeamId ? fixture.team_b_id : fixture.team_a_id;
   const opponent = teams.find((team) => team.id === opponentId);
@@ -1039,8 +1041,7 @@ function FixtureDialog({
       });
   }, [fixture.id, open]);
 
-  async function handleSend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSend() {
     setError(null);
     setSaving(true);
     const { error: sendError } = await supabase.rpc("add_league_message", {
@@ -1053,6 +1054,7 @@ function FixtureDialog({
       return;
     }
     setBody("");
+    setPin((value) => value + 1);
     await markRead();
     onSent();
     const { data } = await supabase
@@ -1128,53 +1130,55 @@ function FixtureDialog({
                   : "Se den planlagte kamp"}
             </Link>
           )}
-          <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto">
-            {messages.length === 0 ? (
-              <li className="text-sm text-line/55">
-                Skriv og find en dato med det andet hold.
-              </li>
-            ) : (
-              messages.map((row) => (
-                <li
-                  key={row.id}
-                  className={`rounded-2xl px-3 py-2 text-sm ${
-                    row.author_id === userId
-                      ? "bg-ball/10 text-line"
-                      : "bg-court text-line/80"
-                  }`}
-                >
-                  <p className="text-[0.65rem] text-line/45">
-                    {messageAuthorName(teams, row.author_id)}
-                    {row.author_id === userId ? " (dig)" : ""} ·{" "}
-                    {formatMatchWhen(row.created_at)}
-                  </p>
-                  <p className="mt-1">{row.body}</p>
-                </li>
-              ))
-            )}
-          </ul>
-          <form onSubmit={(event) => void handleSend(event)} className="mt-3">
-            <textarea
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              maxLength={1000}
-              rows={2}
-              placeholder="Skriv til det andet hold…"
-              className="w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-            />
-            {error ? (
-              <p className="mt-2 text-sm text-red-300" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={saving}
-              className="mt-2 rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
+          <div className="mt-4">
+            <ChatThread
+              scrollKey={`${messages.length}:${messages[messages.length - 1]?.id ?? "empty"}`}
+              pin={pin}
+              footer={
+                <>
+                  {error ? (
+                    <p className="mb-2 text-sm text-red-300" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  <ChatComposer
+                    id={`league-chat-${fixture.id}`}
+                    value={body}
+                    onChange={setBody}
+                    onSubmit={() => void handleSend()}
+                    sending={saving}
+                    placeholder="Skriv til det andet hold…"
+                  />
+                </>
+              }
             >
-              {saving ? "Sender…" : "Send"}
-            </button>
-          </form>
+              <ul className="space-y-2">
+                {messages.length === 0 ? (
+                  <li className="text-sm text-line/55">
+                    Skriv og find en dato med det andet hold.
+                  </li>
+                ) : (
+                  messages.map((row) => (
+                    <li
+                      key={row.id}
+                      className={`rounded-2xl px-3 py-2 text-sm ${
+                        row.author_id === userId
+                          ? "bg-ball/10 text-line"
+                          : "bg-court text-line/80"
+                      }`}
+                    >
+                      <p className="text-[0.65rem] text-line/45">
+                        {messageAuthorName(teams, row.author_id)}
+                        {row.author_id === userId ? " (dig)" : ""} ·{" "}
+                        {formatMatchWhen(row.created_at)}
+                      </p>
+                      <p className="mt-1">{row.body}</p>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </ChatThread>
+          </div>
         </div>
       ) : null}
     </li>

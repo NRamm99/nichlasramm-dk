@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -9,6 +10,7 @@ import {
   listingIsLive,
   listingOccupied,
   listingOccupancyLabel,
+  listingGoingIds,
   personLabel,
   fetchFollowsNewListings,
   setFollowNewListings,
@@ -68,6 +70,9 @@ export function MatchmakerList() {
     const peopleMap = await fetchMembersByIds([
       ...rows.map((row) => row.host_id),
       ...rows.map((row) => row.brought_partner_id),
+      ...nextRsvps
+        .filter((row) => row.status === "going")
+        .map((row) => row.profile_id),
     ]);
     setListings(rows.filter(listingIsLive));
     setRsvps(nextRsvps);
@@ -179,10 +184,22 @@ export function MatchmakerList() {
             </li>
           ) : (
             listings.map((listing) => {
-              const occupied = listingOccupied(
-                listing,
-                rsvps.filter((row) => row.listing_id === listing.id),
+              const listingRsvps = rsvps.filter(
+                (row) => row.listing_id === listing.id,
               );
+              const occupied = listingOccupied(listing, listingRsvps);
+              const going = listingGoingIds(listing, listingRsvps).map((id) => {
+                const person = people.find((row) => row.id === id);
+                return (
+                  person ?? {
+                    id,
+                    username: null,
+                    first_name: null,
+                    last_name: null,
+                    avatar_url: null,
+                  }
+                );
+              });
               return (
                 <li key={listing.id}>
                   <Link
@@ -202,8 +219,24 @@ export function MatchmakerList() {
                         {listing.location ? ` · ${listing.location}` : ""}
                       </span>
                     </span>
-                    <span className="shrink-0 rounded-full bg-ball/15 px-2.5 py-1 text-sm font-semibold text-ball">
-                      {listingOccupancyLabel(occupied)}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="flex -space-x-2">
+                        {going.slice(0, 5).map((person) => (
+                          <MemberAvatar
+                            key={person.id}
+                            person={person}
+                            size="xs"
+                          />
+                        ))}
+                        {going.length > 5 ? (
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-court text-[0.65rem] font-semibold text-line/70 ring-2 ring-court-mid">
+                            +{going.length - 5}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="rounded-full bg-ball/15 px-2.5 py-1 text-sm font-semibold text-ball">
+                        {listingOccupancyLabel(occupied)}
+                      </span>
                     </span>
                   </Link>
                 </li>

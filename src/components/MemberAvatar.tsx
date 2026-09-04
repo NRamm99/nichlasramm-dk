@@ -3,13 +3,27 @@ import { fullName, profilePath, type PartnerPreview } from "../lib/profile";
 
 type MemberAvatarProps = {
   person: PartnerPreview;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
+  className?: string;
 };
 
-export function MemberAvatar({ person, size = "md" }: MemberAvatarProps) {
+export function MemberAvatar({
+  person,
+  size = "md",
+  className = "",
+}: MemberAvatarProps) {
   const dim =
-    size === "sm" ? "h-11 w-11" : size === "lg" ? "h-28 w-28" : "h-16 w-16";
-  const initialsSize = size === "lg" ? "text-2xl" : "text-sm";
+    size === "xs"
+      ? "h-7 w-7"
+      : size === "sm"
+        ? "h-11 w-11"
+        : size === "lg"
+          ? "h-28 w-28"
+          : "h-16 w-16";
+  const initialsSize =
+    size === "lg" ? "text-2xl" : size === "xs" ? "text-[0.65rem]" : "text-sm";
+  const ring =
+    size === "xs" ? "ring-2 ring-court-mid" : "ring-2 ring-ball/30";
   const name = fullName(person);
 
   if (person.avatar_url) {
@@ -17,14 +31,18 @@ export function MemberAvatar({ person, size = "md" }: MemberAvatarProps) {
       <img
         src={person.avatar_url}
         alt={name}
-        className={`${dim} rounded-full object-cover ring-2 ring-ball/30`}
+        title={name}
+        className={`${dim} rounded-full object-cover ${ring} ${className}`}
       />
     );
   }
 
   return (
     <div
-      className={`flex ${dim} items-center justify-center rounded-full bg-court ${initialsSize} font-semibold text-line/50 ring-2 ring-line/10`}
+      title={name}
+      className={`flex ${dim} items-center justify-center rounded-full bg-court ${initialsSize} font-semibold text-line/50 ${
+        size === "xs" ? "ring-2 ring-court-mid" : "ring-2 ring-line/10"
+      } ${className}`}
     >
       {(person.first_name?.[0] ?? person.username?.[0] ?? "?").toUpperCase()}
     </div>

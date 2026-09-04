@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
+import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -46,6 +47,7 @@ export function MatchDetail() {
   const [info, setInfo] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pin, setPin] = useState(0);
   const [resultSets, setResultSets] = useState([{ team1: "", team2: "" }]);
   const [savingResult, setSavingResult] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -217,8 +219,7 @@ export function MatchDetail() {
     return rosterPicksToJson(rosterPicks);
   }
 
-  async function handleComment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleComment() {
     if (!matchId) return;
     setError(null);
     setSaving(true);
@@ -232,6 +233,7 @@ export function MatchDetail() {
       return;
     }
     setComment("");
+    setPin((value) => value + 1);
     await load();
   }
 
@@ -765,47 +767,44 @@ export function MatchDetail() {
 
         <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-6">
           <h2 className="font-display text-3xl tracking-wide">Kommentarer</h2>
-          <ul className="mt-4 space-y-3">
-            {comments.length === 0 ? (
-              <li className="text-sm text-line/60">Ingen kommentarer endnu.</li>
-            ) : (
-              comments.map((row) => (
-                <li key={row.id} className="rounded-2xl bg-court/60 px-4 py-3">
+          <div className="mt-4">
+            <ChatThread
+              scrollKey={`${comments.length}:${comments[comments.length - 1]?.id ?? "empty"}`}
+              pin={pin}
+              footer={
+                isPlayer ? (
+                  <ChatComposer
+                    id="match-comment"
+                    value={comment}
+                    onChange={setComment}
+                    onSubmit={() => void handleComment()}
+                    sending={saving}
+                    placeholder="Skriv til de andre spillere…"
+                  />
+                ) : (
                   <p className="text-xs text-line/50">
-                    {row.author ? fullName(row.author) : "Ukendt"} ·{" "}
-                    {formatMatchWhen(row.created_at)}
+                    Kun spillere i kampen kan skrive med.
                   </p>
-                  <p className="mt-1 text-sm text-line/85">{row.body}</p>
-                </li>
-              ))
-            )}
-          </ul>
-          {isPlayer ? (
-            <form
-              onSubmit={(event) => void handleComment(event)}
-              className="mt-4 space-y-3"
+                )
+              }
             >
-              <textarea
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-                maxLength={1000}
-                rows={3}
-                placeholder="Skriv til de andre spillere…"
-                className="w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-              />
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
-              >
-                {saving ? "Sender…" : "Send"}
-              </button>
-            </form>
-          ) : (
-            <p className="mt-4 text-xs text-line/50">
-              Kun spillere i kampen kan skrive med.
-            </p>
-          )}
+              <ul className="space-y-3">
+                {comments.length === 0 ? (
+                  <li className="text-sm text-line/60">Ingen kommentarer endnu.</li>
+                ) : (
+                  comments.map((row) => (
+                    <li key={row.id} className="rounded-2xl bg-court/60 px-4 py-3">
+                      <p className="text-xs text-line/50">
+                        {row.author ? fullName(row.author) : "Ukendt"} ·{" "}
+                        {formatMatchWhen(row.created_at)}
+                      </p>
+                      <p className="mt-1 text-sm text-line/85">{row.body}</p>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </ChatThread>
+          </div>
         </section>
 
         {canDelete ? (

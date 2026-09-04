@@ -4,13 +4,18 @@ import { useAuth } from "../context/AuthContext";
 
 type SiteShellProps = {
   children: ReactNode;
+  fill?: boolean;
 };
 
-export function SiteShell({ children }: SiteShellProps) {
+export function SiteShell({ children, fill }: SiteShellProps) {
   const { user, loading, signOut } = useAuth();
 
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-court text-line">
+    <div
+      className={`relative overflow-x-clip bg-court text-line ${
+        fill ? "flex h-dvh max-h-dvh flex-col" : "min-h-screen"
+      }`}
+    >
       <div className="pointer-events-none absolute inset-0 overflow-hidden contain-paint">
         <div className="absolute inset-0 court-grid opacity-70" />
         <div className="absolute inset-0 court-lines" />
@@ -18,7 +23,7 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="absolute bottom-[-8rem] right-[-6rem] h-[22rem] w-[22rem] max-w-none rounded-full bg-glass/10 blur-3xl" />
       </div>
 
-      <header className="relative z-10 flex items-center justify-between gap-2 px-4 py-5 sm:gap-3 sm:px-10">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 px-4 py-5 sm:gap-3 sm:px-10">
         <Link
           to="/"
           className="min-w-0 truncate font-display text-xl tracking-[0.12em] text-line sm:text-2xl sm:tracking-[0.18em]"
@@ -56,7 +61,11 @@ export function SiteShell({ children }: SiteShellProps) {
         </nav>
       </header>
 
-      <div className="relative z-10">{children}</div>
+      <div
+        className={`relative z-10 ${fill ? "flex min-h-0 flex-1 flex-col" : ""}`}
+      >
+        {children}
+      </div>
     </div>
   );
 }

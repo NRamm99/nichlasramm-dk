@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -33,6 +34,7 @@ export function MatchmakerDetail() {
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pin, setPin] = useState(0);
   const [body, setBody] = useState("");
 
   const load = useCallback(async () => {
@@ -173,8 +175,7 @@ export function MatchmakerDetail() {
     await load();
   }
 
-  async function handleSend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSend() {
     if (!listingId) return;
     setError(null);
     setSaving(true);
@@ -188,6 +189,7 @@ export function MatchmakerDetail() {
       return;
     }
     setBody("");
+    setPin((value) => value + 1);
     await load();
   }
 
@@ -355,50 +357,52 @@ export function MatchmakerDetail() {
 
         <section className="mt-10">
           <h2 className="font-display text-3xl tracking-wide">Chat</h2>
-          <ul className="mt-4 space-y-3">
-            {messages.length === 0 ? (
-              <li className="text-sm text-line/55">Ingen beskeder endnu.</li>
-            ) : (
-              messages.map((message) => {
-                const author = people.find((row) => row.id === message.author_id);
-                return (
-                  <li key={message.id} className="rounded-2xl bg-court px-4 py-3 text-sm">
-                    <p className="text-xs font-semibold text-line/55">
-                      {author ? fullName(author) : "Medlem"}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-          {chatOk ? (
-            <form onSubmit={(event) => void handleSend(event)} className="mt-4 space-y-2">
-              <textarea
-                required
-                maxLength={1000}
-                rows={3}
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                className="w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 text-sm outline-none focus:border-ball"
-              />
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
-              >
-                Send
-              </button>
-            </form>
-          ) : (
-            <p className="mt-3 text-sm text-line/55">
-              {listingGoingIds(listing, rsvps).includes(user.id) ||
-              mine?.status === "interested" ||
-              isLockedSeat
-                ? "Chatten er lukket."
-                : "Svar Deltager eller Interesseret for at skrive."}
-            </p>
-          )}
+          <div className="mt-4">
+            <ChatThread
+              scrollKey={`${messages.length}:${messages[messages.length - 1]?.id ?? "empty"}`}
+              pin={pin}
+              footer={
+                chatOk ? (
+                  <ChatComposer
+                    id="listing-chat"
+                    value={body}
+                    onChange={setBody}
+                    onSubmit={() => void handleSend()}
+                    sending={saving}
+                  />
+                ) : (
+                  <p className="text-sm text-line/55">
+                    {listingGoingIds(listing, rsvps).includes(user.id) ||
+                    mine?.status === "interested" ||
+                    isLockedSeat
+                      ? "Chatten er lukket."
+                      : "Svar Deltager eller Interesseret for at skrive."}
+                  </p>
+                )
+              }
+            >
+              <ul className="space-y-3">
+                {messages.length === 0 ? (
+                  <li className="text-sm text-line/55">Ingen beskeder endnu.</li>
+                ) : (
+                  messages.map((message) => {
+                    const author = people.find((row) => row.id === message.author_id);
+                    return (
+                      <li
+                        key={message.id}
+                        className="rounded-2xl bg-court px-4 py-3 text-sm"
+                      >
+                        <p className="text-xs font-semibold text-line/55">
+                          {author ? fullName(author) : "Medlem"}
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </ChatThread>
+          </div>
         </section>
       </main>
     </SiteShell>
