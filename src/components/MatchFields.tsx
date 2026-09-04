@@ -110,7 +110,7 @@ export function SetScores({
         Færdigt sæt: mindst 6 partier og forskel. Sidste sæt må stå ufærdigt.
         Det tæller kun, hvis kampen ellers ville være uafgjort.
       </p>
-      <div className="overflow-x-auto rounded-2xl border border-line/10 bg-[#06110d] p-3">
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line/10 bg-court p-3">
         <div
           className="grid min-w-[18rem] items-center gap-2"
           style={{

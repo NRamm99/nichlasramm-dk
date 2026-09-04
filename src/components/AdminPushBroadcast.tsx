@@ -90,7 +90,7 @@ export function AdminPushBroadcast() {
   }
 
   return (
-    <section id="push" className="mt-10 rounded-3xl border border-line/10 bg-court-mid/80 p-6">
+    <section id="push" className="mt-10 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
         Beskeder
       </p>

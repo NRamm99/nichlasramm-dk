@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -62,9 +63,7 @@ export function PlayerMatches() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -76,7 +75,7 @@ export function PlayerMatches() {
   if (missing) {
     return (
       <SiteShell>
-        <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col justify-center px-6 pb-16">
+        <Page center>
           <h1 className="font-display text-5xl">Ikke fundet</h1>
           <p className="mt-2 text-sm text-line/65">
             Der findes ikke et medlem med det brugernavn.
@@ -84,7 +83,7 @@ export function PlayerMatches() {
           <Link to="/profil" className="mt-6 text-sm font-semibold text-ball">
             Tilbage til din profil
           </Link>
-        </main>
+        </Page>
       </SiteShell>
     );
   }
@@ -104,7 +103,7 @@ export function PlayerMatches() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
+      <Page>
         <Link
           to={profilePath(profile?.username)}
           className="text-sm font-semibold text-ball"
@@ -132,7 +131,7 @@ export function PlayerMatches() {
           empty="Ingen kampe registreret."
           resultFor={profile?.id}
         />
-      </main>
+      </Page>
     </SiteShell>
   );
 }

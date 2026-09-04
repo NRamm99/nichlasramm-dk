@@ -52,7 +52,7 @@ export function MatchScoreboard({
   }
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-line/10 bg-[#06110d] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <article className="overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid">
       <WinnerBanner
         winner={outcome.winner}
         unfinished={outcome.unfinished}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { PlayerPicker, SetScores } from "../components/MatchFields";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { teamName, type LeagueTeamPlayer } from "../lib/league";
@@ -207,9 +208,7 @@ export function MatchCreate() {
   if (loading) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -322,7 +321,7 @@ export function MatchCreate() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
+      <Page>
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {fixtureId ? "Liga" : listingId ? "Find kamp" : "Kampe"}
         </p>
@@ -356,7 +355,7 @@ export function MatchCreate() {
                   toDatetimeLocalValue(new Date(Date.now() - 60 * 60 * 1000)),
                 );
               }}
-              className="rounded-3xl border border-line/10 bg-court-mid/80 px-6 py-8 text-left transition hover:border-ball/40"
+              className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-6 py-8 text-left transition hover:border-ball/40"
             >
               <p className="font-display text-3xl tracking-wide">
                 Allerede spillet
@@ -375,7 +374,7 @@ export function MatchCreate() {
                   ),
                 );
               }}
-              className="rounded-3xl border border-line/10 bg-court-mid/80 px-6 py-8 text-left transition hover:border-ball/40"
+              className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-6 py-8 text-left transition hover:border-ball/40"
             >
               <p className="font-display text-3xl tracking-wide">Planlagt kamp</p>
               <p className="mt-2 text-sm text-line/65">
@@ -386,7 +385,7 @@ export function MatchCreate() {
         ) : (
           <form
             onSubmit={(event) => void handleSubmit(event)}
-            className="mt-8 space-y-6 rounded-3xl border border-line/10 bg-court-mid/80 p-6"
+            className="mt-8 space-y-6 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
           >
             <p className="text-sm text-line/70">
               {kind === "played" ? "Allerede spillet" : "Planlagt kamp"}
@@ -643,7 +642,7 @@ export function MatchCreate() {
             </button>
           </form>
         )}
-      </main>
+      </Page>
     </SiteShell>
   );
 }

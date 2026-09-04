@@ -1,16 +1,25 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { SiteShell } from "../components/SiteShell";
+import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
+import { LeaguePlace } from "../components/LeaguePlace";
+import { MemberAvatar, TeamAvatarStack } from "../components/MemberAvatar";
+import { PushNotifications } from "../components/PushNotifications";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { ListGroup, ListRow } from "../components/ui/ListGroup";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   fetchHomeDashboard,
-  remainingLeagueCopy,
   type HomeDashboard,
 } from "../lib/home";
-import { formatMatchWhen } from "../lib/match";
-import { PushNotifications } from "../components/PushNotifications";
-import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
+import {
+  formatNextMatchWhen,
+  teamPlayers,
+  type MatchPlayer,
+} from "../lib/match";
+import { shortDisplayName, type PartnerPreview } from "../lib/profile";
 import { setAppBadgeCount } from "../lib/appBadge";
 
 export function Landing() {
@@ -19,14 +28,9 @@ export function Landing() {
   return (
     <SiteShell>
       {loading ? (
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       ) : user ? (
-        <HomeDashboardView
-          userId={user.id}
-          username={username}
-        />
+        <HomeDashboardView userId={user.id} username={username} />
       ) : (
         <GuestLanding />
       )}
@@ -36,11 +40,9 @@ export function Landing() {
 
 function GuestLanding() {
   return (
-    <main className="flex min-h-[calc(100vh-5.5rem)] w-full max-w-full flex-col items-center justify-center px-6 pb-16 text-center">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-ball">
-        Lukket padelklub
-      </p>
-      <h1 className="max-w-full font-display text-[clamp(2.75rem,14vw,10rem)] leading-[0.85] tracking-[0.04em]">
+    <Page center className="text-center">
+      <p className="ui-label text-ball">Lukket padelklub</p>
+      <h1 className="mt-4 max-w-full font-display text-[clamp(2.75rem,14vw,10rem)] leading-[0.85] tracking-[0.04em]">
         Padel By Ramm
       </h1>
       <p className="mt-6 max-w-lg text-base text-line/75 sm:text-lg">
@@ -48,20 +50,14 @@ function GuestLanding() {
         medlem, eller opret en konto med en invitationskode.
       </p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-        <Link
-          to="/login"
-          className="rounded-full border border-line/25 px-8 py-3 text-sm font-semibold tracking-wide transition hover:border-ball hover:text-ball"
-        >
+        <Button variant="secondary" to="/login" className="px-8 py-3">
           Log ind
-        </Link>
-        <Link
-          to="/register"
-          className="rounded-full bg-ball px-8 py-3 text-sm font-semibold tracking-wide text-court transition hover:bg-line"
-        >
+        </Button>
+        <Button to="/register" className="px-8 py-3">
           Opret konto
-        </Link>
+        </Button>
       </div>
-    </main>
+    </Page>
   );
 }
 
@@ -106,19 +102,14 @@ function HomeDashboardView({
   }, [userId]);
 
   if (!data && !error) {
-    return (
-      <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-        Indlæser…
-      </main>
-    );
+    return <PageStatus>Indlæser…</PageStatus>;
   }
 
   const greeting = data?.firstName || username || "der";
-  const remaining = data?.remainingLeagueMatches ?? null;
   const leagueHint = !data
     ? undefined
-    : data.inLeague && remaining !== null
-      ? remainingLeagueCopy(remaining)
+    : data.inLeague
+      ? undefined
       : data.leagueInvites > 0
         ? data.leagueInvites === 1
           ? "1 anmodning venter"
@@ -128,12 +119,18 @@ function HomeDashboardView({
           : undefined;
   const ownNextMatch =
     data?.nextMatch && data.nextMatchIsOwn ? data.nextMatch : null;
+  const nextMatchPeople = data?.nextMatchPeople ?? new Map<string, PartnerPreview>();
+  const leagueTotal = data?.leagueTotal ?? 0;
+  const leaguePlayed = data?.leaguePlayed ?? 0;
+  const leagueProgress =
+    data?.inLeague && leagueTotal > 0 ? leaguePlayed / leagueTotal : 0;
 
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-4 pb-16 sm:px-6">
-      <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
+    <Page>
+      <h1 className="font-display text-4xl tracking-wide sm:text-5xl">
         Hej {greeting}
       </h1>
+      <p className="mt-1 text-sm text-line/55">Her er status på din klub</p>
       {error ? (
         <p className="mt-4 text-sm text-red-300" role="alert">
           {error}
@@ -141,135 +138,202 @@ function HomeDashboardView({
       ) : null}
 
       {data ? (
-        <div className="mt-6 empty:mt-0 empty:hidden">
-          <PushNotifications hideWhenEnabled />
+        <div className="mt-5 empty:mt-0 empty:hidden">
+          <PushNotifications hideWhenEnabled compact />
         </div>
       ) : null}
 
-      {data ? (
-        <nav aria-label="Hovedmenu" className="mt-6">
-          <ul className="space-y-2">
-            <NavRow
-              to="/nyt"
-              icon={<BellIcon />}
-              label="Nyt"
-              notify={data.unreadNotifications}
-            />
-            <NavRow
-              to="/liga"
-              icon={<LeagueIcon />}
-              label="Liga"
-              hint={leagueHint}
-              notify={data.unreadDialogs}
-            />
-          </ul>
-          <p className="mt-6 mb-2 px-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-line/40">
-            Kampe
-          </p>
-          <ul className="space-y-2">
-            {ownNextMatch ? (
-              <NavRow
-                to={`/kampe/${ownNextMatch.id}`}
-                icon={<CalendarIcon />}
-                label="Næste kamp"
-                hint={formatMatchWhen(ownNextMatch.played_at)}
+      <Card className="mt-6 p-5">
+        {ownNextMatch ? (
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ball">Næste kamp</p>
+              <p className="mt-2 font-display text-3xl tracking-wide sm:text-4xl">
+                {formatNextMatchWhen(ownNextMatch.played_at)}
+              </p>
+              <Button to={`/kampe/${ownNextMatch.id}`} block className="mt-4">
+                Se detaljer
+              </Button>
+            </div>
+            <div className="flex shrink-0 flex-col items-center gap-1">
+              <TeamAvatarStack
+                people={teamPlayers(ownNextMatch.players, 1).map((player) =>
+                  matchPlayerPreview(player, nextMatchPeople),
+                )}
               />
-            ) : null}
-            <NavRow
-              to="/kampe"
-              icon={<MatchesIcon />}
-              label="Se alle kampe"
-            />
-            <NavRow
-              to="/matchmaker"
-              icon={<SearchIcon />}
-              label="Find kamp"
-              hint="Opslag om at spille"
-            />
-            <NavRow to="/kampe/ny" icon={<PlusIcon />} label="Opret kamp" />
-          </ul>
-          <p className="mt-6 mb-2 px-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-line/40">
-            Klub
-          </p>
-          <ul className="space-y-2">
-            <NavRow
-              to="/beskeder"
-              icon={<ChatIcon />}
-              label="Beskeder"
-              notify={data.unreadMessages}
-            />
-            <NavRow
-              to="/medlemmer"
-              icon={<MembersIcon />}
-              label="Medlemsliste"
-            />
-            <NavRow to="/profil" icon={<ProfileIcon />} label="Min profil" />
-            {isAdmin ? (
-              <NavRow
-                to="/admin"
-                icon={<AdminIcon />}
-                label="Administration"
+              <p className="text-xs text-line/40">vs</p>
+              <TeamAvatarStack
+                people={teamPlayers(ownNextMatch.players, 2).map((player) =>
+                  matchPlayerPreview(player, nextMatchPeople),
+                )}
               />
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-ball">Næste kamp</p>
+            <p className="mt-2 text-sm text-line/55">
+              Ingen planlagt kamp i kalenderen.
+            </p>
+          </>
+        )}
+      </Card>
+
+      <Card className="mt-3 p-5">
+        <p className="text-sm font-semibold text-ball">Liga</p>
+        {data?.inLeague ? (
+          <>
+            {data.leagueTable.length > 0 ? (
+              <table className="mt-3 w-full text-left text-sm">
+                <tbody>
+                  {data.leagueTable.map((row) => (
+                    <tr
+                      key={row.teamId}
+                      className={`border-t border-line/10 first:border-t-0 ${
+                        row.mine ? "text-line" : "text-line/50"
+                      }`}
+                    >
+                      <td className="w-14 py-2.5 pr-2 align-middle">
+                        <LeaguePlace place={row.place} />
+                      </td>
+                      <td className="py-2.5 align-middle">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex shrink-0">
+                            {row.players.map((person, index) => (
+                              <span
+                                key={person.id}
+                                className={index > 0 ? "-ml-1.5" : undefined}
+                              >
+                                <MemberAvatar
+                                  person={person}
+                                  size="xs"
+                                  ring="court"
+                                />
+                              </span>
+                            ))}
+                          </div>
+                          <p
+                            className={`min-w-0 truncate ${
+                              row.mine ? "font-semibold" : ""
+                            }`}
+                          >
+                            {row.players
+                              .map((person) => shortDisplayName(person))
+                              .join(" / ") || "Ukendt hold"}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-2.5 pl-2 text-right align-middle font-display text-lg leading-none tabular-nums text-ball">
+                        {row.points}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="mt-2 text-sm text-line/55">Ingen hold i tabellen endnu.</p>
+            )}
+            {leagueTotal > 0 ? (
+              <>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-line/10">
+                  <div
+                    className="h-full rounded-full bg-ball"
+                    style={{ width: `${Math.round(leagueProgress * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-line/50">
+                  {leaguePlayed} af {leagueTotal} kampe
+                </p>
+              </>
             ) : null}
-          </ul>
-        </nav>
-      ) : null}
-    </main>
+            {data.unreadDialogs > 0 ? (
+              <p className="mt-2 text-xs text-line/50">
+                {data.unreadDialogs === 1
+                  ? "1 ulæst ligabesked"
+                  : `${data.unreadDialogs} ulæste ligabeskeder`}
+              </p>
+            ) : null}
+            <Button to="/liga" block className="mt-4">
+              Se ligaen
+            </Button>
+          </>
+        ) : (
+          <>
+            {leagueHint ? (
+              <p className="mt-2 text-sm text-line/55">{leagueHint}</p>
+            ) : null}
+            <Button to="/liga" block className={leagueHint ? "mt-4" : "mt-3"}>
+              Se ligaen
+            </Button>
+          </>
+        )}
+      </Card>
+
+      <p className="ui-label mt-8 mb-2 px-1">Kampe</p>
+      <ListGroup>
+        <ListRow
+          to="/kampe"
+          icon={<MatchesIcon />}
+          label="Se alle kampe"
+        />
+        <ListRow
+          to="/matchmaker"
+          icon={<SearchIcon />}
+          label="Find kamp"
+          hint="Opslag om at spille"
+        />
+        <ListRow to="/kampe/ny" icon={<PlusIcon />} label="Opret kamp" />
+      </ListGroup>
+
+      <p className="ui-label mt-8 mb-2 px-1">Klub</p>
+      <ListGroup>
+        <ListRow
+          to="/beskeder"
+          icon={<ChatBubbleIcon className="h-5 w-5" />}
+          label="Beskeder"
+          badge={data?.unreadMessages}
+        />
+        <ListRow
+          to="/medlemmer"
+          icon={<MembersIcon />}
+          label="Medlemsliste"
+        />
+        <ListRow
+          to="/nyt"
+          icon={<BellIcon />}
+          label="Nyt"
+          badge={data?.unreadNotifications}
+        />
+        {isAdmin ? (
+          <ListRow to="/admin" icon={<AdminIcon />} label="Administration" />
+        ) : null}
+      </ListGroup>
+    </Page>
   );
 }
 
-function NavRow({
-  to,
-  icon,
-  label,
-  hint,
-  badge,
-  notify = 0,
-}: {
-  to: string;
-  icon: ReactNode;
-  label: string;
-  hint?: string;
-  badge?: number | null;
-  notify?: number;
-}) {
-  return (
-    <li>
-      <Link
-        to={to}
-        className="flex min-h-14 items-center gap-3 rounded-2xl border border-line/10 bg-court-mid px-3 py-3 touch-manipulation transition hover:border-ball/40 sm:min-h-16 sm:px-4"
-      >
-        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-court text-ball">
-          {icon}
-          {notify > 0 ? (
-            <span
-              className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-ball px-1 text-[0.65rem] font-bold text-court"
-              aria-label={
-                notify === 1 ? "1 ny besked" : `${notify} nye beskeder`
-              }
-            >
-              {notify > 9 ? "9+" : notify}
-            </span>
-          ) : null}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-base font-semibold leading-tight">
-            {label}
-          </span>
-          {hint ? (
-            <span className="mt-0.5 block truncate text-sm text-line/60">
-              {hint}
-            </span>
-          ) : null}
-        </span>
-        {badge != null ? (
-          <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-ball px-2 text-sm font-bold text-court">
-            {badge}
-          </span>
-        ) : null}
-      </Link>
-    </li>
-  );
+function matchPlayerPreview(
+  player: MatchPlayer,
+  people: Map<string, PartnerPreview>,
+): PartnerPreview {
+  if (player.profile_id) {
+    const person = people.get(player.profile_id);
+    if (person) return person;
+    return {
+      id: player.profile_id,
+      username: null,
+      first_name: player.display_name,
+      last_name: null,
+      avatar_url: null,
+    };
+  }
+  return {
+    id: player.id,
+    username: null,
+    first_name: player.guest_name ?? player.display_name,
+    last_name: null,
+    avatar_url: null,
+  };
 }
 
 function iconClass() {
@@ -294,10 +358,6 @@ function BellIcon() {
   );
 }
 
-function ChatIcon() {
-  return <ChatBubbleIcon className={iconClass()} />;
-}
-
 function SearchIcon() {
   return (
     <svg
@@ -311,46 +371,6 @@ function SearchIcon() {
     >
       <circle cx="11" cy="11" r="6" />
       <path d="M16 16.5 20 20.5" />
-    </svg>
-  );
-}
-
-function LeagueIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 4h8v3a4 4 0 0 1-8 0V4Z" />
-      <path d="M12 11v3" />
-      <path d="M7 21h10" />
-      <path d="M9 21v-4a3 3 0 0 1 6 0v4" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
-      <path d="M8 3.5v3" />
-      <path d="M16 3.5v3" />
-      <path d="M3.5 10h17" />
     </svg>
   );
 }
@@ -406,24 +426,6 @@ function MembersIcon() {
       <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
       <circle cx="17" cy="9" r="2.4" />
       <path d="M20.5 19a4.5 4.5 0 0 0-6-4.2" />
-    </svg>
-  );
-}
-
-function ProfileIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="8" r="3.2" />
-      <path d="M5 19.5a7 7 0 0 1 14 0" />
     </svg>
   );
 }

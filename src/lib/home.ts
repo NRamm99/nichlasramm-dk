@@ -1,11 +1,15 @@
 import {
   fetchLatestLeague,
   fixtureHasUnread,
+  leagueStandings,
+  leagueStandingsWindow,
   type LeagueFixture,
+  type LeagueTeam,
   type LeagueTeamPlayer,
 } from "./league";
 import {
   MATCH_SELECT,
+  fetchDisputedMatchIds,
   type MatchCard,
   type MatchPlayer,
   type MatchRow,
@@ -13,14 +17,29 @@ import {
 } from "./match";
 import { fetchUnreadNotificationCount } from "./matchmaker";
 import { fetchUnreadDirectCount } from "./messages";
+import { fetchMembersByIds, type PartnerPreview } from "./profile";
 import { supabase } from "./supabase";
+
+export type HomeLeagueTableRow = {
+  place: number;
+  teamId: string;
+  points: number;
+  mine: boolean;
+  players: PartnerPreview[];
+};
 
 export type HomeDashboard = {
   firstName: string | null;
   unreadDialogs: number;
   nextMatch: MatchCard | null;
   nextMatchIsOwn: boolean;
+  nextMatchPeople: Map<string, PartnerPreview>;
   remainingLeagueMatches: number | null;
+  leaguePlace: number | null;
+  leaguePoints: number | null;
+  leagueTable: HomeLeagueTableRow[];
+  leaguePlayed: number | null;
+  leagueTotal: number | null;
   inLeague: boolean;
   signupOpen: boolean;
   leagueInvites: number;
@@ -117,35 +136,47 @@ export async function fetchHomeDashboard(
     fetchUnreadDirectCount(),
   ]);
 
-  const empty: HomeDashboard = {
+  const nextMatchPeoplePromise = fetchMembersByIds(
+    (next.match?.players ?? []).map((player) => player.profile_id),
+  );
+
+  const empty = (nextMatchPeople: Map<string, PartnerPreview>): HomeDashboard => ({
     firstName: profile?.first_name ?? null,
     unreadDialogs: 0,
     nextMatch: next.match,
     nextMatchIsOwn: next.isOwn,
+    nextMatchPeople,
     remainingLeagueMatches: null,
+    leaguePlace: null,
+    leaguePoints: null,
+    leagueTable: [],
+    leaguePlayed: null,
+    leagueTotal: null,
     inLeague: false,
     signupOpen: false,
     leagueInvites: 0,
     unreadNotifications,
     unreadMessages,
-  };
+  });
 
-  if (!league) return empty;
+  if (!league) return empty(await nextMatchPeoplePromise);
 
   const signupOpen =
     new Date(league.signup_deadline).getTime() >= Date.now();
 
-  const [{ data: rosterRows }, { data: fixtureRows }] = await Promise.all([
-    supabase
-      .from("league_team_players")
-      .select("team_id, profile_id")
-      .eq("league_id", league.id),
-    supabase.from("league_fixtures").select("*").eq("league_id", league.id),
-  ]);
+  const [{ data: rosterRows }, { data: fixtureRows }, nextMatchPeople] =
+    await Promise.all([
+      supabase
+        .from("league_team_players")
+        .select("team_id, profile_id, slot")
+        .eq("league_id", league.id),
+      supabase.from("league_fixtures").select("*").eq("league_id", league.id),
+      nextMatchPeoplePromise,
+    ]);
 
   const roster = (rosterRows ?? []) as Pick<
     LeagueTeamPlayer,
-    "team_id" | "profile_id"
+    "team_id" | "profile_id" | "slot"
   >[];
   const myTeamId = roster.find((row) => row.profile_id === userId)?.team_id;
   if (!myTeamId) {
@@ -155,7 +186,7 @@ export async function fetchHomeDashboard(
       .eq("league_id", league.id)
       .eq("recipient_id", userId);
     return {
-      ...empty,
+      ...empty(nextMatchPeople),
       signupOpen,
       leagueInvites: inviteRows?.length ?? 0,
     };
@@ -166,26 +197,76 @@ export async function fetchHomeDashboard(
     (row) => row.team_a_id === myTeamId || row.team_b_id === myTeamId,
   );
 
-  const matchIds = myFixtures
+  const matchIds = fixtures
     .map((row) => row.match_id)
     .filter((id): id is string => Boolean(id));
 
   const matchStatus = new Map<string, "scheduled" | "played">();
   const setsByMatch = new Map<string, MatchSet[]>();
-  if (matchIds.length > 0) {
-    const [{ data: matchRows }, { data: setRows }] = await Promise.all([
-      supabase.from("matches").select("id, status").in("id", matchIds),
-      supabase.from("match_sets").select("*").in("match_id", matchIds),
-    ]);
+  let matchPlayers: MatchPlayer[] = [];
+  let disputedMatchIds = new Set<string>();
+  const matchLoad =
+    matchIds.length > 0
+      ? Promise.all([
+          supabase.from("matches").select("id, status").in("id", matchIds),
+          supabase.from("match_players").select("*").in("match_id", matchIds),
+          supabase.from("match_sets").select("*").in("match_id", matchIds),
+          fetchDisputedMatchIds(matchIds),
+        ])
+      : Promise.resolve(null);
+  const [matchBundle, people] = await Promise.all([
+    matchLoad,
+    fetchMembersByIds(roster.map((row) => row.profile_id)),
+  ]);
+  if (matchBundle) {
+    const [{ data: matchRows }, { data: playerRows }, { data: setRows }, disputed] =
+      matchBundle;
     for (const row of (matchRows ?? []) as Pick<MatchRow, "id" | "status">[]) {
       matchStatus.set(row.id, row.status);
     }
+    matchPlayers = (playerRows ?? []) as MatchPlayer[];
     for (const row of (setRows ?? []) as MatchSet[]) {
       const list = setsByMatch.get(row.match_id) ?? [];
       list.push(row);
       setsByMatch.set(row.match_id, list);
     }
+    disputedMatchIds = disputed;
   }
+
+  const teams: LeagueTeam[] = [...new Set(roster.map((row) => row.team_id))].map(
+    (teamId) => ({
+      id: teamId,
+      league_id: league.id,
+      created_at: "",
+      created_by: null,
+      players: roster
+        .filter((row) => row.team_id === teamId)
+        .sort((a, b) => a.slot - b.slot)
+        .map((row) => people.get(row.profile_id))
+        .filter((person): person is PartnerPreview => Boolean(person)),
+    }),
+  );
+  const teamsById = new Map(teams.map((team) => [team.id, team]));
+  const standings = leagueStandings(
+    teams,
+    fixtures,
+    matchPlayers,
+    setsByMatch,
+    matchStatus,
+    disputedMatchIds,
+  );
+  const standingIndex = standings.findIndex((row) => row.teamId === myTeamId);
+  const leaguePlace = standingIndex >= 0 ? standingIndex + 1 : null;
+  const leaguePoints =
+    standingIndex >= 0 ? standings[standingIndex].points : null;
+  const window = leagueStandingsWindow(standings, myTeamId);
+  const leagueTable = window.rows.map((row, offset) => ({
+    place: window.start + offset + 1,
+    teamId: row.teamId,
+    points: row.points,
+    mine: row.teamId === myTeamId,
+    players: teamsById.get(row.teamId)?.players ?? [],
+  }));
 
   const remainingLeagueMatches = myFixtures.filter(
     (fixture) => !fixtureIsDone(fixture, matchStatus, setsByMatch),
@@ -226,7 +307,13 @@ export async function fetchHomeDashboard(
     unreadDialogs,
     nextMatch: next.match,
     nextMatchIsOwn: next.isOwn,
+    nextMatchPeople,
     remainingLeagueMatches,
+    leaguePlace,
+    leaguePoints,
+    leagueTable,
+    leaguePlayed: myFixtures.length - remainingLeagueMatches,
+    leagueTotal: myFixtures.length,
     inLeague: true,
     signupOpen,
     leagueInvites: 0,

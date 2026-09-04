@@ -4,6 +4,7 @@ import {
   type ReactNode,
   type UIEvent,
 } from "react";
+import { Button } from "./ui/Button";
 
 export function ChatThread({
   header,
@@ -54,7 +55,13 @@ export function ChatThread({
       >
         {children}
       </div>
-      <div className="shrink-0 border-t border-line/10 bg-court/95 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div
+        className={`shrink-0 border-t border-line/10 pt-3 ${
+          fill
+            ? "bg-court/95 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            : "pb-0"
+        }`}
+      >
         {footer}
       </div>
     </div>
@@ -104,15 +111,15 @@ export function ChatComposer({
             if (!disabled && !sending && value.trim()) onSubmit();
           }
         }}
-        className="max-h-28 min-h-11 w-full flex-1 resize-none rounded-2xl border border-line/15 bg-court-mid px-4 py-2.5 text-base outline-none focus:border-ball disabled:opacity-60"
+        className="max-h-28 min-h-11 w-full flex-1 resize-none appearance-none rounded-2xl border border-line/15 bg-court px-4 py-2.5 text-base shadow-none outline-none focus:border-ball disabled:opacity-60"
       />
-      <button
+      <Button
         type="submit"
         disabled={disabled || sending || !value.trim()}
-        className="shrink-0 rounded-full bg-ball px-4 py-2.5 text-sm font-semibold text-court disabled:opacity-60"
+        className="shrink-0 px-4 shadow-none"
       >
         {sending ? "…" : "Send"}
-      </button>
+      </Button>
     </form>
   );
 }

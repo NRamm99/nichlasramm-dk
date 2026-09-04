@@ -419,6 +419,26 @@ export function formatMatchWhen(value: string) {
   }).format(new Date(value));
 }
 
+function isSameLocalDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+export function formatNextMatchWhen(value: string) {
+  const date = new Date(value);
+  const time = new Intl.DateTimeFormat("da-DK", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+  if (isSameLocalDay(date, new Date())) {
+    return `I dag, ${time}`;
+  }
+  return formatMatchWhen(value);
+}
+
 export function toDatetimeLocalValue(date: Date) {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;

@@ -50,7 +50,7 @@ export function MatchList({
           <li key={row.id}>
             <Link
               to={`/kampe/${row.id}`}
-              className={`block rounded-2xl border bg-court-mid px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition ${
+              className={`block rounded-2xl border bg-court-mid px-5 py-4 transition ${
                 isOwn
                   ? "border-ball/35 hover:border-ball/55"
                   : isLeagueMatch(row)
@@ -79,7 +79,7 @@ export function MatchList({
                     Du spiller
                   </p>
                 ) : row.disputed ? (
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-amber-200/90">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
                     Uenighed
                   </p>
                 ) : result ? (
@@ -116,7 +116,7 @@ export function MatchList({
                 </p>
               )}
               {row.disputed && isOwn ? (
-                <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-amber-200/90">
+                <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
                   Uenighed om resultatet
                 </p>
               ) : null}

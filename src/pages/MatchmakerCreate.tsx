@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fullName, type PartnerPreview } from "../lib/profile";
@@ -58,9 +59,7 @@ export function MatchmakerCreate() {
   if (loading) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -97,7 +96,7 @@ export function MatchmakerCreate() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-4 pb-16 sm:px-6">
+      <Page>
         <h1 className="font-display text-5xl tracking-wide">Ny annonce</h1>
         <Link to="/matchmaker" className="mt-2 text-sm font-semibold text-ball">
           Tilbage til find kamp
@@ -199,7 +198,7 @@ export function MatchmakerCreate() {
             {saving ? "Opretter…" : "Opret annonce"}
           </button>
         </form>
-      </main>
+      </Page>
     </SiteShell>
   );
 }

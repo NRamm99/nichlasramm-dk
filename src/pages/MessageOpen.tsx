@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
+import { Page } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { openDirectThread, threadPath } from "../lib/messages";
@@ -47,7 +48,7 @@ export function MessageOpen() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col justify-center px-6 pb-16">
+      <Page center>
         {error ? (
           <>
             <h1 className="font-display text-5xl">Besked</h1>
@@ -61,7 +62,7 @@ export function MessageOpen() {
         ) : (
           <p className="text-sm text-line/60">Åbner samtale…</p>
         )}
-      </main>
+      </Page>
     </SiteShell>
   );
 }

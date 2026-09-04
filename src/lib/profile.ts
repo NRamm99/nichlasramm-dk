@@ -42,6 +42,17 @@ export function fullName(person: {
   return "Ukendt";
 }
 
+export function shortDisplayName(person: {
+  first_name: string | null;
+  last_name: string | null;
+  username?: string | null;
+}) {
+  const first = person.first_name?.trim();
+  const last = person.last_name?.trim();
+  if (first && last) return `${first[0].toUpperCase()}. ${last}`;
+  return fullName(person);
+}
+
 export function profilePath(username: string | null | undefined) {
   if (!username) return "/profil";
   return `/profil/${encodeURIComponent(username)}`;

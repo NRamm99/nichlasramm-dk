@@ -4,6 +4,7 @@ import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -253,9 +254,7 @@ export function League() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -453,13 +452,8 @@ export function League() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-          Sæson
-        </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">
-          {league?.name ?? "Liga"}
-        </h1>
+      <Page>
+        <PageHeader eyebrow="Sæson" title={league?.name ?? "Liga"} />
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}
@@ -474,7 +468,7 @@ export function League() {
         {isAdmin && !league ? (
           <form
             onSubmit={(event) => void handleCreate(event)}
-            className="mt-8 space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6"
+            className="mt-8 space-y-4 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
           >
             <h2 className="font-display text-3xl tracking-wide">Opret liga</h2>
             <label className="block text-sm">
@@ -527,7 +521,7 @@ export function League() {
 
         {league ? (
           <>
-            <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid p-6">
+            <section className="mt-8 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
               <p className="text-sm text-line/70">
                 {formatLeagueDay(league.starts_on)} –{" "}
                 {formatLeagueDay(league.ends_on)}
@@ -550,7 +544,7 @@ export function League() {
             </section>
 
             {isAdmin ? (
-              <section className="mt-8 space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6">
+              <section className="mt-8 space-y-4 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
                 <h2 className="font-display text-3xl tracking-wide">
                   Liga-admin
                 </h2>
@@ -747,7 +741,7 @@ export function League() {
             {!myTeam && signupOpen ? (
               <div className="mt-8 space-y-4">
                 {incomingJoins.length > 0 ? (
-                  <section className="space-y-3 rounded-3xl border border-ball/30 bg-court-mid p-6">
+                  <section className="space-y-3 rounded-[var(--radius-card)] border border-ball/30 bg-court-mid p-6">
                     <h2 className="font-display text-3xl tracking-wide">
                       Anmodninger til dig
                     </h2>
@@ -798,7 +792,7 @@ export function League() {
                 ) : null}
 
                 {outgoingJoin ? (
-                  <section className="rounded-3xl border border-line/10 bg-court-mid p-6">
+                  <section className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
                     <h2 className="font-display text-3xl tracking-wide">
                       Afventer svar
                     </h2>
@@ -820,7 +814,7 @@ export function League() {
                 ) : (
                   <form
                     onSubmit={(event) => void handleJoin(event)}
-                    className="space-y-4 rounded-3xl border border-line/10 bg-court-mid p-6"
+                    className="space-y-4 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
                   >
                     <h2 className="font-display text-3xl tracking-wide">
                       Tilmeld
@@ -980,7 +974,7 @@ export function League() {
             Der er ikke oprettet en liga endnu.
           </p>
         ) : null}
-      </main>
+      </Page>
     </SiteShell>
   );
 }
@@ -1097,7 +1091,7 @@ function FixtureDialog({
         </div>
         <p
           className={`text-[0.65rem] font-semibold uppercase tracking-[0.16em] ${
-            hasDispute ? "text-amber-200/90" : done ? "text-ball" : "text-line/45"
+            hasDispute ? "text-red-300" : done ? "text-ball" : "text-line/45"
           }`}
         >
           {hasDispute

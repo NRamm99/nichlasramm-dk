@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { AdminPushBroadcast } from "../components/AdminPushBroadcast";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { supabase } from "../lib/supabase";
@@ -104,9 +105,7 @@ export function Admin() {
   if (loading) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -290,7 +289,7 @@ export function Admin() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-3xl flex-col px-6 pb-16">
+      <Page className="max-w-3xl">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Administration
         </p>
@@ -302,7 +301,7 @@ export function Admin() {
         </p>
 
         {!isAdmin ? (
-          <section className="mt-10 rounded-3xl border border-line/10 bg-court-mid/80 p-8">
+          <section className="mt-10 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-8">
             <p className="text-sm text-line/75">
               Der er endnu ikke sat en administrator. Hvis det er din klub, kan
               du overtage rollen her — kun den første kan gøre det.
@@ -635,7 +634,7 @@ export function Admin() {
             </AdminFold>
           </>
         )}
-      </main>
+      </Page>
     </SiteShell>
   );
 }

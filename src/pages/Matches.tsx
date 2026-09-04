@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
+import { Button } from "../components/ui/Button";
+import { Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -74,9 +76,7 @@ export function Matches() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -95,21 +95,18 @@ export function Matches() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
-        <h1 className="font-display text-6xl tracking-wide">Kampe</h1>
-        <Link
-          to="/kampe/ny"
-          className="mt-6 w-fit rounded-full bg-ball px-6 py-3 text-sm font-semibold text-court"
-        >
+      <Page>
+        <PageHeader title="Kampe" />
+        <Button to="/kampe/ny" className="mt-6 w-fit">
           Opret kamp
-        </Link>
+        </Button>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}
           </p>
         ) : null}
 
-        <h2 className="mt-10 font-display text-3xl tracking-wide">Kommende</h2>
+        <h2 className="mt-10 font-display text-2xl tracking-wide">Kommende</h2>
         <MatchList
           rows={upcoming}
           empty="Ingen planlagte kampe."
@@ -117,9 +114,9 @@ export function Matches() {
           highlightOwn
         />
 
-        <h2 className="mt-10 font-display text-3xl tracking-wide">Spillet</h2>
+        <h2 className="mt-10 font-display text-2xl tracking-wide">Spillet</h2>
         <MatchList rows={played} empty="Ingen registrerede resultater endnu." />
-      </main>
+      </Page>
     </SiteShell>
   );
 }

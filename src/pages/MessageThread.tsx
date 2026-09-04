@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
+import { Page } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -88,7 +89,7 @@ export function MessageThread() {
   if (missing || !threadId) {
     return (
       <SiteShell>
-        <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col justify-center px-6 pb-16">
+        <Page center>
           <h1 className="font-display text-5xl">Ikke fundet</h1>
           <p className="mt-2 text-sm text-line/65">
             Samtalen findes ikke, eller du har ikke adgang.
@@ -96,7 +97,7 @@ export function MessageThread() {
           <Link to="/beskeder" className="mt-6 text-sm font-semibold text-ball">
             Tilbage til beskeder
           </Link>
-        </main>
+        </Page>
       </SiteShell>
     );
   }

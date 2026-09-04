@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -106,9 +107,7 @@ export function MatchmakerList() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -131,7 +130,7 @@ export function MatchmakerList() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-4 pb-16 sm:px-6">
+      <Page>
         <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
           Find kamp
         </h1>
@@ -244,7 +243,7 @@ export function MatchmakerList() {
             })
           )}
         </ul>
-      </main>
+      </Page>
     </SiteShell>
   );
 }

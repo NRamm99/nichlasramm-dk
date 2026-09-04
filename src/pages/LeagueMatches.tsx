@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fetchLatestLeague } from "../lib/league";
@@ -92,9 +93,7 @@ export function LeagueMatches() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -104,12 +103,12 @@ export function LeagueMatches() {
   if (missing) {
     return (
       <SiteShell>
-        <main className="mx-auto max-w-xl px-6 pb-16">
+        <Page>
           <h1 className="font-display text-5xl">Ingen liga</h1>
           <Link to="/liga" className="mt-4 inline-block text-sm font-semibold text-ball">
             Tilbage til liga
           </Link>
-        </main>
+        </Page>
       </SiteShell>
     );
   }
@@ -129,7 +128,7 @@ export function LeagueMatches() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
+      <Page>
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {title}
         </p>
@@ -156,7 +155,7 @@ export function LeagueMatches() {
           rows={played}
           empty="Ingen spillede ligakampe i sæsonen endnu."
         />
-      </main>
+      </Page>
     </SiteShell>
   );
 }

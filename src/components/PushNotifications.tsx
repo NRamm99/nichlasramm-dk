@@ -9,11 +9,15 @@ import {
   pushSupported,
   syncPushSubscription,
 } from "../lib/push";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 
 export function PushNotifications({
   hideWhenEnabled = false,
+  compact = false,
 }: {
   hideWhenEnabled?: boolean;
+  compact?: boolean;
 }) {
   const [enabled, setEnabled] = useState(false);
   const [ready, setReady] = useState(false);
@@ -72,10 +76,8 @@ export function PushNotifications({
   if (hideWhenEnabled && enabled && !error) return null;
 
   return (
-    <div className="rounded-2xl border border-line/10 bg-court px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-        Push-beskeder
-      </p>
+    <Card className={compact ? "px-4 py-3" : "px-4 py-4"}>
+      <p className="ui-label">Push-beskeder</p>
       {iosNeedsInstall ? (
         <p className="mt-2 text-sm text-line/70">
           På iPhone: Del → Føj til hjemmeskærm. Åbn appen derfra, og slå
@@ -87,21 +89,23 @@ export function PushNotifications({
         </p>
       ) : (
         <>
-          <p className="mt-2 text-sm text-line/70">
-            Få besked, når der sker noget i klubben — også når appen er lukket.
-          </p>
-          <button
-            type="button"
+          {compact ? null : (
+            <p className="mt-2 text-sm text-line/70">
+              Få besked, når der sker noget i klubben — også når appen er lukket.
+            </p>
+          )}
+          <Button
+            variant={enabled ? "secondary" : compact ? "secondary" : "primary"}
             disabled={busy}
+            className="mt-3 text-xs"
             onClick={() => void (enabled ? turnOff() : turnOn())}
-            className="mt-3 rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
           >
             {busy
               ? "Vent…"
               : enabled
                 ? "Slå beskeder fra"
                 : "Slå beskeder til"}
-          </button>
+          </Button>
         </>
       )}
       {error ? (
@@ -109,6 +113,6 @@ export function PushNotifications({
           {error}
         </p>
       ) : null}
-    </div>
+    </Card>
   );
 }

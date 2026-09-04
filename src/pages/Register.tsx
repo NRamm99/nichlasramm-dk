@@ -5,6 +5,10 @@ import { danishAuthError, normalizeInviteCode } from "../lib/authErrors";
 import { isValidUsername, normalizeUsername } from "../lib/username";
 import { supabase } from "../lib/supabase";
 import { SiteShell } from "../components/SiteShell";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { fieldClass } from "../components/ui/Field";
+import { Page } from "../components/ui/Page";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
@@ -137,16 +141,12 @@ export function Register() {
 
   return (
     <SiteShell>
-      <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 pb-16">
-        <form
-          onSubmit={(event) => void handleSubmit(event)}
-          className="w-full max-w-md rounded-3xl border border-line/10 bg-court-mid/80 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur sm:p-8"
-        >
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-            Lukket klub
-          </p>
-          <h1 className="mt-2 font-display text-5xl tracking-wide">Opret konto</h1>
-          <p className="mt-2 text-sm text-line/65">
+      <Page center>
+        <form onSubmit={(event) => void handleSubmit(event)} className="w-full max-w-md">
+          <Card className="p-6 sm:p-8">
+          <p className="ui-label">Lukket klub</p>
+          <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl">Opret konto</h1>
+          <p className="mt-2 text-sm text-line/55">
             Du skal bruge en invitationskode. Vælg et brugernavn. Navn og
             billede vises til administratoren.
           </p>
@@ -161,7 +161,7 @@ export function Register() {
               value={inviteCode}
               onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
               placeholder="PBR-XXXXXXXX"
-              className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 tracking-[0.12em] text-line outline-none transition focus:border-ball"
+              className={fieldClass("tracking-[0.12em]")}
             />
           </label>
 
@@ -174,7 +174,7 @@ export function Register() {
                 autoComplete="given-name"
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 text-line outline-none transition focus:border-ball"
+                className={fieldClass()}
               />
             </label>
             <label className="block text-left text-sm font-medium text-line/80">
@@ -185,7 +185,7 @@ export function Register() {
                 autoComplete="family-name"
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 text-line outline-none transition focus:border-ball"
+                className={fieldClass()}
               />
             </label>
           </div>
@@ -220,7 +220,7 @@ export function Register() {
               spellCheck={false}
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 text-line outline-none transition focus:border-ball"
+              className={fieldClass()}
             />
           </label>
 
@@ -232,7 +232,7 @@ export function Register() {
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 text-line outline-none transition focus:border-ball"
+              className={fieldClass()}
             />
           </label>
 
@@ -244,7 +244,7 @@ export function Register() {
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 text-line outline-none transition focus:border-ball"
+              className={fieldClass()}
             />
           </label>
 
@@ -254,13 +254,9 @@ export function Register() {
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-8 w-full rounded-full bg-ball py-3 text-sm font-semibold text-court transition hover:bg-line disabled:opacity-60"
-          >
+          <Button type="submit" disabled={submitting} block className="mt-8 py-3">
             {submitting ? "Opretter konto…" : "Opret konto"}
-          </button>
+          </Button>
 
           <p className="mt-6 text-center text-sm text-line/60">
             Allerede medlem?{" "}
@@ -268,8 +264,9 @@ export function Register() {
               Log ind
             </Link>
           </p>
+          </Card>
         </form>
-      </main>
+      </Page>
     </SiteShell>
   );
 }

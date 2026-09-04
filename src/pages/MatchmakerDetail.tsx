@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -21,6 +22,7 @@ import {
   type MatchmakerRsvpStatus,
 } from "../lib/matchmaker";
 import { fetchMembersByIds, fullName, type PartnerPreview } from "../lib/profile";
+import { formatMatchWhen } from "../lib/match";
 import { supabase } from "../lib/supabase";
 
 export function MatchmakerDetail() {
@@ -84,9 +86,7 @@ export function MatchmakerDetail() {
   if (loading) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -95,21 +95,19 @@ export function MatchmakerDetail() {
   if (missing) {
     return (
       <SiteShell>
-        <main className="mx-auto max-w-xl px-6 py-16">
+        <Page>
           <h1 className="font-display text-5xl">Ikke fundet</h1>
           <Link to="/matchmaker" className="mt-4 inline-block text-sm font-semibold text-ball">
             Tilbage
           </Link>
-        </main>
+        </Page>
       </SiteShell>
     );
   }
   if (!listing) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -195,7 +193,7 @@ export function MatchmakerDetail() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-4 pb-16 sm:px-6">
+      <Page>
         <Link to="/matchmaker" className="text-sm font-semibold text-ball">
           Find kamp
         </Link>
@@ -355,7 +353,7 @@ export function MatchmakerDetail() {
           </button>
         ) : null}
 
-        <section className="mt-10">
+        <section className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
           <h2 className="font-display text-3xl tracking-wide">Chat</h2>
           <div className="mt-4">
             <ChatThread
@@ -369,9 +367,10 @@ export function MatchmakerDetail() {
                     onChange={setBody}
                     onSubmit={() => void handleSend()}
                     sending={saving}
+                    placeholder="Skriv til de andre…"
                   />
                 ) : (
-                  <p className="text-sm text-line/55">
+                  <p className="text-xs text-line/50">
                     {listingGoingIds(listing, rsvps).includes(user.id) ||
                     mine?.status === "interested" ||
                     isLockedSeat
@@ -383,19 +382,22 @@ export function MatchmakerDetail() {
             >
               <ul className="space-y-3">
                 {messages.length === 0 ? (
-                  <li className="text-sm text-line/55">Ingen beskeder endnu.</li>
+                  <li className="text-sm text-line/60">Ingen beskeder endnu.</li>
                 ) : (
                   messages.map((message) => {
                     const author = people.find((row) => row.id === message.author_id);
                     return (
                       <li
                         key={message.id}
-                        className="rounded-2xl bg-court px-4 py-3 text-sm"
+                        className="rounded-2xl bg-court/60 px-4 py-3"
                       >
-                        <p className="text-xs font-semibold text-line/55">
-                          {author ? fullName(author) : "Medlem"}
+                        <p className="text-xs text-line/50">
+                          {author ? fullName(author) : "Medlem"} ·{" "}
+                          {formatMatchWhen(message.created_at)}
                         </p>
-                        <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
+                        <p className="mt-1 text-sm text-line/85 whitespace-pre-wrap">
+                          {message.body}
+                        </p>
                       </li>
                     );
                   })
@@ -404,7 +406,7 @@ export function MatchmakerDetail() {
             </ChatThread>
           </div>
         </section>
-      </main>
+      </Page>
     </SiteShell>
   );
 }

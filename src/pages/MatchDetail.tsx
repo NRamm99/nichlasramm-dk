@@ -4,6 +4,7 @@ import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -164,9 +165,7 @@ export function MatchDetail() {
   if (loading) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -178,12 +177,12 @@ export function MatchDetail() {
   if (missing) {
     return (
       <SiteShell>
-        <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col justify-center px-6 pb-16">
+        <Page center>
           <h1 className="font-display text-5xl">Kampen findes ikke</h1>
           <Link to="/kampe" className="mt-6 text-sm font-semibold text-ball">
             Tilbage til kampe
           </Link>
-        </main>
+        </Page>
       </SiteShell>
     );
   }
@@ -432,7 +431,7 @@ export function MatchDetail() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-2xl flex-col px-6 pb-16">
+      <Page className="max-w-2xl">
         <Link to="/kampe" className="text-sm font-semibold text-ball">
           Tilbage til kampe
         </Link>
@@ -469,8 +468,8 @@ export function MatchDetail() {
               usernames={usernames}
             />
             {correction ? (
-              <div className="mt-4 rounded-3xl border border-amber-200/30 bg-amber-200/5 p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/90">
+              <div className="mt-4 rounded-[var(--radius-card)] border border-red-400/30 bg-red-400/5 p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
                   Uenighed om kampen
                 </p>
                 <p className="mt-2 text-sm text-line/75">
@@ -537,7 +536,7 @@ export function MatchDetail() {
                 {editingResult ? (
                   <form
                     onSubmit={(event) => void handlePropose(event)}
-                    className="rounded-3xl border border-line/10 bg-court-mid/80 p-6"
+                    className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
                   >
                     <h2 className="font-display text-3xl tracking-wide">
                       Ret kamp
@@ -623,8 +622,8 @@ export function MatchDetail() {
             </section>
 
             {correction ? (
-              <div className="mt-4 rounded-3xl border border-amber-200/30 bg-amber-200/5 p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/90">
+              <div className="mt-4 rounded-[var(--radius-card)] border border-red-400/30 bg-red-400/5 p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
                   Uenighed om kampen
                 </p>
                 <p className="mt-2 text-sm text-line/75">
@@ -684,7 +683,7 @@ export function MatchDetail() {
                 {editingRoster ? (
                   <form
                     onSubmit={(event) => void handleProposeRoster(event)}
-                    className="rounded-3xl border border-line/10 bg-court-mid/80 p-6"
+                    className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
                   >
                     <h2 className="font-display text-3xl tracking-wide">
                       Ret spillere
@@ -732,7 +731,7 @@ export function MatchDetail() {
               </div>
             ) : null}
 
-            <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-6">
+            <section className="mt-8 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
               <h2 className="font-display text-3xl tracking-wide">Resultat</h2>
               {isPlayer ? (
                 <form
@@ -765,7 +764,7 @@ export function MatchDetail() {
           </>
         )}
 
-        <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-6">
+        <section className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
           <h2 className="font-display text-3xl tracking-wide">Kommentarer</h2>
           <div className="mt-4">
             <ChatThread
@@ -819,7 +818,7 @@ export function MatchDetail() {
             </button>
           </div>
         ) : null}
-      </main>
+      </Page>
     </SiteShell>
   );
 }
@@ -850,7 +849,7 @@ function TeamCard({
   usernames: Map<string, string>;
 }) {
   return (
-    <div className="rounded-3xl border border-line/10 bg-court-mid/80 p-5">
+    <div className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
         {title}
       </p>

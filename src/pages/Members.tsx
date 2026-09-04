@@ -3,6 +3,8 @@ import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { fieldClass } from "../components/ui/Field";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -62,9 +64,7 @@ export function Members() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -75,11 +75,8 @@ export function Members() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-          Klubben
-        </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">Medlemmer</h1>
+      <Page>
+        <PageHeader eyebrow="Klubben" title="Medlemmer" />
         <label className="mt-4 block">
           <span className="sr-only">Søg blandt medlemmer</span>
           <input
@@ -88,7 +85,7 @@ export function Members() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Søg efter navn…"
             autoComplete="off"
-            className="w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 text-sm text-line outline-none placeholder:text-line/40 focus:border-ball"
+            className={fieldClass("bg-court-mid text-sm placeholder:text-line/40")}
           />
         </label>
 
@@ -98,9 +95,9 @@ export function Members() {
           </p>
         ) : null}
 
-        <ul className="mt-6 space-y-3">
+        <ul className="mt-6 divide-y divide-line/10 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid">
           {visibleMembers.length === 0 ? (
-            <li className="rounded-2xl border border-line/10 bg-court-mid/60 px-5 py-4 text-sm text-line/60">
+            <li className="px-4 py-4 text-sm text-line/60">
               {members.length === 0
                 ? "Ingen medlemmer at vise."
                 : "Ingen medlemmer matcher søgningen."}
@@ -114,10 +111,10 @@ export function Members() {
               const isYou = member.id === user.id;
 
               return (
-                <li key={member.id} className="flex items-stretch gap-2">
+                <li key={member.id} className="flex items-stretch">
                   <Link
                     to={href}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-line/10 bg-court-mid/80 px-5 py-4 transition hover:border-ball/40"
+                    className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 transition hover:bg-line/[0.03]"
                   >
                     <MemberAvatar person={member} size="sm" />
                     <div className="min-w-0 flex-1">
@@ -146,7 +143,7 @@ export function Members() {
                       to={messagePath(member.username)}
                       aria-label={`Send besked til ${fullName(member)}`}
                       title="Send besked"
-                      className="flex w-14 shrink-0 items-center justify-center rounded-2xl border border-line/10 bg-court-mid/80 text-ball transition hover:border-ball/40"
+                      className="flex w-12 shrink-0 items-center justify-center border-l border-line/10 text-line/70 transition hover:text-ball"
                     >
                       <ChatBubbleIcon />
                     </Link>
@@ -156,7 +153,7 @@ export function Members() {
             })
           )}
         </ul>
-      </main>
+      </Page>
     </SiteShell>
   );
 }

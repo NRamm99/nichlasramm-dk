@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
+import { Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { messagePath } from "../lib/messages";
@@ -81,9 +82,7 @@ export function FindPartner() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -176,7 +175,7 @@ export function FindPartner() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
+      <Page>
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Partnerskab
         </p>
@@ -200,7 +199,7 @@ export function FindPartner() {
           </p>
         ) : null}
 
-        <section className="mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-5">
+        <section className="mt-8 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-5">
           {iAmSeeking && !showSeekForm ? (
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
@@ -292,7 +291,7 @@ export function FindPartner() {
           onAccept={handleAccept}
           onCancel={handleCancel}
         />
-      </main>
+      </Page>
     </SiteShell>
   );
 }

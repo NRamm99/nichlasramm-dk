@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { MatchRecord } from "../components/MatchRecord";
 import { PushNotifications } from "../components/PushNotifications";
-import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Field, fieldClass } from "../components/ui/Field";
+import { ListGroup, ListRow } from "../components/ui/ListGroup";
+import { Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -155,9 +159,7 @@ export function Profile() {
   if (loading) {
     return (
       <SiteShell>
-        <main className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
-        </main>
+        <PageStatus>Indlæser…</PageStatus>
       </SiteShell>
     );
   }
@@ -169,15 +171,15 @@ export function Profile() {
   if (missing) {
     return (
       <SiteShell>
-        <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col justify-center px-6 pb-16">
-          <h1 className="font-display text-5xl">Ikke fundet</h1>
-          <p className="mt-2 text-sm text-line/65">
-            Der findes ikke et medlem med det brugernavn.
-          </p>
-          <Link to="/medlemmer" className="mt-6 text-sm font-semibold text-ball">
+        <Page>
+          <PageHeader
+            title="Ikke fundet"
+            subtitle="Der findes ikke et medlem med det brugernavn."
+          />
+          <Button variant="ghost" to="/medlemmer" className="mt-6">
             Tilbage til medlemslisten
-          </Link>
-        </main>
+          </Button>
+        </Page>
       </SiteShell>
     );
   }
@@ -393,23 +395,21 @@ export function Profile() {
 
   return (
     <SiteShell>
-      <main className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-xl flex-col px-6 pb-16">
+      <Page>
         {error ? (
-          <p className="mt-6 text-sm text-red-300" role="alert">
+          <p className="text-sm text-red-300" role="alert">
             {error}
           </p>
         ) : null}
         {info ? (
-          <p className="mt-6 text-sm text-ball" role="status">
+          <p className="text-sm text-line/70" role="status">
             {info}
           </p>
         ) : null}
 
         {profile && isOwn && incoming.length > 0 ? (
-          <section className="mt-8 rounded-3xl border border-ball/25 bg-ball/5 p-6">
-            <h2 className="font-display text-2xl tracking-wide">
-              Partnerskabsanmodninger
-            </h2>
+          <Card className="mt-6 p-5">
+            <p className="ui-label">Partnerskabsanmodninger</p>
             <ul className="mt-4 space-y-3">
               {incoming.map((request) => (
                 <li
@@ -430,54 +430,29 @@ export function Profile() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      className="text-xs"
                       onClick={() => void handleDecline(request.id)}
-                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
                     >
                       Afvis
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      className="text-xs"
                       onClick={() => void handleAccept(request.id)}
-                      className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
                     >
                       Acceptér
-                    </button>
+                    </Button>
                   </div>
                 </li>
               ))}
             </ul>
-          </section>
+          </Card>
         ) : null}
 
         {profile ? (
-          <section className="relative mt-8 rounded-3xl border border-line/10 bg-court-mid/80 p-8">
-            {isOwn && !editing ? (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                aria-label="Rediger profil"
-                title="Rediger profil"
-                className="absolute top-5 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-line/20 text-line/80 transition hover:border-ball/50 hover:text-ball"
-              >
-                <PencilIcon />
-              </button>
-            ) : !isOwn && profile.username ? (
-              <Link
-                to={messagePath(profile.username)}
-                aria-label="Send besked"
-                title="Send besked"
-                className="absolute top-5 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-line/20 text-ball transition hover:border-ball/50"
-              >
-                <ChatBubbleIcon className="h-4 w-4" />
-              </Link>
-            ) : null}
-            <div
-              className={`flex items-start gap-4 ${
-                (isOwn && !editing) || (!isOwn && profile.username) ? "pr-12" : ""
-              }`}
-            >
+          <>
+            <div className="mt-6 flex items-start gap-4">
               <MemberAvatar
                 size="lg"
                 person={{
@@ -486,9 +461,7 @@ export function Profile() {
                 }}
               />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-                  {isOwn ? "Din profil" : "Medlem"}
-                </p>
+                <p className="ui-label">{isOwn ? "Din profil" : "Medlem"}</p>
                 <h1 className="mt-1 font-display text-4xl leading-none tracking-wide sm:text-5xl">
                   {fullName(profile)}
                 </h1>
@@ -499,332 +472,327 @@ export function Profile() {
             </div>
 
             <div className="mt-6">
-              <MatchRecord record={record} />
-              {profile.username ? (
-                <Link
-                  to={profileMatchesPath(profile.username)}
-                  className="mt-3 flex w-full items-center justify-center rounded-full bg-ball px-4 py-2.5 text-xs font-semibold text-court"
-                >
-                  Se kampe
-                </Link>
-              ) : null}
+              <MatchRecord
+                record={record}
+                matchesTo={
+                  profile.username
+                    ? profileMatchesPath(profile.username)
+                    : undefined
+                }
+              />
             </div>
+
             {!isOwn && profile.username ? (
-              <Link
+              <Button
+                variant="secondary"
                 to={messagePath(profile.username)}
-                className="mt-6 flex w-full items-center justify-center rounded-full border border-ball/50 px-4 py-2.5 text-xs font-semibold text-ball"
+                block
+                className="mt-4"
               >
                 Send besked
-              </Link>
-            ) : null}
-            {isOwn ? (
-              <div className="mt-6">
-                <PushNotifications />
-              </div>
+              </Button>
             ) : null}
 
             {isOwn && editing ? (
               <>
-              <form
-                onSubmit={(event) => void handleSave(event)}
-                className="mt-6 space-y-4"
-              >
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-line/80">
-                    Fornavn
-                    <input
-                      required
-                      value={firstName}
-                      onChange={(event) => setFirstName(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                    />
-                  </label>
-                  <label className="block text-sm font-medium text-line/80">
-                    Efternavn
-                    <input
-                      required
-                      value={lastName}
-                      onChange={(event) => setLastName(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                    />
-                  </label>
-                </div>
-                <label className="block text-sm font-medium text-line/80">
-                  Profilbillede
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-                      setAvatarFile(file);
-                      setAvatarPreview(file ? URL.createObjectURL(file) : null);
-                    }}
-                    className="mt-2 w-full text-sm text-line/70 file:mr-4 file:rounded-full file:border-0 file:bg-ball file:px-4 file:py-2 file:text-sm file:font-semibold file:text-court"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-line/80">
-                  Bio
-                  <textarea
-                    value={bio}
-                    maxLength={500}
-                    rows={4}
-                    onChange={(event) => setBio(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                  />
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(false);
-                      setAvatarFile(null);
-                      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-                      setAvatarPreview(null);
-                      setFirstName(profile.first_name ?? "");
-                      setLastName(profile.last_name ?? "");
-                      setBio(profile.bio ?? "");
-                      setNewPassword("");
-                      setConfirmPassword("");
-                      resetDeleteForm();
-                    }}
-                    className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                  >
-                    Annuller
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court disabled:opacity-60"
-                  >
-                    {saving ? "Gemmer…" : "Gem"}
-                  </button>
-                </div>
-              </form>
-              <form
-                onSubmit={(event) => void handleChangePassword(event)}
-                className="mt-6 space-y-3 rounded-2xl border border-line/15 bg-court px-5 py-4"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ball">
-                  Adgangskode
-                </p>
-                <label className="block text-sm font-medium text-line/80">
-                  Ny adgangskode
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 outline-none focus:border-ball"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-line/80">
-                  Gentag adgangskode
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(event) =>
-                      setConfirmPassword(event.target.value)
-                    }
-                    className="mt-2 w-full rounded-2xl border border-line/15 bg-court-mid px-4 py-3 outline-none focus:border-ball"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={savingPassword}
-                  className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold disabled:opacity-60"
+                <form
+                  onSubmit={(event) => void handleSave(event)}
+                  className="mt-6 space-y-4"
                 >
-                  {savingPassword ? "Gemmer…" : "Skift adgangskode"}
-                </button>
-              </form>
-              <form
-                onSubmit={(event) => void handleDeleteAccount(event)}
-                className="mt-6 space-y-3 rounded-2xl border border-red-400/25 bg-court px-5 py-4"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
-                  Slet konto
-                </p>
-                {!confirmingDelete ? (
-                  <>
-                    <p className="text-sm text-line/65">
-                      Kontoen forsvinder permanent. Kampe du har spillet bliver
-                      stående med dit navn.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingDelete(true)}
-                      className="rounded-full border border-red-400/40 px-4 py-2 text-xs font-semibold text-red-300"
-                    >
-                      Slet min konto…
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-line/70">
-                      Det kan ikke fortrydes. Skriv{" "}
-                      <span className="font-semibold text-red-200">
-                        {ACCOUNT_DELETE_WORD}
-                      </span>{" "}
-                      og din adgangskode for at bekræfte.
-                    </p>
-                    <label className="block text-sm font-medium text-line/80">
-                      Skriv {ACCOUNT_DELETE_WORD}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field label="Fornavn">
                       <input
-                        value={deleteConfirm}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        onChange={(event) =>
-                          setDeleteConfirm(event.target.value)
-                        }
-                        className="mt-2 w-full rounded-2xl border border-red-400/20 bg-court-mid px-4 py-3 outline-none focus:border-red-300"
+                        required
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
+                        className={fieldClass()}
                       />
-                    </label>
-                    <label className="block text-sm font-medium text-line/80">
-                      Adgangskode
+                    </Field>
+                    <Field label="Efternavn">
+                      <input
+                        required
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
+                        className={fieldClass()}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Profilbillede">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+                        setAvatarFile(file);
+                        setAvatarPreview(file ? URL.createObjectURL(file) : null);
+                      }}
+                      className="mt-2 w-full text-sm text-line/70 file:mr-4 file:rounded-full file:border-0 file:bg-ball file:px-4 file:py-2 file:text-sm file:font-semibold file:text-court"
+                    />
+                  </Field>
+                  <Field label="Bio">
+                    <textarea
+                      value={bio}
+                      maxLength={500}
+                      rows={4}
+                      onChange={(event) => setBio(event.target.value)}
+                      className={fieldClass()}
+                    />
+                  </Field>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setEditing(false);
+                        setAvatarFile(null);
+                        if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+                        setAvatarPreview(null);
+                        setFirstName(profile.first_name ?? "");
+                        setLastName(profile.last_name ?? "");
+                        setBio(profile.bio ?? "");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                        resetDeleteForm();
+                      }}
+                    >
+                      Annuller
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                      {saving ? "Gemmer…" : "Gem"}
+                    </Button>
+                  </div>
+                </form>
+                <form
+                  onSubmit={(event) => void handleChangePassword(event)}
+                  className="mt-6 space-y-3"
+                >
+                  <Card className="space-y-3 px-5 py-4">
+                    <p className="ui-label">Adgangskode</p>
+                    <Field label="Ny adgangskode">
                       <input
                         type="password"
-                        autoComplete="current-password"
-                        value={deletePassword}
-                        onChange={(event) =>
-                          setDeletePassword(event.target.value)
-                        }
-                        className="mt-2 w-full rounded-2xl border border-red-400/20 bg-court-mid px-4 py-3 outline-none focus:border-red-300"
+                        required
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        className={fieldClass("bg-court-mid")}
                       />
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => resetDeleteForm()}
-                        className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                      >
-                        Annuller
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={
-                          deleting ||
-                          deleteConfirm.trim() !== ACCOUNT_DELETE_WORD ||
-                          deletePassword.length === 0
+                    </Field>
+                    <Field label="Gentag adgangskode">
+                      <input
+                        type="password"
+                        required
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(event) =>
+                          setConfirmPassword(event.target.value)
                         }
-                        className="rounded-full bg-red-400 px-4 py-2 text-xs font-semibold text-court disabled:opacity-40"
-                      >
-                        {deleting ? "Sletter…" : "Slet kontoen permanent"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </form>
-              </>
-            ) : (
-              <div className="mt-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                    Partner
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    {partner ? (
+                        className={fieldClass("bg-court-mid")}
+                      />
+                    </Field>
+                    <Button
+                      variant="secondary"
+                      type="submit"
+                      disabled={savingPassword}
+                    >
+                      {savingPassword ? "Gemmer…" : "Skift adgangskode"}
+                    </Button>
+                  </Card>
+                </form>
+                <form
+                  onSubmit={(event) => void handleDeleteAccount(event)}
+                  className="mt-4"
+                >
+                  <Card className="space-y-3 border-red-400/25 px-5 py-4">
+                    <p className="ui-label text-red-300">Slet konto</p>
+                    {!confirmingDelete ? (
                       <>
-                        <span className="text-sm text-line/80">
-                          <MemberNameLink person={partner} />
-                        </span>
-                        {isOwn ? (
-                          confirmRemove ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-line/70">
-                                Fjerne partner?
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmRemove(false)}
-                                className="rounded-full border border-line/20 px-3 py-1.5 text-xs font-semibold"
-                              >
-                                Annuller
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void handleRemovePartner()}
-                                className="rounded-full bg-red-400 px-3 py-1.5 text-xs font-semibold text-court"
-                              >
-                                Ja, fjern
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setConfirmRemove(true)}
-                              className="rounded-full border border-red-400/30 px-3 py-1.5 text-xs font-semibold text-red-300"
-                            >
-                              Fjern partner
-                            </button>
-                          )
-                        ) : null}
+                        <p className="text-sm text-line/65">
+                          Kontoen forsvinder permanent. Kampe du har spillet
+                          bliver stående med dit navn.
+                        </p>
+                        <Button
+                          variant="danger"
+                          onClick={() => setConfirmingDelete(true)}
+                        >
+                          Slet min konto…
+                        </Button>
                       </>
                     ) : (
-                      <span className="text-sm text-line/80">
-                        {isOwn ? (
-                          <Link
-                            to="/find-partner"
-                            className="font-semibold text-ball hover:underline"
+                      <>
+                        <p className="text-sm text-line/70">
+                          Det kan ikke fortrydes. Skriv{" "}
+                          <span className="font-semibold text-red-200">
+                            {ACCOUNT_DELETE_WORD}
+                          </span>{" "}
+                          og din adgangskode for at bekræfte.
+                        </p>
+                        <Field label={`Skriv ${ACCOUNT_DELETE_WORD}`}>
+                          <input
+                            value={deleteConfirm}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            onChange={(event) =>
+                              setDeleteConfirm(event.target.value)
+                            }
+                            className={fieldClass(
+                              "border-red-400/20 bg-court-mid focus:border-red-300",
+                            )}
+                          />
+                        </Field>
+                        <Field label="Adgangskode">
+                          <input
+                            type="password"
+                            autoComplete="current-password"
+                            value={deletePassword}
+                            onChange={(event) =>
+                              setDeletePassword(event.target.value)
+                            }
+                            className={fieldClass(
+                              "border-red-400/20 bg-court-mid focus:border-red-300",
+                            )}
+                          />
+                        </Field>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="secondary"
+                            onClick={() => resetDeleteForm()}
                           >
-                            Find partner
-                          </Link>
-                        ) : (
-                          "Ingen"
-                        )}
+                            Annuller
+                          </Button>
+                          <Button
+                            variant="danger"
+                            type="submit"
+                            className="border-0 bg-red-400 text-court hover:bg-red-300"
+                            disabled={
+                              deleting ||
+                              deleteConfirm.trim() !== ACCOUNT_DELETE_WORD ||
+                              deletePassword.length === 0
+                            }
+                          >
+                            {deleting ? "Sletter…" : "Slet kontoen permanent"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </Card>
+                </form>
+              </>
+            ) : (
+              <>
+                <p className="ui-label mt-8 mb-2 px-1">Partner</p>
+                <ListGroup>
+                  {partner ? (
+                    <li className="flex min-h-14 items-center gap-3 px-4 py-3">
+                      <MemberAvatar person={partner} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-base font-semibold leading-tight">
+                          <MemberNameLink person={partner} />
+                        </span>
+                        <span className="mt-0.5 block text-sm text-line/55">
+                          Fast makker
+                        </span>
                       </span>
+                      {isOwn ? (
+                        confirmRemove ? (
+                          <span className="flex items-center gap-2">
+                            <Button
+                              variant="secondary"
+                              className="px-3 py-1.5 text-xs"
+                              onClick={() => setConfirmRemove(false)}
+                            >
+                              Annuller
+                            </Button>
+                            <Button
+                              variant="danger"
+                              className="border-0 bg-red-400 px-3 py-1.5 text-xs text-court hover:bg-red-300"
+                              onClick={() => void handleRemovePartner()}
+                            >
+                              Ja, fjern
+                            </Button>
+                          </span>
+                        ) : (
+                          <Button
+                            variant="danger"
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => setConfirmRemove(true)}
+                          >
+                            Fjern
+                          </Button>
+                        )
+                      ) : null}
+                    </li>
+                  ) : (
+                    <ListRow
+                      to={isOwn ? "/find-partner" : undefined}
+                      icon={<HandshakeIcon />}
+                      label={isOwn ? "Find partner" : "Ingen partner"}
+                      chevron={isOwn}
+                    />
+                  )}
+                </ListGroup>
+
+                {isOwn ? (
+                  <>
+                    <p className="ui-label mt-8 mb-2 px-1">Konto</p>
+                    <ListGroup>
+                      <ListRow
+                        onClick={() => setEditing(true)}
+                        icon={<PencilIcon />}
+                        label="Rediger profil"
+                        hint="Navn, billede og info"
+                      />
+                      <ListRow
+                        to="/liga/kampe"
+                        icon={<TrophyIcon />}
+                        label="Mine ligakampe"
+                        hint="Se kommende og afsluttede kampe"
+                      />
+                    </ListGroup>
+                    <div className="mt-6">
+                      <PushNotifications compact />
+                    </div>
+                  </>
+                ) : null}
+
+                {!isOwn && !partner && !viewerHasPartner ? (
+                  <div className="mt-6">
+                    {pendingIncoming ? (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => void handleDecline(pendingIncoming.id)}
+                        >
+                          Afvis
+                        </Button>
+                        <Button
+                          onClick={() => void handleAccept(pendingIncoming.id)}
+                        >
+                          Acceptér anmodning
+                        </Button>
+                      </div>
+                    ) : pendingOutgoing ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => void handleCancel(pendingOutgoing.id)}
+                      >
+                        Annuller anmodning
+                      </Button>
+                    ) : (
+                      <Button onClick={() => void handleRequest(profile.id)}>
+                        Anmod om partnerskab
+                      </Button>
                     )}
                   </div>
-                </div>
-              </div>
+                ) : null}
+              </>
             )}
-
-            {!isOwn && !partner && !viewerHasPartner ? (
-              <div className="mt-6">
-                {pendingIncoming ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleDecline(pendingIncoming.id)}
-                      className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                    >
-                      Afvis
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleAccept(pendingIncoming.id)}
-                      className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
-                    >
-                      Acceptér anmodning
-                    </button>
-                  </div>
-                ) : pendingOutgoing ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleCancel(pendingOutgoing.id)}
-                    className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-                  >
-                    Annuller anmodning
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void handleRequest(profile.id)}
-                    className="rounded-full bg-ball px-4 py-2 text-xs font-semibold text-court"
-                  >
-                    Anmod om partnerskab
-                  </button>
-                )}
-              </div>
-            ) : null}
-          </section>
+          </>
         ) : (
           <p className="mt-8 text-sm text-line/60">Indlæser profil…</p>
         )}
-      </main>
+      </Page>
     </SiteShell>
   );
 }
@@ -834,7 +802,7 @@ function PencilIcon() {
     <svg
       viewBox="0 0 24 24"
       aria-hidden
-      className="h-4 w-4"
+      className="h-5 w-5"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
@@ -843,6 +811,45 @@ function PencilIcon() {
     >
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function HandshakeIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 13 4.5 9.5 8 6l3.5 3.5" />
+      <path d="m16 13 3.5-3.5L16 6l-3.5 3.5" />
+      <path d="M8.5 14.5 12 18l3.5-3.5" />
+    </svg>
+  );
+}
+
+function TrophyIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 4h8v3a4 4 0 0 1-8 0V4Z" />
+      <path d="M12 11v3" />
+      <path d="M7 21h10" />
+      <path d="M9 21v-4a3 3 0 0 1 6 0v4" />
     </svg>
   );
 }
@@ -857,18 +864,12 @@ function BioBubble({
   if (!text && !showEmpty) return null;
 
   return (
-    <div className="mt-2 flex min-w-0 max-w-sm items-start">
-      <span
-        aria-hidden
-        className="mt-2.5 h-0 w-0 shrink-0 border-y-[6px] border-y-transparent border-r-[7px] border-r-court"
-      />
-      <p
-        className={`min-w-0 rounded-2xl rounded-tl-md bg-court px-3 py-1.5 text-sm leading-relaxed whitespace-pre-wrap ${
-          text ? "text-line/90" : "text-line/50 italic"
-        }`}
-      >
-        {text || "Ingen bio endnu."}
-      </p>
-    </div>
+    <p
+      className={`mt-2 inline-block rounded-full px-3 py-1 text-sm leading-relaxed ${
+        text ? "bg-court-mid text-line/80" : "bg-court-mid text-line/50 italic"
+      }`}
+    >
+      {text || "Ingen bio endnu."}
+    </p>
   );
 }

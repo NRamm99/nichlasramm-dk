@@ -177,6 +177,23 @@ export function leagueStandings(
   );
 }
 
+export function leagueStandingsWindow<T extends { teamId: string }>(
+  standings: T[],
+  teamId: string,
+  size = 3,
+) {
+  const index = standings.findIndex((row) => row.teamId === teamId);
+  if (index < 0) return { start: 0, rows: [] as T[] };
+  if (standings.length <= size) return { start: 0, rows: standings };
+  const start =
+    index === 0
+      ? 0
+      : index >= standings.length - 1
+        ? standings.length - size
+        : index - 1;
+  return { start, rows: standings.slice(start, start + size) };
+}
+
 export function leagueIsRunning(league: League) {
   const end = league.ends_on.includes("T")
     ? new Date(league.ends_on)
