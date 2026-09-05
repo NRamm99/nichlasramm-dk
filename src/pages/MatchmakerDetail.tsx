@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -97,9 +97,7 @@ export function MatchmakerDetail() {
       <SiteShell>
         <Page>
           <h1 className="font-display text-5xl">Ikke fundet</h1>
-          <Link to="/matchmaker" className="mt-4 inline-block text-sm font-semibold text-ball">
-            Tilbage
-          </Link>
+          <BackLink to="/matchmaker">Find kamp</BackLink>
         </Page>
       </SiteShell>
     );
@@ -194,10 +192,8 @@ export function MatchmakerDetail() {
   return (
     <SiteShell>
       <Page>
-        <Link to="/matchmaker" className="text-sm font-semibold text-ball">
-          Find kamp
-        </Link>
-        <h1 className="mt-2 font-display text-5xl tracking-wide">
+        <BackLink to="/matchmaker">Find kamp</BackLink>
+        <h1 className="mt-4 font-display text-5xl tracking-wide">
           {personLabel(listing.host_id, people)}
         </h1>
         <p className="mt-2 text-sm text-line/70">

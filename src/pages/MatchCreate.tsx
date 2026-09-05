@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { PlayerPicker, SetScores } from "../components/MatchFields";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { teamName, type LeagueTeamPlayer } from "../lib/league";
@@ -322,22 +322,17 @@ export function MatchCreate() {
   return (
     <SiteShell>
       <Page>
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+        <BackLink
+          to={fixtureId ? "/liga" : listingId ? `/matchmaker/${listingId}` : "/kampe"}
+        >
+          {fixtureId ? "Liga" : listingId ? "Annonce" : "Kampe"}
+        </BackLink>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {fixtureId ? "Liga" : listingId ? "Find kamp" : "Kampe"}
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">
           {fixtureId ? "Ny ligakamp" : listingId ? `Kamp på bane ${listingCourt}` : "Ny kamp"}
         </h1>
-        <Link
-          to={fixtureId ? "/liga" : listingId ? `/matchmaker/${listingId}` : "/kampe"}
-          className="mt-2 text-sm font-semibold text-ball"
-        >
-          {fixtureId
-            ? "Tilbage til liga"
-            : listingId
-              ? "Tilbage til annonce"
-              : "Tilbage til kampe"}
-        </Link>
 
         {error && !kind ? (
           <p className="mt-6 text-sm text-red-300" role="alert">

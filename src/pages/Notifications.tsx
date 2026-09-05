@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
 import { Button } from "../components/ui/Button";
 import { ListEmpty, ListGroup } from "../components/ui/ListGroup";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -89,10 +89,13 @@ export function Notifications() {
   return (
     <SiteShell>
       <Page>
-        <PageHeader
-          title="Nyt"
-          subtitle="Det der vedrører dig, siden sidst du kiggede her."
-        />
+        <BackLink to="/">Hjem</BackLink>
+        <div className="mt-4">
+          <PageHeader
+            title="Nyt"
+            subtitle="Det der vedrører dig, siden sidst du kiggede her."
+          />
+        </div>
         {rows.length > 0 ? (
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
             {unread > 0 ? (
@@ -142,9 +145,6 @@ export function Notifications() {
             ))
           )}
         </ListGroup>
-        <Button variant="ghost" to="/" className="mt-8">
-          Tilbage til hjem
-        </Button>
       </Page>
     </SiteShell>
   );

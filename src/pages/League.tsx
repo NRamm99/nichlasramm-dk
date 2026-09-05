@@ -4,7 +4,7 @@ import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -453,7 +453,10 @@ export function League() {
   return (
     <SiteShell>
       <Page>
-        <PageHeader eyebrow="Sæson" title={league?.name ?? "Liga"} />
+        <BackLink to="/">Hjem</BackLink>
+        <div className="mt-4">
+          <PageHeader eyebrow="Sæson" title={league?.name ?? "Liga"} />
+        </div>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}

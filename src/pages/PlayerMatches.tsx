@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -80,9 +80,7 @@ export function PlayerMatches() {
           <p className="mt-2 text-sm text-line/65">
             Der findes ikke et medlem med det brugernavn.
           </p>
-          <Link to="/profil" className="mt-6 text-sm font-semibold text-ball">
-            Tilbage til din profil
-          </Link>
+          <BackLink to="/profil">Profil</BackLink>
         </Page>
       </SiteShell>
     );
@@ -104,13 +102,8 @@ export function PlayerMatches() {
   return (
     <SiteShell>
       <Page>
-        <Link
-          to={profilePath(profile?.username)}
-          className="text-sm font-semibold text-ball"
-        >
-          Tilbage til profil
-        </Link>
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+        <BackLink to={profilePath(profile?.username)}>Profil</BackLink>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Kampe
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">

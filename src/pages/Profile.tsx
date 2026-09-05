@@ -8,7 +8,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Field, fieldClass } from "../components/ui/Field";
 import { ListGroup, ListRow } from "../components/ui/ListGroup";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -172,13 +172,13 @@ export function Profile() {
     return (
       <SiteShell>
         <Page>
-          <PageHeader
-            title="Ikke fundet"
-            subtitle="Der findes ikke et medlem med det brugernavn."
-          />
-          <Button variant="ghost" to="/medlemmer" className="mt-6">
-            Tilbage til medlemslisten
-          </Button>
+          <BackLink to="/medlemmer">Medlemmer</BackLink>
+          <div className="mt-4">
+            <PageHeader
+              title="Ikke fundet"
+              subtitle="Der findes ikke et medlem med det brugernavn."
+            />
+          </div>
         </Page>
       </SiteShell>
     );
@@ -396,6 +396,7 @@ export function Profile() {
   return (
     <SiteShell>
       <Page>
+        {!isOwn ? <BackLink to="/medlemmer">Medlemmer</BackLink> : null}
         {error ? (
           <p className="text-sm text-red-300" role="alert">
             {error}
@@ -746,8 +747,8 @@ export function Profile() {
                       <ListRow
                         to="/liga/kampe"
                         icon={<TrophyIcon />}
-                        label="Mine ligakampe"
-                        hint="Se kommende og afsluttede kampe"
+                        label="Ligakampe"
+                        hint="Sæsonens kommende og afsluttede kampe"
                       />
                     </ListGroup>
                     <div className="mt-6">

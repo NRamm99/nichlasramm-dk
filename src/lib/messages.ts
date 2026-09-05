@@ -36,6 +36,69 @@ export function otherParticipantId(thread: DirectThread, userId: string) {
   return thread.user_a === userId ? thread.user_b : thread.user_a;
 }
 
+const UNREAD_MESSAGES_EVENT = "padel:unread-messages";
+
+export function onUnreadMessagesChanged(listener: () => void) {
+  window.addEventListener(UNREAD_MESSAGES_EVENT, listener);
+  return () => window.removeEventListener(UNREAD_MESSAGES_EVENT, listener);
+}
+
+function notifyUnreadMessagesChanged() {
+  window.dispatchEvent(new Event(UNREAD_MESSAGES_EVENT));
+}
+
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+}
+
+export function formatInboxWhen(iso: string) {
+  const date = new Date(iso);
+  const dayDiff = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+  if (dayDiff === 0) {
+    return new Intl.DateTimeFormat("da-DK", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  if (dayDiff === 1) return "I går";
+  if (dayDiff < 7) {
+    return new Intl.DateTimeFormat("da-DK", { weekday: "short" }).format(date);
+  }
+  return new Intl.DateTimeFormat("da-DK", {
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}
+
+export function sameCalendarDay(a: string, b: string) {
+  const left = new Date(a);
+  const right = new Date(b);
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+export function formatMessageDay(iso: string) {
+  const date = new Date(iso);
+  const dayDiff = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+  if (dayDiff === 0) return "I dag";
+  if (dayDiff === 1) return "I går";
+  return new Intl.DateTimeFormat("da-DK", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+}
+
+export function formatMessageTime(iso: string) {
+  return new Intl.DateTimeFormat("da-DK", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
 export async function openDirectThread(userId: string) {
   const { data, error } = await supabase.rpc("open_direct_thread", {
     p_user_id: userId,
@@ -93,4 +156,5 @@ export async function markDirectThreadRead(threadId: string) {
     p_thread_id: threadId,
   });
   if (error) throw error;
+  notifyUnreadMessagesChanged();
 }

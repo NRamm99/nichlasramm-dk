@@ -5,7 +5,7 @@ import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -180,9 +180,7 @@ export function MatchDetail() {
       <SiteShell>
         <Page center>
           <h1 className="font-display text-5xl">Kampen findes ikke</h1>
-          <Link to="/kampe" className="mt-6 text-sm font-semibold text-ball">
-            Tilbage til kampe
-          </Link>
+          <BackLink to="/kampe">Kampe</BackLink>
         </Page>
       </SiteShell>
     );
@@ -433,10 +431,8 @@ export function MatchDetail() {
   return (
     <SiteShell>
       <Page className="max-w-2xl">
-        <Link to="/kampe" className="text-sm font-semibold text-ball">
-          Tilbage til kampe
-        </Link>
-        <div className="mt-6 flex flex-wrap items-center gap-2">
+        <BackLink to="/kampe">Kampe</BackLink>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
             {match?.status === "played" ? "Spillet" : "Planlagt"}
           </p>

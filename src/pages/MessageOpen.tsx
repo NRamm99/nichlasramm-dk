@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
-import { Page } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { openDirectThread, threadPath } from "../lib/messages";
@@ -55,9 +55,7 @@ export function MessageOpen() {
             <p className="mt-4 text-sm text-red-300" role="alert">
               {error}
             </p>
-            <Link to="/medlemmer" className="mt-6 text-sm font-semibold text-ball">
-              Tilbage til medlemslisten
-            </Link>
+            <BackLink to="/medlemmer">Medlemmer</BackLink>
           </>
         ) : (
           <p className="text-sm text-line/60">Åbner samtale…</p>

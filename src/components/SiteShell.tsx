@@ -3,7 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { ChatBubbleIcon } from "./ChatBubbleIcon";
 import { Button } from "./ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { fetchUnreadDirectCount } from "../lib/messages";
+import { fetchUnreadDirectCount, onUnreadMessagesChanged } from "../lib/messages";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -81,9 +81,11 @@ function TabBar() {
       if (document.visibilityState === "visible") void load();
     }
     document.addEventListener("visibilitychange", onVisible);
+    const stopUnread = onUnreadMessagesChanged(() => void load());
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
+      stopUnread();
     };
   }, []);
 

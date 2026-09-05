@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
+import { AdminPolls } from "../components/AdminPolls";
 import { AdminPushBroadcast } from "../components/AdminPushBroadcast";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { supabase } from "../lib/supabase";
@@ -290,7 +291,8 @@ export function Admin() {
   return (
     <SiteShell>
       <Page className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+        <BackLink to="/">Hjem</BackLink>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Administration
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">Invitationer</h1>
@@ -328,6 +330,7 @@ export function Admin() {
         ) : (
           <>
             <AdminPushBroadcast />
+            <AdminPolls />
 
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <button

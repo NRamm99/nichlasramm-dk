@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SiteShell } from "../components/SiteShell";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
+import { HomePoll } from "../components/HomePoll";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, TeamAvatarStack } from "../components/MemberAvatar";
 import { PushNotifications } from "../components/PushNotifications";
@@ -12,6 +13,7 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   fetchHomeDashboard,
+  remainingLeagueCopy,
   type HomeDashboard,
 } from "../lib/home";
 import {
@@ -137,6 +139,15 @@ function HomeDashboardView({
         </p>
       ) : null}
 
+      {data?.pendingPoll ? (
+        <HomePoll
+          poll={data.pendingPoll}
+          onDone={() => {
+            void fetchHomeDashboard(userId).then(setData);
+          }}
+        />
+      ) : null}
+
       {data ? (
         <div className="mt-5 empty:mt-0 empty:hidden">
           <PushNotifications hideWhenEnabled compact />
@@ -175,6 +186,14 @@ function HomeDashboardView({
             <p className="mt-2 text-sm text-line/55">
               Ingen planlagt kamp i kalenderen.
             </p>
+            <div className="mt-4 grid gap-2">
+              <Button to="/matchmaker" block>
+                Find kamp
+              </Button>
+              <Button to="/kampe/ny" variant="secondary" block>
+                Opret kamp
+              </Button>
+            </div>
           </>
         )}
       </Card>
@@ -242,7 +261,9 @@ function HomeDashboardView({
                   />
                 </div>
                 <p className="mt-2 text-xs text-line/50">
-                  {leaguePlayed} af {leagueTotal} kampe
+                  {data.remainingLeagueMatches != null
+                    ? remainingLeagueCopy(data.remainingLeagueMatches)
+                    : `${leaguePlayed} af ${leagueTotal} kampe`}
                 </p>
               </>
             ) : null}
@@ -293,6 +314,14 @@ function HomeDashboardView({
           label="Beskeder"
           badge={data?.unreadMessages}
         />
+        {data && !data.hasPartner ? (
+          <ListRow
+            to="/find-partner"
+            icon={<HandshakeIcon />}
+            label="Find partner"
+            hint="Fast makker, ikke en enkelt kamp"
+          />
+        ) : null}
         <ListRow
           to="/medlemmer"
           icon={<MembersIcon />}
@@ -354,6 +383,25 @@ function BellIcon() {
     >
       <path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 11H3c0-4 3-4 3-11Z" />
       <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function HandshakeIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={iconClass()}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 13 4.5 9.5 8 6l3.5 3.5" />
+      <path d="m16 13 3.5-3.5L16 6l-3.5 3.5" />
+      <path d="M8.5 14.5 12 18l3.5-3.5" />
     </svg>
   );
 }

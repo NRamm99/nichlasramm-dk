@@ -35,6 +35,10 @@ function copy(kind: string | undefined) {
       return "Du har fået en partnerskabsanmodning.";
     case "match_comment":
       return "Ny kommentar på en kamp.";
+    case "match_result_correction":
+      return "Der er uenighed om et kampresultat.";
+    case "league_join_request":
+      return "Du har fået en liga-anmodning.";
     case "league_message":
       return "Ny besked i en ligadialog.";
     case "admin_broadcast":

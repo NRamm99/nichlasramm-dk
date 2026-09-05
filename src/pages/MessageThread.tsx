@@ -3,14 +3,17 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { Page } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   fetchDirectMessages,
   fetchDirectThread,
+  formatMessageDay,
+  formatMessageTime,
   markDirectThreadRead,
   otherParticipantId,
+  sameCalendarDay,
   sendDirectMessage,
   type DirectMessage,
 } from "../lib/messages";
@@ -97,9 +100,7 @@ export function MessageThread() {
           <p className="mt-2 text-sm text-line/65">
             Samtalen findes ikke, eller du har ikke adgang.
           </p>
-          <Link to="/beskeder" className="mt-6 text-sm font-semibold text-ball">
-            Tilbage til beskeder
-          </Link>
+          <BackLink to="/beskeder">Beskeder</BackLink>
         </Page>
       </SiteShell>
     );
@@ -172,31 +173,38 @@ export function MessageThread() {
             {messages.length === 0 ? (
               <li className="text-sm text-line/55">Skriv den første besked.</li>
             ) : (
-              messages.map((message) => {
+              messages.map((message, index) => {
                 const mine = message.author_id === user.id;
+                const previous = messages[index - 1];
+                const showDay =
+                  !previous ||
+                  !sameCalendarDay(previous.created_at, message.created_at);
                 return (
-                  <li
-                    key={message.id}
-                    className={`flex ${mine ? "justify-end" : "justify-start"}`}
-                  >
+                  <li key={message.id}>
+                    {showDay ? (
+                      <p className="py-3 text-center text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-line/40">
+                        {formatMessageDay(message.created_at)}
+                      </p>
+                    ) : null}
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
-                        mine
-                          ? "rounded-br-md bg-ball text-court"
-                          : "rounded-bl-md bg-court-mid text-line"
-                      }`}
+                      className={`flex ${mine ? "justify-end" : "justify-start"}`}
                     >
-                      <p>{message.body}</p>
-                      <p
-                        className={`mt-1 text-[0.65rem] ${
-                          mine ? "text-court/70" : "text-line/45"
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                          mine
+                            ? "rounded-br-md bg-ball text-court"
+                            : "rounded-bl-md bg-court-mid text-line"
                         }`}
                       >
-                        {new Intl.DateTimeFormat("da-DK", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).format(new Date(message.created_at))}
-                      </p>
+                        <p>{message.body}</p>
+                        <p
+                          className={`mt-1 text-[0.65rem] ${
+                            mine ? "text-court/70" : "text-line/45"
+                          }`}
+                        >
+                          {formatMessageTime(message.created_at)}
+                        </p>
+                      </div>
                     </div>
                   </li>
                 );
@@ -210,24 +218,5 @@ export function MessageThread() {
 }
 
 function ThreadBack() {
-  return (
-    <Link
-      to="/beskeder"
-      className="inline-flex min-h-11 items-center gap-1.5 py-1 text-sm font-semibold text-ball touch-manipulation"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M15 5 8 12l7 7" />
-      </svg>
-      Beskeder
-    </Link>
-  );
+  return <BackLink to="/beskeder">Beskeder</BackLink>;
 }

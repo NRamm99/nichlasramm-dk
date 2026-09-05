@@ -17,6 +17,7 @@ import {
 } from "./match";
 import { fetchUnreadNotificationCount } from "./matchmaker";
 import { fetchUnreadDirectCount } from "./messages";
+import { fetchPendingPoll, type PendingPoll } from "./poll";
 import { fetchMembersByIds, type PartnerPreview } from "./profile";
 import { supabase } from "./supabase";
 
@@ -45,6 +46,8 @@ export type HomeDashboard = {
   leagueInvites: number;
   unreadNotifications: number;
   unreadMessages: number;
+  hasPartner: boolean;
+  pendingPoll: PendingPoll | null;
 };
 
 export function remainingLeagueCopy(count: number) {
@@ -127,13 +130,25 @@ function fixtureIsDone(
 export async function fetchHomeDashboard(
   userId: string,
 ): Promise<HomeDashboard> {
-  const [{ data: profile }, next, league, unreadNotifications, unreadMessages] =
+  const [
+    { data: profile },
+    next,
+    league,
+    unreadNotifications,
+    unreadMessages,
+    pendingPoll,
+  ] =
     await Promise.all([
-    supabase.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("first_name, partner_id")
+      .eq("id", userId)
+      .maybeSingle(),
     fetchNextScheduledMatch(userId),
     fetchLatestLeague(),
     fetchUnreadNotificationCount(),
     fetchUnreadDirectCount(),
+    fetchPendingPoll(),
   ]);
 
   const nextMatchPeoplePromise = fetchMembersByIds(
@@ -157,6 +172,8 @@ export async function fetchHomeDashboard(
     leagueInvites: 0,
     unreadNotifications,
     unreadMessages,
+    hasPartner: Boolean(profile?.partner_id),
+    pendingPoll,
   });
 
   if (!league) return empty(await nextMatchPeoplePromise);
@@ -319,5 +336,7 @@ export async function fetchHomeDashboard(
     leagueInvites: 0,
     unreadNotifications,
     unreadMessages,
+    hasPartner: Boolean(profile?.partner_id),
+    pendingPoll,
   };
 }

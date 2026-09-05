@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   fetchDirectInbox,
+  formatInboxWhen,
   threadPath,
   type DirectInboxRow,
 } from "../lib/messages";
@@ -90,8 +91,13 @@ export function MessagesInbox() {
                       </span>
                     )}
                     <span className="min-w-0 flex-1">
-                      <span className="block font-semibold">
-                        {person ? fullName(person) : "Medlem"}
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="truncate font-semibold">
+                          {person ? fullName(person) : "Medlem"}
+                        </span>
+                        <span className="shrink-0 text-xs text-line/45">
+                          {formatInboxWhen(row.last_message_at)}
+                        </span>
                       </span>
                       <span className="mt-0.5 block truncate text-sm text-line/55">
                         {preview}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fullName, type PartnerPreview } from "../lib/profile";
@@ -97,10 +97,8 @@ export function MatchmakerCreate() {
   return (
     <SiteShell>
       <Page>
-        <h1 className="font-display text-5xl tracking-wide">Ny annonce</h1>
-        <Link to="/matchmaker" className="mt-2 text-sm font-semibold text-ball">
-          Tilbage til find kamp
-        </Link>
+        <BackLink to="/matchmaker">Find kamp</BackLink>
+        <h1 className="mt-4 font-display text-5xl tracking-wide">Ny annonce</h1>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}

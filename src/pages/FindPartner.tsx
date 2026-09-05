@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { messagePath } from "../lib/messages";
@@ -176,7 +176,8 @@ export function FindPartner() {
   return (
     <SiteShell>
       <Page>
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+        <BackLink to="/profil">Profil</BackLink>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Partnerskab
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">Find partner</h1>
@@ -184,9 +185,6 @@ export function FindPartner() {
           Medlemmer uden partner, og dem der aktivt søger en. Du kan kun have
           én partner.
         </p>
-        <Link to="/profil" className="mt-4 text-sm font-semibold text-ball">
-          Tilbage til profil
-        </Link>
 
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">

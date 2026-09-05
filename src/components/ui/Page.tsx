@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { cx } from "./cx";
 
 export function Page({
@@ -22,6 +23,35 @@ export function Page({
     >
       {children}
     </main>
+  );
+}
+
+export function BackLink({
+  to,
+  children,
+}: {
+  to: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex min-h-11 items-center gap-1.5 py-1 text-sm font-semibold text-ball touch-manipulation"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M15 5 8 12l7 7" />
+      </svg>
+      {children}
+    </Link>
   );
 }
 

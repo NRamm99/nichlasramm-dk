@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fetchLatestLeague } from "../lib/league";
@@ -105,9 +105,7 @@ export function LeagueMatches() {
       <SiteShell>
         <Page>
           <h1 className="font-display text-5xl">Ingen liga</h1>
-          <Link to="/liga" className="mt-4 inline-block text-sm font-semibold text-ball">
-            Tilbage til liga
-          </Link>
+          <BackLink to="/liga">Liga</BackLink>
         </Page>
       </SiteShell>
     );
@@ -129,13 +127,11 @@ export function LeagueMatches() {
   return (
     <SiteShell>
       <Page>
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+        <BackLink to="/liga">Liga</BackLink>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {title}
         </p>
         <h1 className="mt-2 font-display text-6xl tracking-wide">Ligakampe</h1>
-        <Link to="/liga" className="mt-2 text-sm font-semibold text-ball">
-          Tilbage til liga
-        </Link>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -131,7 +131,8 @@ export function MatchmakerList() {
   return (
     <SiteShell>
       <Page>
-        <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
+        <BackLink to="/">Hjem</BackLink>
+        <h1 className="mt-4 font-display text-5xl tracking-wide sm:text-6xl">
           Find kamp
         </h1>
         <p className="mt-2 text-sm text-line/65">
