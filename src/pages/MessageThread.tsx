@@ -77,8 +77,11 @@ export function MessageThread() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell fill>
-        <main className="flex flex-1 items-center justify-center px-6 text-sm text-line/60">
-          Indlæser…
+        <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6">
+          <ThreadBack />
+          <p className="flex flex-1 items-center justify-center text-sm text-line/60">
+            Indlæser…
+          </p>
         </main>
       </SiteShell>
     );
@@ -130,12 +133,10 @@ export function MessageThread() {
           pin={pin}
           header={
             <div className="shrink-0 pb-3 pt-1">
-              <div className="flex items-center gap-3">
+              <ThreadBack />
+              <div className="mt-3 flex items-center gap-3">
                 {other ? <MemberAvatar person={other} size="sm" /> : null}
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-                    Besked
-                  </p>
                   {other?.username ? (
                     <Link
                       to={profilePath(other.username)}
@@ -150,12 +151,6 @@ export function MessageThread() {
                   )}
                 </div>
               </div>
-              <Link
-                to="/beskeder"
-                className="mt-2 inline-block text-sm font-semibold text-ball"
-              >
-                Alle samtaler
-              </Link>
               {error ? (
                 <p className="mt-2 text-sm text-red-300" role="alert">
                   {error}
@@ -211,5 +206,28 @@ export function MessageThread() {
         </ChatThread>
       </main>
     </SiteShell>
+  );
+}
+
+function ThreadBack() {
+  return (
+    <Link
+      to="/beskeder"
+      className="inline-flex min-h-11 items-center gap-1.5 py-1 text-sm font-semibold text-ball touch-manipulation"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M15 5 8 12l7 7" />
+      </svg>
+      Beskeder
+    </Link>
   );
 }

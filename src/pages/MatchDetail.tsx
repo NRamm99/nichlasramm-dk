@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { LeagueBadge } from "../components/LeagueBadge";
 import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
@@ -435,11 +436,18 @@ export function MatchDetail() {
         <Link to="/kampe" className="text-sm font-semibold text-ball">
           Tilbage til kampe
         </Link>
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-          {match?.status === "played" ? "Spillet" : "Planlagt"}
-        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+            {match?.status === "played" ? "Spillet" : "Planlagt"}
+          </p>
+          {isLeagueMatch ? <LeagueBadge /> : null}
+        </div>
         <h1 className="mt-2 font-display text-6xl tracking-wide">
-          {isSinglesMatch(players) ? "Single" : "Kamp"}
+          {isLeagueMatch
+            ? "Ligakamp"
+            : isSinglesMatch(players)
+              ? "Single"
+              : "Kamp"}
         </h1>
         {match ? (
           <p className="mt-2 text-sm text-line/70">
