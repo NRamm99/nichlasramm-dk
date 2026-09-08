@@ -7,11 +7,14 @@ import {
   type MatchSet,
 } from "../lib/match";
 import { profilePath } from "../lib/profile";
+import { ratingDeltaClass } from "./RatingValue";
 
 type MatchScoreboardProps = {
   players: MatchPlayer[];
   sets: MatchSet[];
   usernames?: Map<string, string>;
+  ratings?: Map<string, number>;
+  ratingDeltas?: Map<string, number>;
   compact?: boolean;
 };
 
@@ -19,6 +22,8 @@ export function MatchScoreboard({
   players,
   sets,
   usernames,
+  ratings,
+  ratingDeltas,
   compact = false,
 }: MatchScoreboardProps) {
   const ordered = [...sets].sort((a, b) => a.set_number - b.set_number);
@@ -39,6 +44,8 @@ export function MatchScoreboard({
           opponents={ordered.map((row) => row.team2_games)}
           setsWon={outcome.team1}
           wonMatch={outcome.winner === 1}
+          ratingDeltas={ratingDeltas}
+          ratings={ratings}
         />
         <CompactTeam
           players={team2}
@@ -46,6 +53,8 @@ export function MatchScoreboard({
           opponents={ordered.map((row) => row.team1_games)}
           setsWon={outcome.team2}
           wonMatch={outcome.winner === 2}
+          ratingDeltas={ratingDeltas}
+          ratings={ratings}
         />
       </div>
     );
@@ -60,6 +69,8 @@ export function MatchScoreboard({
         team2={team2}
         team1Sets={outcome.team1}
         team2Sets={outcome.team2}
+        ratings={ratings}
+        ratingDeltas={ratingDeltas}
       />
 
       <div className="px-3 py-4 sm:px-5 sm:py-5">
@@ -70,6 +81,8 @@ export function MatchScoreboard({
           setsWon={outcome.team1}
           wonMatch={outcome.winner === 1}
           usernames={usernames}
+          ratings={ratings}
+          ratingDeltas={ratingDeltas}
         />
         <div className="my-2 flex items-center gap-3 px-2">
           <span className="h-px flex-1 bg-line/10" />
@@ -85,6 +98,8 @@ export function MatchScoreboard({
           setsWon={outcome.team2}
           wonMatch={outcome.winner === 2}
           usernames={usernames}
+          ratings={ratings}
+          ratingDeltas={ratingDeltas}
         />
       </div>
     </article>
@@ -98,6 +113,8 @@ function WinnerBanner({
   team2,
   team1Sets,
   team2Sets,
+  ratings,
+  ratingDeltas,
 }: {
   winner: 1 | 2 | null;
   unfinished: boolean;
@@ -105,9 +122,24 @@ function WinnerBanner({
   team2: MatchPlayer[];
   team1Sets: number;
   team2Sets: number;
+  ratings?: Map<string, number>;
+  ratingDeltas?: Map<string, number>;
 }) {
   const names = (winner === 2 ? team2 : team1)
-    .map((player) => player.display_name)
+    .map((player) => {
+      const rating = player.profile_id
+        ? ratings?.get(player.profile_id)
+        : undefined;
+      const delta = player.profile_id
+        ? ratingDeltas?.get(player.profile_id)
+        : undefined;
+      const rated =
+        rating == null ? player.display_name : `${player.display_name} (${rating})`;
+      if (delta == null) return rated;
+      const signed =
+        delta > 0 ? `+ ${delta}` : delta < 0 ? `− ${Math.abs(delta)}` : "± 0";
+      return `${rated} ${signed}`;
+    })
     .join(" & ");
 
   if (winner) {
@@ -159,6 +191,8 @@ function TeamBoard({
   setsWon,
   wonMatch,
   usernames,
+  ratings,
+  ratingDeltas,
 }: {
   players: MatchPlayer[];
   games: number[];
@@ -166,6 +200,8 @@ function TeamBoard({
   setsWon: number;
   wonMatch: boolean;
   usernames?: Map<string, string>;
+  ratings?: Map<string, number>;
+  ratingDeltas?: Map<string, number>;
 }) {
   return (
     <div
@@ -193,9 +229,21 @@ function TeamBoard({
             const username = player.profile_id
               ? usernames?.get(player.profile_id)
               : undefined;
+            const rating = player.profile_id
+              ? ratings?.get(player.profile_id)
+              : undefined;
+            const delta = player.profile_id
+              ? ratingDeltas?.get(player.profile_id)
+              : undefined;
             const className = `block truncate font-semibold leading-tight ${
               wonMatch ? "text-line" : "text-line/75"
             }`;
+            const label = (
+              <>
+                {player.display_name}
+                <PlayerRatingSuffix rating={rating} delta={delta} />
+              </>
+            );
             if (username) {
               return (
                 <Link
@@ -203,13 +251,13 @@ function TeamBoard({
                   to={profilePath(username)}
                   className={`${className} hover:text-ball`}
                 >
-                  {player.display_name}
+                  {label}
                 </Link>
               );
             }
             return (
               <p key={player.id} className={className}>
-                {player.display_name}
+                {label}
               </p>
             );
           })}
@@ -261,12 +309,16 @@ function CompactTeam({
   opponents,
   setsWon,
   wonMatch,
+  ratings,
+  ratingDeltas,
 }: {
   players: MatchPlayer[];
   games: number[];
   opponents: number[];
   setsWon: number;
   wonMatch: boolean;
+  ratings?: Map<string, number>;
+  ratingDeltas?: Map<string, number>;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -276,7 +328,21 @@ function CompactTeam({
         }`}
       >
         {wonMatch ? "● " : ""}
-        {players.map((player) => player.display_name.split(" ")[0]).join(" / ")}
+        {players.map((player, index) => {
+          const rating = player.profile_id
+            ? ratings?.get(player.profile_id)
+            : undefined;
+          const delta = player.profile_id
+            ? ratingDeltas?.get(player.profile_id)
+            : undefined;
+          return (
+            <span key={player.id}>
+              {index > 0 ? " / " : ""}
+              {player.display_name.split(" ")[0]}
+              <PlayerRatingSuffix rating={rating} delta={delta} />
+            </span>
+          );
+        })}
       </p>
       <div className="flex items-center gap-1">
         {games.map((value, index) => {
@@ -308,5 +374,29 @@ function CompactTeam({
         </span>
       </div>
     </div>
+  );
+}
+
+function PlayerRatingSuffix({
+  rating,
+  delta,
+}: {
+  rating?: number;
+  delta?: number;
+}) {
+  return (
+    <>
+      {rating != null ? (
+        <span className="font-normal tabular-nums text-line/45"> ({rating})</span>
+      ) : null}
+      {delta != null ? (
+        <span
+          className={`font-sans text-[0.7rem] font-semibold tabular-nums tracking-normal ${ratingDeltaClass(delta)}`}
+        >
+          {" "}
+          {delta > 0 ? `+ ${delta}` : delta < 0 ? `− ${Math.abs(delta)}` : "± 0"}
+        </span>
+      ) : null}
+    </>
   );
 }

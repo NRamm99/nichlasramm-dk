@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { LeagueBadge } from "./LeagueBadge";
 import { MatchScoreboard } from "./MatchScoreboard";
@@ -9,6 +10,7 @@ import {
   teamNames,
   type MatchCard,
 } from "../lib/match";
+import { fetchMatchPlayerRatingChips, fetchPlayerRatingsByIds } from "../lib/rating";
 
 type MatchListProps = {
   rows: MatchCard[];
@@ -25,6 +27,41 @@ export function MatchList({
   highlightOwn = false,
   resultFor,
 }: MatchListProps) {
+  const [chipsByMatch, setChipsByMatch] = useState<
+    Map<string, Map<string, { rating: number; delta: number }>>
+  >(new Map());
+  const [currentRatings, setCurrentRatings] = useState<Map<string, number>>(
+    new Map(),
+  );
+  const matchKey = rows.map((row) => row.id).join(",");
+
+  useEffect(() => {
+    const ids = matchKey ? matchKey.split(",") : [];
+    const profileIds = rows.flatMap((row) =>
+      row.players.map((player) => player.profile_id),
+    );
+    let cancelled = false;
+    void Promise.all([
+      fetchMatchPlayerRatingChips(ids),
+      fetchPlayerRatingsByIds(profileIds),
+    ])
+      .then(([chips, ratings]) => {
+        if (cancelled) return;
+        setChipsByMatch(chips);
+        const current = new Map<string, number>();
+        for (const [id, row] of ratings) current.set(id, row.rating);
+        setCurrentRatings(current);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setChipsByMatch(new Map());
+        setCurrentRatings(new Map());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [matchKey]);
+
   if (rows.length === 0) {
     return (
       <p className="mt-4 rounded-2xl border border-line/10 bg-court-mid px-5 py-4 text-sm text-line/60">
@@ -104,13 +141,15 @@ export function MatchList({
                     players={row.players}
                     sets={row.sets}
                     compact
+                    ratings={ratingMapForMatch(row.id, chipsByMatch, currentRatings)}
+                    ratingDeltas={deltaMapForMatch(row.id, chipsByMatch)}
                   />
                 </div>
               ) : (
                 <p className="mt-1 text-sm font-semibold text-line">
-                  {teamNames(row.players, 1)}{" "}
+                  {teamNames(row.players, 1, currentRatings)}{" "}
                   <span className="font-normal text-line/45">vs</span>{" "}
-                  {teamNames(row.players, 2)}
+                  {teamNames(row.players, 2, currentRatings)}
                 </p>
               )}
               {row.disputed && isOwn ? (
@@ -124,4 +163,27 @@ export function MatchList({
       })}
     </ul>
   );
+}
+
+function ratingMapForMatch(
+  matchId: string,
+  chipsByMatch: Map<string, Map<string, { rating: number; delta: number }>>,
+  currentRatings: Map<string, number>,
+) {
+  const chips = chipsByMatch.get(matchId);
+  if (!chips) return currentRatings;
+  const ratings = new Map(currentRatings);
+  for (const [id, chip] of chips) ratings.set(id, chip.rating);
+  return ratings;
+}
+
+function deltaMapForMatch(
+  matchId: string,
+  chipsByMatch: Map<string, Map<string, { rating: number; delta: number }>>,
+) {
+  const chips = chipsByMatch.get(matchId);
+  if (!chips) return undefined;
+  const deltas = new Map<string, number>();
+  for (const [id, chip] of chips) deltas.set(id, chip.delta);
+  return deltas;
 }

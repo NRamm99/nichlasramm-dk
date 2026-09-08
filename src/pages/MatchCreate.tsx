@@ -20,6 +20,11 @@ import {
   type MatchmakerRsvp,
 } from "../lib/matchmaker";
 import { fetchMembersByIds, fullName, type PartnerPreview } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 type Kind = "played" | "scheduled";
@@ -48,6 +53,7 @@ export function MatchCreate() {
   const [listingHostPlays, setListingHostPlays] = useState(true);
   const [listingCourtPlayers, setListingCourtPlayers] = useState<string[]>([]);
   const [format, setFormat] = useState<"singles" | "doubles">("doubles");
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!user) return;
@@ -62,7 +68,7 @@ export function MatchCreate() {
         .select("partner_id")
         .eq("id", user.id)
         .maybeSingle(),
-    ]).then(([list, me]) => {
+    ]).then(async ([list, me]) => {
       const rows = (list.data ?? []) as PartnerPreview[];
       setMembers(rows.filter((row) => row.id !== user.id));
       const currentPartner = me.data?.partner_id ?? null;
@@ -70,6 +76,10 @@ export function MatchCreate() {
       if (currentPartner) {
         setPartner({ kind: "member", id: currentPartner });
       }
+      const ratingRows = await fetchPlayerRatingsByIds(
+        rows.map((row) => row.id),
+      ).catch(() => new Map());
+      setRatings(ratingValues(ratingRows));
     });
   }, [user]);
 
@@ -461,20 +471,24 @@ export function MatchCreate() {
                   Holdene er låst
                 </p>
                 <p className="mt-2 font-semibold">
-                  {teamName(leagueHome) || "Jeres hold"}
+                  {teamName(leagueHome, ratings) || "Jeres hold"}
                 </p>
                 <ul className="mt-1 text-line/70">
                   {leagueHome.map((player) => (
-                    <li key={player.id}>{fullName(player)}</li>
+                    <li key={player.id}>
+                      {withRating(fullName(player), ratings.get(player.id))}
+                    </li>
                   ))}
                 </ul>
                 <p className="mt-3 text-line/45">vs</p>
                 <p className="mt-2 font-semibold">
-                  {teamName(leagueAway) || "Modstandere"}
+                  {teamName(leagueAway, ratings) || "Modstandere"}
                 </p>
                 <ul className="mt-1 text-line/70">
                   {leagueAway.map((player) => (
-                    <li key={player.id}>{fullName(player)}</li>
+                    <li key={player.id}>
+                      {withRating(fullName(player), ratings.get(player.id))}
+                    </li>
                   ))}
                 </ul>
                 <p className="mt-3 text-xs text-line/50">
@@ -489,24 +503,18 @@ export function MatchCreate() {
                 <p className="mt-2">Dig</p>
                 <p className="text-line/70">
                   {partner?.kind === "member"
-                    ? (members.find((row) => row.id === partner.id)
-                      ? fullName(members.find((row) => row.id === partner.id)!)
-                      : "Makker")
+                    ? labeledMember(members, partner.id, ratings, "Makker")
                     : "Makker"}
                 </p>
                 <p className="mt-3 text-line/45">vs</p>
                 <p className="text-line/70">
                   {opponent1?.kind === "member"
-                    ? (members.find((row) => row.id === opponent1.id)
-                      ? fullName(members.find((row) => row.id === opponent1.id)!)
-                      : "Modstander")
+                    ? labeledMember(members, opponent1.id, ratings, "Modstander")
                     : "Modstander"}
                 </p>
                 <p className="text-line/70">
                   {opponent2?.kind === "member"
-                    ? (members.find((row) => row.id === opponent2.id)
-                      ? fullName(members.find((row) => row.id === opponent2.id)!)
-                      : "Modstander")
+                    ? labeledMember(members, opponent2.id, ratings, "Modstander")
                     : "Modstander"}
                 </p>
               </div>
@@ -516,33 +524,37 @@ export function MatchCreate() {
                   Bane {listingCourt} · du er ikke med
                 </p>
                 <p className="mt-2 text-line/70">
-                  {listingCourtPlayers[0]
-                    ? (members.find((row) => row.id === listingCourtPlayers[0])
-                      ? fullName(members.find((row) => row.id === listingCourtPlayers[0])!)
-                      : "Spiller")
-                    : "Spiller"}
+                  {labeledMember(
+                    members,
+                    listingCourtPlayers[0],
+                    ratings,
+                    "Spiller",
+                  )}
                 </p>
                 <p className="text-line/70">
-                  {listingCourtPlayers[1]
-                    ? (members.find((row) => row.id === listingCourtPlayers[1])
-                      ? fullName(members.find((row) => row.id === listingCourtPlayers[1])!)
-                      : "Spiller")
-                    : "Spiller"}
+                  {labeledMember(
+                    members,
+                    listingCourtPlayers[1],
+                    ratings,
+                    "Spiller",
+                  )}
                 </p>
                 <p className="mt-3 text-line/45">vs</p>
                 <p className="text-line/70">
-                  {listingCourtPlayers[2]
-                    ? (members.find((row) => row.id === listingCourtPlayers[2])
-                      ? fullName(members.find((row) => row.id === listingCourtPlayers[2])!)
-                      : "Spiller")
-                    : "Spiller"}
+                  {labeledMember(
+                    members,
+                    listingCourtPlayers[2],
+                    ratings,
+                    "Spiller",
+                  )}
                 </p>
                 <p className="text-line/70">
-                  {listingCourtPlayers[3]
-                    ? (members.find((row) => row.id === listingCourtPlayers[3])
-                      ? fullName(members.find((row) => row.id === listingCourtPlayers[3])!)
-                      : "Spiller")
-                    : "Spiller"}
+                  {labeledMember(
+                    members,
+                    listingCourtPlayers[3],
+                    ratings,
+                    "Spiller",
+                  )}
                 </p>
               </div>
             ) : (
@@ -571,6 +583,7 @@ export function MatchCreate() {
                     label="Partner"
                     members={members}
                     excludeIds={excludePartner}
+                    ratings={ratings}
                     value={partner}
                     onChange={setPartner}
                   />
@@ -587,6 +600,7 @@ export function MatchCreate() {
                   label={format === "singles" ? "Modstander" : "Modstander 1"}
                   members={members}
                   excludeIds={excludeOpp1}
+                  ratings={ratings}
                   value={opponent1}
                   onChange={setOpponent1}
                 />
@@ -595,6 +609,7 @@ export function MatchCreate() {
                     label="Modstander 2"
                     members={members}
                     excludeIds={excludeOpp2}
+                    ratings={ratings}
                     value={opponent2}
                     onChange={setOpponent2}
                   />
@@ -640,4 +655,16 @@ export function MatchCreate() {
       </Page>
     </SiteShell>
   );
+}
+
+function labeledMember(
+  members: PartnerPreview[],
+  id: string | undefined,
+  ratings: Map<string, number>,
+  fallback: string,
+) {
+  if (!id) return fallback;
+  const member = members.find((row) => row.id === id);
+  if (!member) return fallback;
+  return withRating(fullName(member), ratings.get(id));
 }

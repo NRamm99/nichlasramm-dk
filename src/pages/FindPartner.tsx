@@ -14,11 +14,13 @@ import {
   type PartnershipRequest,
   type PublicProfile,
 } from "../lib/profile";
+import { fetchPlayerRatingsByIds, type PlayerRating } from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 export function FindPartner() {
   const { user, loading } = useAuth();
   const [members, setMembers] = useState<PublicProfile[]>([]);
+  const [ratings, setRatings] = useState<Map<string, PlayerRating>>(new Map());
   const [requests, setRequests] = useState<PartnershipRequest[]>([]);
   const [hasPartner, setHasPartner] = useState(false);
   const [iAmSeeking, setIAmSeeking] = useState(false);
@@ -64,6 +66,10 @@ export function FindPartner() {
     setMyNote(me?.seeking_note ?? "");
     setSeekNote(me?.seeking_note ?? "");
     setMembers((rows ?? []) as PublicProfile[]);
+    const ratingMap = await fetchPlayerRatingsByIds(
+      (rows ?? []).map((row) => row.id),
+    ).catch(() => new Map<string, PlayerRating>());
+    setRatings(ratingMap);
     const people = await fetchMembersByIds(
       (requestRows ?? []).flatMap((row) => [row.requester_id, row.recipient_id]),
     );
@@ -274,6 +280,7 @@ export function FindPartner() {
           title="Søger aktivt"
           empty="Ingen søger aktivt lige nu."
           members={seeking}
+          ratings={ratings}
           requests={requests}
           onRequest={handleRequest}
           onAccept={handleAccept}
@@ -284,6 +291,7 @@ export function FindPartner() {
           title="Uden partner"
           empty="Ingen andre uden partner lige nu."
           members={available}
+          ratings={ratings}
           requests={requests}
           onRequest={handleRequest}
           onAccept={handleAccept}
@@ -298,6 +306,7 @@ function MemberSection({
   title,
   empty,
   members,
+  ratings,
   requests,
   onRequest,
   onAccept,
@@ -307,6 +316,7 @@ function MemberSection({
   title: string;
   empty: string;
   members: PublicProfile[];
+  ratings: Map<string, PlayerRating>;
   requests: PartnershipRequest[];
   onRequest: (id: string) => void;
   onAccept: (id: string) => void;
@@ -338,7 +348,10 @@ function MemberSection({
                 <div className="flex items-start gap-3">
                   <MemberAvatar person={member} size="sm" />
                   <div>
-                    <MemberNameLink person={member} />
+                    <MemberNameLink
+                      person={member}
+                      rating={ratings.get(member.id)?.rating}
+                    />
                     {member.username ? (
                       <p className="text-xs text-line/55">@{member.username}</p>
                     ) : null}

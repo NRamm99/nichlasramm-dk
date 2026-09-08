@@ -19,11 +19,17 @@ import {
   fullName,
   type PartnerPreview,
 } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 
 export function MessagesInbox() {
   const { user, loading } = useAuth();
   const [rows, setRows] = useState<DirectInboxRow[]>([]);
   const [names, setNames] = useState<Map<string, PartnerPreview>>(new Map());
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -31,8 +37,12 @@ export function MessagesInbox() {
     try {
       const inbox = await fetchDirectInbox();
       const people = await fetchMembersByIds(inbox.map((row) => row.other_id));
+      const ratingRows = await fetchPlayerRatingsByIds(
+        inbox.map((row) => row.other_id),
+      ).catch(() => new Map());
       setRows(inbox);
       setNames(people);
+      setRatings(ratingValues(ratingRows));
       setError(null);
     } catch (loadError) {
       setError(danishAuthError((loadError as Error).message));
@@ -93,7 +103,12 @@ export function MessagesInbox() {
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-3">
                         <span className="truncate font-semibold">
-                          {person ? fullName(person) : "Medlem"}
+                          {person
+                            ? withRating(
+                                fullName(person),
+                                ratings.get(person.id),
+                              )
+                            : "Medlem"}
                         </span>
                         <span className="shrink-0 text-xs text-line/45">
                           {formatInboxWhen(row.last_message_at)}

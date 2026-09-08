@@ -65,6 +65,7 @@ export function MemberAvatar({
 
 type MemberNameLinkProps = {
   person: PartnerPreview;
+  rating?: number | null;
 };
 
 export function TeamAvatarStack({ people }: { people: PartnerPreview[] }) {
@@ -83,10 +84,18 @@ export function TeamAvatarStack({ people }: { people: PartnerPreview[] }) {
   );
 }
 
-export function MemberNameLink({ person }: MemberNameLinkProps) {
+export function MemberNameLink({ person, rating }: MemberNameLinkProps) {
   const name = fullName(person);
+  const labeled = (
+    <>
+      {name}
+      {rating != null ? (
+        <span className="font-normal tabular-nums text-line/45"> ({rating})</span>
+      ) : null}
+    </>
+  );
   if (!person.username) {
-    return <span className="font-semibold text-line">{name}</span>;
+    return <span className="font-semibold text-line">{labeled}</span>;
   }
 
   return (
@@ -94,7 +103,7 @@ export function MemberNameLink({ person }: MemberNameLinkProps) {
       to={profilePath(person.username)}
       className="font-semibold text-line hover:text-ball hover:underline"
     >
-      {name}
+      {labeled}
     </Link>
   );
 }

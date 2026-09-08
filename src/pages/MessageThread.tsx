@@ -18,6 +18,11 @@ import {
   type DirectMessage,
 } from "../lib/messages";
 import { fetchMembersByIds, fullName, profilePath } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 import { syncAppBadge } from "../lib/appBadge";
 
 export function MessageThread() {
@@ -31,6 +36,7 @@ export function MessageThread() {
     last_name: string | null;
     avatar_url: string | null;
   } | null>(null);
+  const [otherRating, setOtherRating] = useState<number | null>(null);
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [body, setBody] = useState("");
@@ -48,12 +54,14 @@ export function MessageThread() {
         return;
       }
       const otherId = otherParticipantId(thread, user.id);
-      const [rows, people] = await Promise.all([
+      const [rows, people, ratingRows] = await Promise.all([
         fetchDirectMessages(threadId),
         fetchMembersByIds([otherId]),
+        fetchPlayerRatingsByIds([otherId]).catch(() => new Map()),
       ]);
       setMessages(rows);
       setOther(people.get(otherId) ?? null);
+      setOtherRating(ratingValues(ratingRows).get(otherId) ?? null);
       setMissing(false);
       setError(null);
       await markDirectThreadRead(threadId);
@@ -122,7 +130,7 @@ export function MessageThread() {
     }
   }
 
-  const title = other ? fullName(other) : "Besked";
+  const title = other ? withRating(fullName(other), otherRating) : "Besked";
   const lastId = messages[messages.length - 1]?.id ?? "empty";
 
   return (

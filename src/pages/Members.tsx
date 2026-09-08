@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
+import { RatingMark } from "../components/RatingValue";
 import { SiteShell } from "../components/SiteShell";
 import { Page, PageHeader, PageStatus } from "../components/ui/Page";
 import { fieldClass } from "../components/ui/Field";
@@ -16,11 +17,13 @@ import {
   type PublicProfile,
 } from "../lib/profile";
 import { messagePath } from "../lib/messages";
+import { fetchPlayerRatingsByIds, type PlayerRating } from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 export function Members() {
   const { user, loading } = useAuth();
   const [members, setMembers] = useState<PublicProfile[]>([]);
+  const [ratings, setRatings] = useState<Map<string, PlayerRating>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [search, setSearch] = useState("");
@@ -41,7 +44,11 @@ export function Members() {
     const people = await fetchMembersByIds(
       (rows ?? []).map((row) => row.partner_id),
     );
+    const ratingMap = await fetchPlayerRatingsByIds(
+      (rows ?? []).map((row) => row.id),
+    ).catch(() => new Map<string, PlayerRating>());
     setMembers((rows ?? []).map((row) => attachPartner(row, people)));
+    setRatings(ratingMap);
     setReady(true);
   }, []);
 
@@ -77,6 +84,20 @@ export function Members() {
     <SiteShell>
       <Page>
         <PageHeader eyebrow="Klubben" title="Medlemmer" />
+        <Link
+          to="/rating"
+          className="mt-4 flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-4 py-3 transition hover:border-ball/30"
+        >
+          <span className="min-w-0">
+            <span className="block font-semibold text-line">Rating</span>
+            <span className="block text-xs text-line/55">
+              Se klubbens rangliste
+            </span>
+          </span>
+          <span aria-hidden className="shrink-0 text-lg text-line/35">
+            ›
+          </span>
+        </Link>
         <label className="mt-4 block">
           <span className="sr-only">Søg blandt medlemmer</span>
           <input
@@ -125,6 +146,7 @@ export function Members() {
                             Dig
                           </span>
                         ) : null}
+                        <RatingMark value={ratings.get(member.id)?.rating} />
                       </p>
                       {member.username ? (
                         <p className="text-xs text-line/55">@{member.username}</p>

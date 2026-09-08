@@ -456,7 +456,18 @@ export function teamPlayers(players: MatchPlayer[], team: 1 | 2) {
     .sort((a, b) => a.slot - b.slot);
 }
 
-export function teamNames(players: MatchPlayer[], team: 1 | 2) {
-  const names = teamPlayers(players, team).map((player) => player.display_name);
+export function teamNames(
+  players: MatchPlayer[],
+  team: 1 | 2,
+  ratings?: Map<string, number>,
+) {
+  const names = teamPlayers(players, team).map((player) => {
+    const rating = player.profile_id
+      ? ratings?.get(player.profile_id)
+      : undefined;
+    return rating == null
+      ? player.display_name
+      : `${player.display_name} (${rating})`;
+  });
   return names.join(" / ") || "Ukendt hold";
 }

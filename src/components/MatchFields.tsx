@@ -1,6 +1,7 @@
 import type { PartnerPreview } from "../lib/profile";
 import { fullName } from "../lib/profile";
 import type { PlayerPick } from "../lib/match";
+import { withRating } from "../lib/rating";
 
 type PlayerPickerProps = {
   label: string;
@@ -8,6 +9,7 @@ type PlayerPickerProps = {
   excludeIds: string[];
   value: PlayerPick | null;
   onChange: (value: PlayerPick | null) => void;
+  ratings?: Map<string, number>;
 };
 
 export function PlayerPicker({
@@ -16,6 +18,7 @@ export function PlayerPicker({
   excludeIds,
   value,
   onChange,
+  ratings,
 }: PlayerPickerProps) {
   const selectedMember = value?.kind === "member" ? value.id : "";
   const guestName = value?.kind === "guest" ? value.name : "";
@@ -75,7 +78,7 @@ export function PlayerPicker({
           <option value="">Vælg spiller</option>
           {available.map((member) => (
             <option key={member.id} value={member.id}>
-              {fullName(member)}
+              {withRating(fullName(member), ratings?.get(member.id))}
               {member.username ? ` (@${member.username})` : ""}
             </option>
           ))}
@@ -187,10 +190,12 @@ export function MatchRosterFields({
   members,
   picks,
   onChange,
+  ratings,
 }: {
   members: PartnerPreview[];
   picks: Array<PlayerPick | null>;
   onChange: (picks: Array<PlayerPick | null>) => void;
+  ratings?: Map<string, number>;
 }) {
   const labels =
     picks.length === 2
@@ -214,6 +219,7 @@ export function MatchRosterFields({
             label={label}
             members={members}
             excludeIds={excludeIds}
+            ratings={ratings}
             value={picks[index] ?? null}
             onChange={(value) => {
               const next = [...picks];

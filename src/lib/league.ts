@@ -1,5 +1,6 @@
 import { matchOutcome, type MatchPlayer, type MatchSet } from "./match";
 import { fullName, type PartnerPreview } from "./profile";
+import { withRating } from "./rating";
 import { supabase } from "./supabase";
 
 export type League = {
@@ -81,15 +82,24 @@ export function formatLeagueWhen(value: string) {
   }).format(new Date(value));
 }
 
-export function teamName(players: PartnerPreview[]) {
-  const names = players.map((player) => fullName(player));
+export function teamName(
+  players: PartnerPreview[],
+  ratings?: Map<string, number>,
+) {
+  const names = players.map((player) =>
+    withRating(fullName(player), ratings?.get(player.id)),
+  );
   return names.join(" / ") || "Ukendt hold";
 }
 
-export function messageAuthorName(teams: LeagueTeam[], authorId: string) {
+export function messageAuthorName(
+  teams: LeagueTeam[],
+  authorId: string,
+  ratings?: Map<string, number>,
+) {
   for (const team of teams) {
     const person = team.players.find((player) => player.id === authorId);
-    if (person) return fullName(person);
+    if (person) return withRating(fullName(person), ratings?.get(authorId));
   }
   return "Ukendt";
 }
@@ -110,13 +120,14 @@ export function leagueStandings(
   setsByMatch: Map<string, MatchSet[]>,
   matchStatus: Map<string, "scheduled" | "played">,
   disputedMatchIds: Set<string> = new Set(),
+  ratings?: Map<string, number>,
 ): StandingRow[] {
   const rows = new Map<string, StandingRow>();
   const playerIds = new Map<string, Set<string>>();
   for (const team of teams) {
     rows.set(team.id, {
       teamId: team.id,
-      name: teamName(team.players),
+      name: teamName(team.players, ratings),
       played: 0,
       wins: 0,
       draws: 0,

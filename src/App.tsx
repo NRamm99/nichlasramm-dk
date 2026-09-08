@@ -21,6 +21,7 @@ import { MessageOpen } from "./pages/MessageOpen";
 import { MessageThread } from "./pages/MessageThread";
 import { MessagesInbox } from "./pages/MessagesInbox";
 import { Profile } from "./pages/Profile";
+import { RatingBoard } from "./pages/RatingBoard";
 
 function NotFound() {
   return (
@@ -48,6 +49,7 @@ function App() {
         <Route path="/profil/:username" element={<Profile />} />
         <Route path="/find-partner" element={<FindPartner />} />
         <Route path="/medlemmer" element={<Members />} />
+        <Route path="/rating" element={<RatingBoard />} />
         <Route path="/beskeder/til/:username" element={<MessageOpen />} />
         <Route path="/beskeder/:threadId" element={<MessageThread />} />
         <Route path="/beskeder" element={<MessagesInbox />} />

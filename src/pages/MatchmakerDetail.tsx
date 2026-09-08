@@ -23,6 +23,11 @@ import {
 } from "../lib/matchmaker";
 import { fetchMembersByIds, fullName, type PartnerPreview } from "../lib/profile";
 import { formatMatchWhen } from "../lib/match";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 export function MatchmakerDetail() {
@@ -33,6 +38,7 @@ export function MatchmakerDetail() {
   const [courtMatches, setCourtMatches] = useState<MatchmakerListingMatch[]>([]);
   const [messages, setMessages] = useState<MatchmakerMessage[]>([]);
   const [people, setPeople] = useState<PartnerPreview[]>([]);
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -72,6 +78,10 @@ export function MatchmakerDetail() {
       ...((messageRows ?? []) as MatchmakerMessage[]).map((item) => item.author_id),
     ]);
     setPeople([...peopleMap.values()]);
+    const ratingRows = await fetchPlayerRatingsByIds([
+      ...peopleMap.keys(),
+    ]).catch(() => new Map());
+    setRatings(ratingValues(ratingRows));
     if (canChat(next, nextRsvps, user.id)) {
       await supabase.rpc("mark_matchmaker_listing_read", {
         p_listing_id: listingId,
@@ -194,7 +204,7 @@ export function MatchmakerDetail() {
       <Page>
         <BackLink to="/matchmaker">Find kamp</BackLink>
         <h1 className="mt-4 font-display text-5xl tracking-wide">
-          {personLabel(listing.host_id, people)}
+          {personLabel(listing.host_id, people, ratings)}
         </h1>
         <p className="mt-2 text-sm text-line/70">
           {formatListingWindow(listing.starts_at, listing.ends_at)}
@@ -267,7 +277,7 @@ export function MatchmakerDetail() {
                     court.map((id) => (
                       <li key={id} className="flex items-center justify-between gap-2">
                         <span>
-                          {personLabel(id, people)}
+                          {personLabel(id, people, ratings)}
                           {roleFor(id)}
                         </span>
                         {isHost &&
@@ -317,7 +327,9 @@ export function MatchmakerDetail() {
               <li>Ingen endnu.</li>
             ) : (
               interested.map((row) => (
-                <li key={row.profile_id}>{personLabel(row.profile_id, people)}</li>
+                <li key={row.profile_id}>
+                  {personLabel(row.profile_id, people, ratings)}
+                </li>
               ))
             )}
           </ul>
@@ -332,7 +344,9 @@ export function MatchmakerDetail() {
               <li>Ingen endnu.</li>
             ) : (
               declined.map((row) => (
-                <li key={row.profile_id}>{personLabel(row.profile_id, people)}</li>
+                <li key={row.profile_id}>
+                  {personLabel(row.profile_id, people, ratings)}
+                </li>
               ))
             )}
           </ul>
@@ -388,8 +402,13 @@ export function MatchmakerDetail() {
                         className="rounded-2xl bg-court/60 px-4 py-3"
                       >
                         <p className="text-xs text-line/50">
-                          {author ? fullName(author) : "Medlem"} ·{" "}
-                          {formatMatchWhen(message.created_at)}
+                          {author
+                            ? withRating(
+                                fullName(author),
+                                ratings.get(author.id),
+                              )
+                            : "Medlem"}{" "}
+                          · {formatMatchWhen(message.created_at)}
                         </p>
                         <p className="mt-1 text-sm text-line/85 whitespace-pre-wrap">
                           {message.body}

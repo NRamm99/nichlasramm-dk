@@ -19,6 +19,10 @@ import {
   type MatchmakerRsvp,
 } from "../lib/matchmaker";
 import { fetchMembersByIds, type PartnerPreview } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+} from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 export function MatchmakerList() {
@@ -26,6 +30,7 @@ export function MatchmakerList() {
   const [listings, setListings] = useState<MatchmakerListing[]>([]);
   const [rsvps, setRsvps] = useState<MatchmakerRsvp[]>([]);
   const [people, setPeople] = useState<PartnerPreview[]>([]);
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
   const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
@@ -75,9 +80,13 @@ export function MatchmakerList() {
         .filter((row) => row.status === "going")
         .map((row) => row.profile_id),
     ]);
+    const ratingRows = await fetchPlayerRatingsByIds([
+      ...peopleMap.keys(),
+    ]).catch(() => new Map());
     setListings(rows.filter(listingIsLive));
     setRsvps(nextRsvps);
     setPeople([...peopleMap.values()]);
+    setRatings(ratingValues(ratingRows));
     setUnreadIds(
       new Set(
         rows
@@ -212,7 +221,7 @@ export function MatchmakerList() {
                   >
                     <span className="min-w-0">
                       <span className="block font-semibold">
-                        {personLabel(listing.host_id, people)}
+                        {personLabel(listing.host_id, people, ratings)}
                       </span>
                       <span className="mt-0.5 block truncate text-sm text-line/60">
                         {formatListingWindow(listing.starts_at, listing.ends_at)}

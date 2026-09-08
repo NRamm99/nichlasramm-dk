@@ -35,6 +35,11 @@ import {
   fullName,
   type PartnerPreview,
 } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 export function League() {
@@ -69,6 +74,7 @@ export function League() {
   const [creatingNext, setCreatingNext] = useState(false);
   const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
   const [joinRequests, setJoinRequests] = useState<LeagueJoinRequest[]>([]);
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
 
   function fillSeasonFromLeague(current: League) {
     setName(current.name);
@@ -100,6 +106,10 @@ export function League() {
     setMembers(people);
     setClubPartnerId(me?.partner_id ?? null);
     setPartnerId((current) => current || me?.partner_id || "");
+    const ratingRows = await fetchPlayerRatingsByIds(
+      people.map((row) => row.id).concat(user.id),
+    ).catch(() => new Map());
+    setRatings(ratingValues(ratingRows));
 
     if (!latest) {
       setTeams([]);
@@ -133,6 +143,12 @@ export function League() {
       ...roster.map((row) => row.profile_id),
       ...pendingRequests.flatMap((row) => [row.requester_id, row.recipient_id]),
     ]);
+    const rosterRatingRows = await fetchPlayerRatingsByIds([
+      user.id,
+      ...people.map((row) => row.id),
+      ...peopleById.keys(),
+    ]).catch(() => new Map());
+    setRatings(ratingValues(rosterRatingRows));
     setJoinRequests(
       pendingRequests.map((row) => ({
         ...row,
@@ -284,6 +300,7 @@ export function League() {
         setsByMatch,
         matchStatus,
         disputedMatchIds,
+        ratings,
       )
     : [];
   const myFixtures = fixtures
@@ -369,7 +386,7 @@ export function League() {
         (row.team_a_id === team.id || row.team_b_id === team.id) &&
         row.match_id,
     ).length;
-    const label = teamName(team.players);
+    const label = teamName(team.players, ratings);
     const ok = window.confirm(
       played > 0
         ? `${label} har ${played} spillede ligakampe. Holdet fjernes, og de kampe bliver almindelige klubkampe. Fortsæt?`
@@ -723,7 +740,7 @@ export function League() {
                           className="flex items-center justify-between gap-3 rounded-2xl border border-line/10 bg-court px-4 py-3"
                         >
                           <span className="text-sm font-semibold">
-                            {teamName(team.players)}
+                            {teamName(team.players, ratings)}
                           </span>
                           <button
                             type="button"
@@ -763,7 +780,10 @@ export function League() {
                             ) : null}
                             <div>
                               {request.other ? (
-                                <MemberNameLink person={request.other} />
+                                <MemberNameLink
+                                  person={request.other}
+                                  rating={ratings.get(request.other.id)}
+                                />
                               ) : (
                                 <p className="font-semibold">Ukendt</p>
                               )}
@@ -802,7 +822,10 @@ export function League() {
                     <p className="mt-2 text-sm text-line/65">
                       Du har sendt en anmodning til{" "}
                       {outgoingJoin.other
-                        ? fullName(outgoingJoin.other)
+                        ? withRating(
+                            fullName(outgoingJoin.other),
+                            ratings.get(outgoingJoin.other.id),
+                          )
                         : "makkeren"}
                       . I er først tilmeldt, når de accepterer.
                     </p>
@@ -836,7 +859,7 @@ export function League() {
                         <option value="">Vælg makker</option>
                         {members.map((member) => (
                           <option key={member.id} value={member.id}>
-                            {fullName(member)}
+                            {withRating(fullName(member), ratings.get(member.id))}
                             {member.id === clubPartnerId
                               ? " (din partner)"
                               : ""}
@@ -939,6 +962,7 @@ export function League() {
                         fixture={fixture}
                         myTeamId={myTeam.id}
                         teams={teams}
+                        ratings={ratings}
                         matchStatus={
                           fixture.match_id
                             ? matchStatus.get(fixture.match_id)
@@ -987,6 +1011,7 @@ function FixtureDialog({
   fixture,
   myTeamId,
   teams,
+  ratings,
   matchStatus,
   hasResult,
   userId,
@@ -999,6 +1024,7 @@ function FixtureDialog({
   fixture: LeagueFixture;
   myTeamId: string;
   teams: LeagueTeam[];
+  ratings: Map<string, number>;
   matchStatus?: "scheduled" | "played";
   hasResult: boolean;
   userId: string;
@@ -1089,7 +1115,7 @@ function FixtureDialog({
             ) : null}
           </p>
           <p className="mt-1 text-sm text-line/70">
-            {opponent ? teamName(opponent.players) : "Modstander"}
+            {opponent ? teamName(opponent.players, ratings) : "Modstander"}
           </p>
         </div>
         <p
@@ -1165,7 +1191,7 @@ function FixtureDialog({
                       }`}
                     >
                       <p className="text-[0.65rem] text-line/45">
-                        {messageAuthorName(teams, row.author_id)}
+                        {messageAuthorName(teams, row.author_id, ratings)}
                         {row.author_id === userId ? " (dig)" : ""} ·{" "}
                         {formatMatchWhen(row.created_at)}
                       </p>

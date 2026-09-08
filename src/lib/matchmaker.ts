@@ -1,5 +1,6 @@
 import { fixtureHasUnread } from "./league";
 import { fullName, type PartnerPreview } from "./profile";
+import { withRating } from "./rating";
 import { supabase } from "./supabase";
 
 export type MatchmakerStatus = "open" | "closed" | "converted";
@@ -250,8 +251,10 @@ export function listingHasUnreadChat(
 export function personLabel(
   id: string | null | undefined,
   people: PartnerPreview[],
+  ratings?: Map<string, number>,
 ) {
   if (!id) return "Ukendt";
   const person = people.find((row) => row.id === id);
-  return person ? fullName(person) : "Medlem";
+  const name = person ? fullName(person) : "Medlem";
+  return withRating(name, ratings?.get(id));
 }

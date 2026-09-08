@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { MatchRecord } from "../components/MatchRecord";
+import { RatingInline } from "../components/RatingValue";
 import { PushNotifications } from "../components/PushNotifications";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
@@ -16,6 +17,13 @@ import {
   fetchPlayerRecord,
   type PlayerRecord,
 } from "../lib/match";
+import {
+  emptyRatingSummary,
+  fetchPlayerRatingsByIds,
+  fetchPlayerRatingSummary,
+  type PlayerRating,
+  type PlayerRatingSummary,
+} from "../lib/rating";
 import {
   PROFILE_SELECT,
   REQUEST_SELECT,
@@ -48,6 +56,10 @@ export function Profile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [record, setRecord] = useState<PlayerRecord>(emptyPlayerRecord());
+  const [ratingSummary, setRatingSummary] = useState<PlayerRatingSummary>(
+    emptyRatingSummary(),
+  );
+  const [ratings, setRatings] = useState<Map<string, PlayerRating>>(new Map());
   const [incoming, setIncoming] = useState<PartnershipRequest[]>([]);
   const [outgoing, setOutgoing] = useState<PartnershipRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -107,10 +119,12 @@ export function Profile() {
       setMissing(true);
       setProfile(null);
       setRecord(emptyPlayerRecord());
+      setRatingSummary(emptyRatingSummary());
+      setRatings(new Map());
       return;
     }
 
-    const [{ data: requestRows }, nextRecord] = await Promise.all([
+    const [{ data: requestRows }, nextRecord, nextRating] = await Promise.all([
       supabase
         .from("partnership_requests")
         .select(REQUEST_SELECT)
@@ -120,16 +134,25 @@ export function Profile() {
             : `and(requester_id.eq.${user.id},recipient_id.eq.${data.id}),and(requester_id.eq.${data.id},recipient_id.eq.${user.id})`,
         ),
       fetchPlayerRecord(data.id).catch(() => emptyPlayerRecord()),
+      fetchPlayerRatingSummary(data.id).catch(() => emptyRatingSummary()),
     ]);
     setRecord(nextRecord);
+    setRatingSummary(nextRating);
 
-    const people = await fetchMembersByIds([
+    const peopleIds = [
       data.partner_id,
       ...(requestRows ?? []).flatMap((row) => [
         row.requester_id,
         row.recipient_id,
       ]),
+    ];
+    const [people, ratingMap] = await Promise.all([
+      fetchMembersByIds(peopleIds),
+      fetchPlayerRatingsByIds(peopleIds).catch(
+        () => new Map<string, PlayerRating>(),
+      ),
     ]);
+    setRatings(ratingMap);
 
     const mapped = attachPartner(data, people);
     setProfile(mapped);
@@ -423,7 +446,10 @@ export function Profile() {
                     ) : null}
                     <div>
                       {request.requester ? (
-                        <MemberNameLink person={request.requester} />
+                        <MemberNameLink
+                          person={request.requester}
+                          rating={ratings.get(request.requester.id)?.rating}
+                        />
                       ) : (
                         <span>Ukendt</span>
                       )}
@@ -466,6 +492,9 @@ export function Profile() {
                 <h1 className="mt-1 font-display text-4xl leading-none tracking-wide sm:text-5xl">
                   {fullName(profile)}
                 </h1>
+                <div className="mt-2">
+                  <RatingInline summary={ratingSummary} />
+                </div>
                 {!editing && (profile.bio || isOwn) ? (
                   <BioBubble text={profile.bio} showEmpty={isOwn} />
                 ) : null}
@@ -689,7 +718,10 @@ export function Profile() {
                       <MemberAvatar person={partner} size="sm" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-base font-semibold leading-tight">
-                          <MemberNameLink person={partner} />
+                          <MemberNameLink
+                            person={partner}
+                            rating={ratings.get(partner.id)?.rating}
+                          />
                         </span>
                         <span className="mt-0.5 block text-sm text-line/55">
                           Fast makker

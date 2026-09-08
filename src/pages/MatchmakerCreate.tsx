@@ -5,6 +5,11 @@ import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fullName, type PartnerPreview } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 function todayDateInput() {
@@ -27,6 +32,7 @@ export function MatchmakerCreate() {
   const [partnerId, setPartnerId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!user) return;
@@ -37,7 +43,7 @@ export function MatchmakerCreate() {
         .is("banned_at", null)
         .order("first_name"),
       supabase.from("profiles").select("partner_id").eq("id", user.id).maybeSingle(),
-    ]).then(([list, me]) => {
+    ]).then(async ([list, me]) => {
       const rows = ((list.data ?? []) as PartnerPreview[]).filter(
         (row) => row.id !== user.id,
       );
@@ -48,6 +54,10 @@ export function MatchmakerCreate() {
         setBringPartner(true);
         setPartnerId(current);
       }
+      const ratingRows = await fetchPlayerRatingsByIds(
+        rows.map((row) => row.id),
+      ).catch(() => new Map());
+      setRatings(ratingValues(ratingRows));
     });
   }, [user]);
 
@@ -182,7 +192,7 @@ export function MatchmakerCreate() {
                 <option value="">Vælg medlem</option>
                 {partnerOptions.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {fullName(member)}
+                    {withRating(fullName(member), ratings.get(member.id))}
                   </option>
                 ))}
               </select>

@@ -33,6 +33,7 @@ import {
   profilePath,
   type PartnerPreview,
 } from "../lib/profile";
+import { fetchMatchRatingEvents, fetchPlayerRatingsByIds, withRating, type RatingEvent } from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 export function MatchDetail() {
@@ -44,6 +45,12 @@ export function MatchDetail() {
   const [sets, setSets] = useState<MatchSet[]>([]);
   const [comments, setComments] = useState<MatchComment[]>([]);
   const [usernames, setUsernames] = useState<Map<string, string>>(new Map());
+  const [ratingEvents, setRatingEvents] = useState<Map<string, RatingEvent>>(
+    new Map(),
+  );
+  const [currentRatings, setCurrentRatings] = useState<Map<string, number>>(
+    new Map(),
+  );
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -94,6 +101,7 @@ export function MatchDetail() {
       { data: correctionRow },
       { data: fixtureRow },
       { data: memberRows },
+      matchRatings,
     ] = await Promise.all([
       supabase.from("match_players").select("*").eq("match_id", matchId),
       supabase
@@ -121,12 +129,20 @@ export function MatchDetail() {
         .select("id, username, first_name, last_name, avatar_url")
         .is("banned_at", null)
         .order("first_name"),
+      fetchMatchRatingEvents(matchId).catch(
+        () => new Map<string, RatingEvent>(),
+      ),
     ]);
 
-    const people = await fetchMembersByIds([
-      ...(playerRows ?? []).map((row) => row.profile_id),
-      ...(commentRows ?? []).map((row) => row.author_id),
-      correctionRow?.proposed_by,
+    const [people, ratingRows] = await Promise.all([
+      fetchMembersByIds([
+        ...(playerRows ?? []).map((row) => row.profile_id),
+        ...(commentRows ?? []).map((row) => row.author_id),
+        correctionRow?.proposed_by,
+      ]),
+      fetchPlayerRatingsByIds(
+        (playerRows ?? []).map((row) => row.profile_id),
+      ).catch(() => new Map()),
     ]);
 
     const nameMap = new Map<string, string>();
@@ -146,6 +162,10 @@ export function MatchDetail() {
     );
     setIsLeagueMatch(Boolean(fixtureRow));
     setMembers((memberRows ?? []) as PartnerPreview[]);
+    setRatingEvents(matchRatings);
+    const liveRatings = new Map<string, number>();
+    for (const [id, row] of ratingRows) liveRatings.set(id, row.rating);
+    setCurrentRatings(liveRatings);
     setCorrection(
       correctionRow
         ? {
@@ -187,6 +207,12 @@ export function MatchDetail() {
   }
 
   const isPlayer = players.some((player) => player.profile_id === user.id);
+  const playerRatings = new Map(currentRatings);
+  const playerDeltas = new Map<string, number>();
+  for (const [id, event] of ratingEvents) {
+    playerRatings.set(id, event.rating_after);
+    playerDeltas.set(id, event.delta);
+  }
   const canDelete = isPlayer || isAdmin;
   const myTeam = players.find((player) => player.profile_id === user.id)?.team;
   const proposerTeam = players.find(
@@ -470,6 +496,8 @@ export function MatchDetail() {
               players={players}
               sets={sets}
               usernames={usernames}
+              ratings={playerRatings}
+              ratingDeltas={playerDeltas}
             />
             {correction ? (
               <div className="mt-4 rounded-[var(--radius-card)] border border-red-400/30 bg-red-400/5 p-6">
@@ -490,7 +518,11 @@ export function MatchDetail() {
                     <>
                       Foreslåede spillere:{" "}
                       <span className="font-semibold text-line">
-                        {proposedRosterLine(correction.players, members)}
+                        {proposedRosterLine(
+                          correction.players,
+                          members,
+                          playerRatings,
+                        )}
                       </span>
                       .{" "}
                     </>
@@ -555,6 +587,7 @@ export function MatchDetail() {
                         <MatchRosterFields
                           members={members}
                           picks={rosterPicks}
+                          ratings={playerRatings}
                           onChange={setRosterPicks}
                         />
                       </div>
@@ -617,11 +650,13 @@ export function MatchDetail() {
                 title="Hold 1"
                 players={teamPlayers(players, 1)}
                 usernames={usernames}
+                ratings={playerRatings}
               />
               <TeamCard
                 title="Hold 2"
                 players={teamPlayers(players, 2)}
                 usernames={usernames}
+                ratings={playerRatings}
               />
             </section>
 
@@ -635,7 +670,11 @@ export function MatchDetail() {
                     <>
                       Foreslåede spillere:{" "}
                       <span className="font-semibold text-line">
-                        {proposedRosterLine(correction.players, members)}
+                        {proposedRosterLine(
+                          correction.players,
+                          members,
+                          playerRatings,
+                        )}
                       </span>
                       .
                     </>
@@ -700,6 +739,7 @@ export function MatchDetail() {
                       <MatchRosterFields
                         members={members}
                         picks={rosterPicks}
+                        ratings={playerRatings}
                         onChange={setRosterPicks}
                       />
                     </div>
@@ -798,8 +838,13 @@ export function MatchDetail() {
                   comments.map((row) => (
                     <li key={row.id} className="rounded-2xl bg-court/60 px-4 py-3">
                       <p className="text-xs text-line/50">
-                        {row.author ? fullName(row.author) : "Ukendt"} ·{" "}
-                        {formatMatchWhen(row.created_at)}
+                        {row.author
+                          ? withRating(
+                              fullName(row.author),
+                              playerRatings.get(row.author.id),
+                            )
+                          : "Ukendt"}{" "}
+                        · {formatMatchWhen(row.created_at)}
                       </p>
                       <p className="mt-1 text-sm text-line/85">{row.body}</p>
                     </li>
@@ -830,13 +875,15 @@ export function MatchDetail() {
 function proposedRosterLine(
   players: ProposedMatchPlayer[],
   members: PartnerPreview[],
+  ratings: Map<string, number>,
 ) {
   return [...players]
     .sort((a, b) => a.team - b.team || a.slot - b.slot)
     .map((player) => {
       if (player.profile_id) {
         const member = members.find((row) => row.id === player.profile_id);
-        return member ? fullName(member) : "Medlem";
+        const name = member ? fullName(member) : "Medlem";
+        return withRating(name, ratings.get(player.profile_id));
       }
       return player.guest_name || "Gæst";
     })
@@ -847,10 +894,12 @@ function TeamCard({
   title,
   players,
   usernames,
+  ratings,
 }: {
   title: string;
   players: MatchPlayer[];
   usernames: Map<string, string>;
+  ratings: Map<string, number>;
 }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-5">
@@ -862,6 +911,13 @@ function TeamCard({
           const username = player.profile_id
             ? usernames.get(player.profile_id)
             : undefined;
+          const rating = player.profile_id
+            ? ratings.get(player.profile_id)
+            : undefined;
+          const name =
+            rating == null
+              ? player.display_name
+              : `${player.display_name} (${rating})`;
           return (
             <li key={player.id} className="text-sm font-semibold text-line">
               {username ? (
@@ -869,11 +925,11 @@ function TeamCard({
                   to={profilePath(username)}
                   className="hover:text-ball hover:underline"
                 >
-                  {player.display_name}
+                  {name}
                 </Link>
               ) : (
                 <>
-                  {player.display_name}{" "}
+                  {name}{" "}
                   {player.guest_name ? (
                     <span className="text-xs font-normal text-line/45">
                       gæst

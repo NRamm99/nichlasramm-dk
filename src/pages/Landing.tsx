@@ -22,6 +22,11 @@ import {
   type MatchPlayer,
 } from "../lib/match";
 import { shortDisplayName, type PartnerPreview } from "../lib/profile";
+import {
+  fetchPlayerRatingsByIds,
+  ratingValues,
+  withRating,
+} from "../lib/rating";
 import { setAppBadgeCount } from "../lib/appBadge";
 
 export function Landing() {
@@ -73,6 +78,7 @@ function HomeDashboardView({
   const { isAdmin } = useAuth();
   const [data, setData] = useState<HomeDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +89,16 @@ function HomeDashboardView({
         if (cancelled) return;
         setData(dashboard);
         void setAppBadgeCount(dashboard.unreadNotifications);
+        const ratingIds = [
+          ...dashboard.leagueTable.flatMap((row) =>
+            row.players.map((person) => person.id),
+          ),
+          ...dashboard.nextMatchPeople.keys(),
+        ];
+        const ratingRows = await fetchPlayerRatingsByIds(ratingIds).catch(
+          () => new Map(),
+        );
+        if (!cancelled) setRatings(ratingValues(ratingRows));
       } catch (loadError) {
         if (!cancelled) setError(danishAuthError((loadError as Error).message));
       }
@@ -237,7 +253,12 @@ function HomeDashboardView({
                             }`}
                           >
                             {row.players
-                              .map((person) => shortDisplayName(person))
+                              .map((person) =>
+                                withRating(
+                                  shortDisplayName(person),
+                                  ratings.get(person.id),
+                                ),
+                              )
                               .join(" / ") || "Ukendt hold"}
                           </p>
                         </div>
