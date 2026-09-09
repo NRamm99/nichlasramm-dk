@@ -146,11 +146,11 @@ export function MatchList({
                   />
                 </div>
               ) : (
-                <p className="mt-1 text-sm font-semibold text-line">
-                  {teamNames(row.players, 1, currentRatings)}{" "}
-                  <span className="font-normal text-line/45">vs</span>{" "}
-                  {teamNames(row.players, 2, currentRatings)}
-                </p>
+                <div className="mt-1 text-sm font-semibold text-line">
+                  <p>{teamNames(row.players, 1, currentRatings)}</p>
+                  <p className="font-normal text-line/45">Vs.</p>
+                  <p>{teamNames(row.players, 2, currentRatings)}</p>
+                </div>
               )}
               {row.disputed && isOwn ? (
                 <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
