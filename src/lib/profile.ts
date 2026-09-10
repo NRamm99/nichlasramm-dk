@@ -53,6 +53,21 @@ export function shortDisplayName(person: {
   return fullName(person);
 }
 
+export function listPlayerName(
+  displayName: string,
+  person?: PartnerPreview | null,
+) {
+  if (person?.first_name?.trim() && person.last_name?.trim()) {
+    return shortDisplayName(person);
+  }
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const initial = parts[0][0]?.toUpperCase() ?? "?";
+    return `${initial}. ${parts[parts.length - 1]}`;
+  }
+  return displayName.trim() || "Ukendt";
+}
+
 export function profilePath(username: string | null | undefined) {
   if (!username) return "/profil";
   return `/profil/${encodeURIComponent(username)}`;

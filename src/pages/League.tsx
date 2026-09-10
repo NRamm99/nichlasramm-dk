@@ -885,13 +885,17 @@ export function League() {
               </p>
             ) : null}
 
-            <h2 className="mt-10 font-display text-3xl tracking-wide">Tabel</h2>
+            <div className="lg:mt-10 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10">
+            <div>
+            <h2 className="mt-10 font-display text-3xl tracking-wide lg:mt-0">
+              Tabel
+            </h2>
             {standings.length === 0 ? (
               <p className="mt-4 rounded-2xl border border-line/10 bg-court-mid px-5 py-4 text-sm text-line/60">
                 Ingen hold endnu.
               </p>
             ) : (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-line/10 bg-court-mid">
+              <div className="mt-4 overflow-x-auto rounded-2xl border border-line/10 bg-court-mid">
                 <table className="w-full text-left text-sm">
                   <thead className="text-[0.65rem] uppercase tracking-[0.16em] text-line/40">
                     <tr>
@@ -938,10 +942,11 @@ export function League() {
                 </table>
               </div>
             )}
+            </div>
 
             {myTeam ? (
-              <>
-                <h2 className="mt-10 font-display text-3xl tracking-wide">
+              <div>
+                <h2 className="mt-10 font-display text-3xl tracking-wide lg:mt-0">
                   Jeres kampe
                 </h2>
                 <p className="mt-2 text-sm text-line/65">
@@ -993,8 +998,9 @@ export function League() {
                     ))}
                   </ul>
                 )}
-              </>
+              </div>
             ) : null}
+            </div>
           </>
         ) : !isAdmin ? (
           <p className="mt-8 text-sm text-line/60">

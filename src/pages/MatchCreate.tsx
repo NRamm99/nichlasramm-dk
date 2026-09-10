@@ -340,7 +340,7 @@ export function MatchCreate() {
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {fixtureId ? "Liga" : listingId ? "Find kamp" : "Kampe"}
         </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">
+        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
           {fixtureId ? "Ny ligakamp" : listingId ? `Kamp på bane ${listingCourt}` : "Ny kamp"}
         </h1>
 
@@ -351,7 +351,7 @@ export function MatchCreate() {
         ) : null}
 
         {!kind ? (
-          <div className="mt-10 grid gap-4">
+          <div className="mt-10 grid gap-4 lg:grid-cols-2">
             <button
               type="button"
               onClick={() => {
@@ -390,7 +390,7 @@ export function MatchCreate() {
         ) : (
           <form
             onSubmit={(event) => void handleSubmit(event)}
-            className="mt-8 space-y-6 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
+            className="mt-8 max-w-2xl space-y-6 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
           >
             <p className="text-sm text-line/70">
               {kind === "played" ? "Allerede spillet" : "Planlagt kamp"}

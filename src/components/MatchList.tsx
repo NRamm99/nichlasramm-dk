@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { LeagueBadge } from "./LeagueBadge";
-import { MatchScoreboard } from "./MatchScoreboard";
+import { MatchLineup } from "./MatchLineup";
+import { ListEmpty, ListGroup } from "./ui/ListGroup";
 import {
-  formatMatchWhen,
+  formatMatchRelativeDay,
+  formatMatchTime,
   isLeagueMatch,
   isSinglesMatch,
+  matchLocalDayKey,
   resultForTeam,
-  teamNames,
   type MatchCard,
 } from "../lib/match";
+import { fetchMembersByIds, type PartnerPreview } from "../lib/profile";
 import { fetchMatchPlayerRatingChips, fetchPlayerRatingsByIds } from "../lib/rating";
 
 type MatchListProps = {
@@ -19,6 +22,30 @@ type MatchListProps = {
   highlightOwn?: boolean;
   resultFor?: string;
 };
+
+type DayGroup = {
+  key: string;
+  label: string;
+  rows: MatchCard[];
+};
+
+function groupByLocalDay(rows: MatchCard[]): DayGroup[] {
+  const groups: DayGroup[] = [];
+  for (const row of rows) {
+    const key = matchLocalDayKey(row.played_at);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.rows.push(row);
+    } else {
+      groups.push({
+        key,
+        label: formatMatchRelativeDay(row.played_at),
+        rows: [row],
+      });
+    }
+  }
+  return groups;
+}
 
 export function MatchList({
   rows,
@@ -33,6 +60,9 @@ export function MatchList({
   const [currentRatings, setCurrentRatings] = useState<Map<string, number>>(
     new Map(),
   );
+  const [people, setPeople] = useState<Map<string, PartnerPreview>>(
+    new Map(),
+  );
   const matchKey = rows.map((row) => row.id).join(",");
 
   useEffect(() => {
@@ -44,18 +74,21 @@ export function MatchList({
     void Promise.all([
       fetchMatchPlayerRatingChips(ids),
       fetchPlayerRatingsByIds(profileIds),
+      fetchMembersByIds(profileIds),
     ])
-      .then(([chips, ratings]) => {
+      .then(([chips, ratings, members]) => {
         if (cancelled) return;
         setChipsByMatch(chips);
         const current = new Map<string, number>();
         for (const [id, row] of ratings) current.set(id, row.rating);
         setCurrentRatings(current);
+        setPeople(members);
       })
       .catch(() => {
         if (cancelled) return;
         setChipsByMatch(new Map());
         setCurrentRatings(new Map());
+        setPeople(new Map());
       });
     return () => {
       cancelled = true;
@@ -64,104 +97,156 @@ export function MatchList({
 
   if (rows.length === 0) {
     return (
-      <p className="mt-4 rounded-2xl border border-line/10 bg-court-mid px-5 py-4 text-sm text-line/60">
-        {empty}
-      </p>
+      <ListGroup className="mt-3">
+        <ListEmpty>{empty}</ListEmpty>
+      </ListGroup>
     );
   }
 
   return (
-    <ul className="mt-4 space-y-3">
-      {rows.map((row) => {
-        const isOwn =
-          Boolean(highlightOwn && userId) &&
-          row.players.some((player) => player.profile_id === userId);
-        const team = resultFor
-          ? row.players.find((player) => player.profile_id === resultFor)?.team
-          : undefined;
-        const result =
-          resultFor && team && row.sets.length > 0
-            ? resultForTeam(row.sets, team)
-            : null;
+    <div className="mt-3 space-y-5">
+      {groupByLocalDay(rows).map((group) => (
+        <section key={group.key}>
+          <h3 className="mb-2 px-1 text-xs font-semibold text-line/50">
+            {group.label}
+          </h3>
+          <ListGroup>
+            {group.rows.map((row) => {
+              const isOwn =
+                Boolean(highlightOwn && userId) &&
+                row.players.some((player) => player.profile_id === userId);
+              const team = resultFor
+                ? row.players.find((player) => player.profile_id === resultFor)
+                    ?.team
+                : undefined;
+              const result =
+                resultFor && team && row.sets.length > 0
+                  ? resultForTeam(row.sets, team)
+                  : null;
+              const upcoming = row.status === "scheduled";
+              const time = upcoming ? formatMatchTime(row.played_at) : null;
 
-        return (
-          <li key={row.id}>
-            <Link
-              to={`/kampe/${row.id}`}
-              className={`block rounded-2xl border bg-court-mid px-5 py-4 transition ${
-                isOwn
-                  ? "border-ball/35 hover:border-ball/55"
-                  : isLeagueMatch(row)
-                    ? "border-ball/20 hover:border-ball/40"
-                    : "border-line/10 hover:border-ball/40"
-              }`}
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <p className="text-xs text-line/55">
-                    {formatMatchWhen(row.played_at)}
-                  </p>
-                  {isLeagueMatch(row) ? (
-                    <LeagueBadge />
-                  ) : isSinglesMatch(row.players) ? (
-                    <span className="inline-flex items-center rounded-full bg-line/10 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-line/70">
-                      Single
-                    </span>
-                  ) : null}
-                </div>
-                {isOwn ? (
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-ball/80">
-                    Du spiller
-                  </p>
-                ) : row.disputed ? (
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
-                    Uenighed
-                  </p>
-                ) : result ? (
-                  <p
-                    className={`text-[0.65rem] font-semibold uppercase tracking-[0.16em] ${
-                      result === "V"
-                        ? "text-ball"
-                        : result === "U"
-                          ? "text-line/70"
-                          : "text-line/40"
-                    }`}
+              return (
+                <li key={row.id}>
+                  <Link
+                    to={`/kampe/${row.id}`}
+                    className="block px-3 py-3 transition hover:bg-line/[0.03] lg:px-4 lg:py-3.5"
                   >
-                    {result === "V"
-                      ? "Vundet"
-                      : result === "U"
-                        ? "Ulige"
-                        : "Tabt"}
-                  </p>
-                ) : null}
-              </div>
-              {row.sets.length > 0 ? (
-                <div className="mt-3">
-                  <MatchScoreboard
-                    players={row.players}
-                    sets={row.sets}
-                    compact
-                    ratings={ratingMapForMatch(row.id, chipsByMatch, currentRatings)}
-                    ratingDeltas={deltaMapForMatch(row.id, chipsByMatch)}
-                  />
-                </div>
-              ) : (
-                <div className="mt-1 text-sm font-semibold text-line">
-                  <p>{teamNames(row.players, 1, currentRatings)}</p>
-                  <p className="font-normal text-line/45">Vs.</p>
-                  <p>{teamNames(row.players, 2, currentRatings)}</p>
-                </div>
-              )}
-              {row.disputed && isOwn ? (
-                <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
-                  Uenighed om resultatet
-                </p>
-              ) : null}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+                    <MatchRowMeta
+                      time={time}
+                      league={isLeagueMatch(row)}
+                      singles={isSinglesMatch(row.players)}
+                      isOwn={isOwn}
+                      disputed={Boolean(row.disputed)}
+                      result={result}
+                    />
+                    <MatchLineup
+                      players={row.players}
+                      sets={upcoming ? [] : row.sets}
+                      people={people}
+                      ratings={ratingMapForMatch(
+                        row.id,
+                        chipsByMatch,
+                        currentRatings,
+                      )}
+                      ratingDeltas={
+                        upcoming
+                          ? undefined
+                          : deltaMapForMatch(row.id, chipsByMatch)
+                      }
+                    />
+                    {row.disputed && isOwn ? (
+                      <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
+                        Uenighed om resultatet
+                      </p>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ListGroup>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function MatchRowMeta({
+  time,
+  league,
+  singles,
+  isOwn,
+  disputed,
+  result,
+}: {
+  time: string | null;
+  league: boolean;
+  singles: boolean;
+  isOwn: boolean;
+  disputed: boolean;
+  result: "V" | "U" | "T" | null;
+}) {
+  const chips: { key: string; label: string; className: string }[] = [];
+  if (league) {
+    chips.push({ key: "liga", label: "Liga", className: "text-ball" });
+  } else if (singles) {
+    chips.push({
+      key: "single",
+      label: "Single",
+      className: "text-line/55",
+    });
+  }
+  if (isOwn) {
+    chips.push({
+      key: "own",
+      label: "Du spiller",
+      className: "text-ball/80",
+    });
+  } else if (disputed) {
+    chips.push({
+      key: "disputed",
+      label: "Uenighed",
+      className: "text-red-300",
+    });
+  } else if (result) {
+    chips.push({
+      key: "result",
+      label: result === "V" ? "Vundet" : result === "U" ? "Ulige" : "Tabt",
+      className:
+        result === "V"
+          ? "text-ball"
+          : result === "U"
+            ? "text-line/70"
+            : "text-line/40",
+    });
+  }
+
+  if (!time && chips.length === 0) return null;
+
+  return (
+    <div className="mb-2 flex items-center justify-between gap-3">
+      {time ? (
+        <p className="text-xs tabular-nums text-line/50">{time}</p>
+      ) : (
+        <span />
+      )}
+      {chips.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {chips.map((chip) =>
+            chip.key === "liga" ? (
+              <LeagueBadge key={chip.key} />
+            ) : (
+              <span
+                key={chip.key}
+                className={`text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${chip.className}`}
+              >
+                {chip.label}
+              </span>
+            ),
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

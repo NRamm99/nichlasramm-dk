@@ -290,12 +290,14 @@ export function Admin() {
 
   return (
     <SiteShell>
-      <Page className="max-w-3xl">
+      <Page>
         <BackLink to="/">Hjem</BackLink>
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Administration
         </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">Invitationer</h1>
+        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+          Invitationer
+        </h1>
         <p className="mt-2 max-w-xl text-sm text-line/65">
           Hver kode kan kun bruges én gang. Når den er brugt, kan du se hvem der
           er med, spærre adgangen, nulstille en glemt adgangskode, eller rydde

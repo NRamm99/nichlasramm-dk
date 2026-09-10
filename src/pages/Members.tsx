@@ -138,7 +138,8 @@ export function Members() {
                     className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 transition hover:bg-line/[0.03]"
                   >
                     <MemberAvatar person={member} size="sm" />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 lg:flex lg:items-center lg:justify-between lg:gap-4">
+                      <div className="min-w-0">
                       <p className="font-semibold text-line">
                         {fullName(member)}
                         {isYou ? (
@@ -151,12 +152,15 @@ export function Members() {
                       {member.username ? (
                         <p className="text-xs text-line/55">@{member.username}</p>
                       ) : null}
+                      </div>
                       {partnerName ? (
-                        <p className="mt-1 text-sm text-line/65">
+                        <p className="mt-1 text-sm text-line/65 lg:mt-0 lg:shrink-0">
                           Partner: {partnerName}
                         </p>
                       ) : member.seeking_partner ? (
-                        <p className="mt-1 text-sm text-line/65">Søger partner</p>
+                        <p className="mt-1 text-sm text-line/65 lg:mt-0 lg:shrink-0">
+                          Søger partner
+                        </p>
                       ) : null}
                     </div>
                   </Link>

@@ -479,6 +479,8 @@ export function Profile() {
 
         {profile ? (
           <>
+            <div className="lg:mt-2 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-start lg:gap-10">
+            <div>
             <div className="mt-6 flex items-start gap-4">
               <MemberAvatar
                 size="lg"
@@ -489,7 +491,7 @@ export function Profile() {
               />
               <div className="min-w-0 flex-1">
                 <p className="ui-label">{isOwn ? "Din profil" : "Medlem"}</p>
-                <h1 className="mt-1 font-display text-4xl leading-none tracking-wide sm:text-5xl">
+                <h1 className="mt-1 font-display text-4xl leading-none tracking-wide sm:text-5xl lg:text-4xl">
                   {fullName(profile)}
                 </h1>
                 <div className="mt-2">
@@ -523,11 +525,14 @@ export function Profile() {
               </Button>
             ) : null}
 
+            </div>
+            <div className="min-w-0">
+
             {isOwn && editing ? (
               <>
                 <form
                   onSubmit={(event) => void handleSave(event)}
-                  className="mt-6 space-y-4"
+                  className="mt-6 max-w-xl space-y-4"
                 >
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field label="Fornavn">
@@ -821,6 +826,8 @@ export function Profile() {
                 ) : null}
               </>
             )}
+            </div>
+            </div>
           </>
         ) : (
           <p className="mt-8 text-sm text-line/60">Indlæser profil…</p>

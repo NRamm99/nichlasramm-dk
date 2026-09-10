@@ -114,7 +114,7 @@ export function MatchmakerCreate() {
             {error}
           </p>
         ) : null}
-        <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-4">
+        <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 max-w-2xl space-y-4">
           <label className="block text-sm font-medium text-line/80">
             Dato
             <input

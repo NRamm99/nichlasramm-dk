@@ -186,7 +186,9 @@ export function FindPartner() {
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Partnerskab
         </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">Find partner</h1>
+        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+          Find partner
+        </h1>
         <p className="mt-2 text-sm text-line/65">
           Medlemmer uden partner, og dem der aktivt søger en. Du kan kun have
           én partner.

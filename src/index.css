@@ -64,6 +64,21 @@ body {
   }
 }
 
+@media (min-width: 1024px) {
+  .ui-page {
+    padding-inline: 2rem;
+    padding-bottom: 3rem;
+  }
+
+  .has-desktop-nav .ui-page {
+    max-width: 72rem;
+    width: 100%;
+    min-height: 100dvh;
+    margin-inline: auto;
+    padding-top: 1.5rem;
+  }
+}
+
 .ui-label {
   font-size: 0.62rem;
   font-weight: 600;

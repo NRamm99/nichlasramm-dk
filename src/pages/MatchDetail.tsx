@@ -464,7 +464,7 @@ export function MatchDetail() {
           </p>
           {isLeagueMatch ? <LeagueBadge /> : null}
         </div>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">
+        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
           {isLeagueMatch
             ? "Ligakamp"
             : isSinglesMatch(players)

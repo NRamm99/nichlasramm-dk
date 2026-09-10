@@ -419,24 +419,79 @@ export function formatMatchWhen(value: string) {
   }).format(new Date(value));
 }
 
-function isSameLocalDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function localDayDiff(from: Date, to: Date) {
+  return Math.round(
+    (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) /
+      86_400_000,
   );
+}
+
+function formatMatchDate(value: string) {
+  return new Intl.DateTimeFormat("da-DK", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+export function formatMatchTime(value: string) {
+  return new Intl.DateTimeFormat("da-DK", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+export function matchLocalDayKey(value: string) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+export function formatMatchRelativeDay(value: string) {
+  const days = localDayDiff(new Date(), new Date(value));
+  if (days === 0) return "I dag";
+  if (days === 1) return "I morgen";
+  if (days === 2) return "I overmorgen";
+  if (days === -1) return "I går";
+
+  const abs = Math.abs(days);
+  const future = days > 0;
+
+  if (abs <= 6) {
+    return future ? `Om ${abs} dage` : `${abs} dage siden`;
+  }
+
+  if (abs < 28) {
+    const weeks = Math.floor(abs / 7);
+    if (weeks === 1) return future ? "Om 1 uge" : "1 uge siden";
+    return future ? `Om ${weeks} uger` : `${weeks} uger siden`;
+  }
+
+  const months = Math.max(1, Math.round(abs / 30));
+  if (months === 1) return future ? "Om 1 måned" : "1 måned siden";
+  return future ? `Om ${months} måneder` : `${months} måneder siden`;
 }
 
 export function formatNextMatchWhen(value: string) {
   const date = new Date(value);
-  const time = new Intl.DateTimeFormat("da-DK", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-  if (isSameLocalDay(date, new Date())) {
-    return `I dag, ${time}`;
+  const time = formatMatchTime(value);
+  const days = localDayDiff(new Date(), date);
+
+  if (days === 0) {
+    return { title: `I dag, ${time}` };
   }
-  return formatMatchWhen(value);
+  if (days === 1) {
+    return { title: `I morgen, ${time}`, hint: formatMatchDate(value) };
+  }
+  if (days === 2) {
+    return { title: `I overmorgen, ${time}`, hint: formatMatchDate(value) };
+  }
+
+  return { title: formatMatchWhen(value) };
 }
 
 export function toDatetimeLocalValue(date: Date) {

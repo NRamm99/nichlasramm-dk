@@ -15,7 +15,6 @@ type MatchScoreboardProps = {
   usernames?: Map<string, string>;
   ratings?: Map<string, number>;
   ratingDeltas?: Map<string, number>;
-  compact?: boolean;
 };
 
 export function MatchScoreboard({
@@ -24,7 +23,6 @@ export function MatchScoreboard({
   usernames,
   ratings,
   ratingDeltas,
-  compact = false,
 }: MatchScoreboardProps) {
   const ordered = [...sets].sort((a, b) => a.set_number - b.set_number);
   const outcome = matchOutcome(ordered);
@@ -33,31 +31,6 @@ export function MatchScoreboard({
 
   if (ordered.length === 0) {
     return null;
-  }
-
-  if (compact) {
-    return (
-      <div className="space-y-1.5">
-        <CompactTeam
-          players={team1}
-          games={ordered.map((row) => row.team1_games)}
-          opponents={ordered.map((row) => row.team2_games)}
-          setsWon={outcome.team1}
-          wonMatch={outcome.winner === 1}
-          ratingDeltas={ratingDeltas}
-          ratings={ratings}
-        />
-        <CompactTeam
-          players={team2}
-          games={ordered.map((row) => row.team2_games)}
-          opponents={ordered.map((row) => row.team1_games)}
-          setsWon={outcome.team2}
-          wonMatch={outcome.winner === 2}
-          ratingDeltas={ratingDeltas}
-          ratings={ratings}
-        />
-      </div>
-    );
   }
 
   return (
@@ -299,80 +272,6 @@ function SetTile({ value, opponent }: { value: number; opponent: number }) {
       }`}
     >
       {value}
-    </div>
-  );
-}
-
-function CompactTeam({
-  players,
-  games,
-  opponents,
-  setsWon,
-  wonMatch,
-  ratings,
-  ratingDeltas,
-}: {
-  players: MatchPlayer[];
-  games: number[];
-  opponents: number[];
-  setsWon: number;
-  wonMatch: boolean;
-  ratings?: Map<string, number>;
-  ratingDeltas?: Map<string, number>;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <p
-        className={`min-w-0 flex-1 truncate text-sm ${
-          wonMatch ? "font-semibold text-line" : "text-line/65"
-        }`}
-      >
-        {wonMatch ? "● " : ""}
-        {players.map((player, index) => {
-          const rating = player.profile_id
-            ? ratings?.get(player.profile_id)
-            : undefined;
-          const delta = player.profile_id
-            ? ratingDeltas?.get(player.profile_id)
-            : undefined;
-          return (
-            <span key={player.id}>
-              {index > 0 ? " / " : ""}
-              {player.display_name.split(" ")[0]}
-              <PlayerRatingSuffix rating={rating} delta={delta} />
-            </span>
-          );
-        })}
-      </p>
-      <div className="flex items-center gap-1">
-        {games.map((value, index) => {
-          const opponent = opponents[index] ?? 0;
-          const complete = isCompleteSet(value, opponent);
-          const leading = value > opponent;
-          return (
-            <span
-              key={index}
-              className={`flex h-8 w-8 items-center justify-center rounded-md font-display text-xl leading-none tabular-nums ${
-                leading
-                  ? "bg-ball text-court"
-                  : complete
-                    ? "bg-court text-line/40"
-                    : "border border-dashed border-line/25 bg-court text-line/70"
-              }`}
-            >
-              {value}
-            </span>
-          );
-        })}
-        <span
-          className={`ml-1.5 w-5 text-center font-display text-2xl leading-none ${
-            wonMatch ? "text-ball" : "text-line/35"
-          }`}
-          aria-label={`${setsWon} vundne sæt`}
-        >
-          {setsWon}
-        </span>
-      </div>
     </div>
   );
 }

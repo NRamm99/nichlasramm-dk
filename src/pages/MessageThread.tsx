@@ -88,7 +88,7 @@ export function MessageThread() {
   if (loading || (!ready && user)) {
     return (
       <SiteShell fill>
-        <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6">
+        <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6 lg:max-w-3xl">
           <ThreadBack />
           <p className="flex flex-1 items-center justify-center text-sm text-line/60">
             Indlæser…
@@ -135,7 +135,7 @@ export function MessageThread() {
 
   return (
     <SiteShell fill>
-      <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6">
+      <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6 lg:max-w-3xl">
         <ChatThread
           fill
           scrollKey={`${messages.length}:${lastId}`}

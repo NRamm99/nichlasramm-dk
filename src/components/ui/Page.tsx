@@ -16,8 +16,8 @@ export function Page({
       className={cx(
         "ui-page flex flex-col",
         center
-          ? "min-h-[calc(100vh-5.5rem)] items-center justify-center"
-          : "min-h-[calc(100vh-5.5rem)]",
+          ? "min-h-[calc(100vh-5.5rem)] items-center justify-center lg:min-h-[calc(100vh-6.5rem)]"
+          : "min-h-[calc(100vh-5.5rem)] lg:min-h-[calc(100vh-6.5rem)]",
         className,
       )}
     >
@@ -59,24 +59,29 @@ export function PageHeader({
   eyebrow,
   title,
   subtitle,
+  action,
 }: {
   eyebrow?: string;
   title: ReactNode;
   subtitle?: ReactNode;
+  action?: ReactNode;
 }) {
   return (
     <header>
       {eyebrow ? <p className="ui-label">{eyebrow}</p> : null}
-      <h1
+      <div
         className={cx(
-          "font-display text-4xl tracking-wide sm:text-5xl",
+          "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
           eyebrow && "mt-2",
         )}
       >
-        {title}
-      </h1>
+        <h1 className="font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+          {title}
+        </h1>
+        {action ? <div className="shrink-0 sm:pt-1">{action}</div> : null}
+      </div>
       {subtitle ? (
-        <p className="mt-2 text-sm text-line/55">{subtitle}</p>
+        <p className="mt-2 max-w-xl text-sm text-line/55">{subtitle}</p>
       ) : null}
     </header>
   );

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -140,19 +141,15 @@ export function MatchmakerList() {
   return (
     <SiteShell>
       <Page>
-        <BackLink to="/">Hjem</BackLink>
-        <h1 className="mt-4 font-display text-5xl tracking-wide sm:text-6xl">
-          Find kamp
-        </h1>
-        <p className="mt-2 text-sm text-line/65">
-          Opslag om at spille — ikke det samme som at finde en fast partner.
-        </p>
-        <Link
-          to="/matchmaker/ny"
-          className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-ball px-4 py-2.5 text-xs font-semibold text-court sm:w-auto"
-        >
-          Opret annonce
-        </Link>
+        <PageHeader
+          title="Find kamp"
+          subtitle="Opslag om at spille — ikke det samme som at finde en fast partner."
+          action={
+            <Button to="/matchmaker/ny" className="w-full sm:w-fit">
+              Opret annonce
+            </Button>
+          }
+        />
         <button
           type="button"
           role="switch"

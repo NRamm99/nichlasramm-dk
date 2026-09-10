@@ -96,17 +96,21 @@ export function Matches() {
   return (
     <SiteShell>
       <Page>
-        <PageHeader title="Kampe" />
-        <Button to="/kampe/ny" className="mt-6 w-fit">
-          Opret kamp
-        </Button>
+        <PageHeader
+          title="Kampe"
+          action={
+            <Button to="/kampe/ny" className="w-full sm:w-fit">
+              Opret kamp
+            </Button>
+          }
+        />
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}
           </p>
         ) : null}
 
-        <h2 className="mt-10 font-display text-2xl tracking-wide">Kommende</h2>
+        <h2 className="mt-8 font-display text-2xl tracking-wide">Kommende</h2>
         <MatchList
           rows={upcoming}
           empty="Ingen planlagte kampe."
@@ -114,7 +118,7 @@ export function Matches() {
           highlightOwn
         />
 
-        <h2 className="mt-10 font-display text-2xl tracking-wide">Spillet</h2>
+        <h2 className="mt-8 font-display text-2xl tracking-wide">Spillet</h2>
         <MatchList rows={played} empty="Ingen registrerede resultater endnu." />
       </Page>
     </SiteShell>

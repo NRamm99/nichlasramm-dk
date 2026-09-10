@@ -47,22 +47,29 @@ export function Landing() {
 
 function GuestLanding() {
   return (
-    <Page center className="text-center">
-      <p className="ui-label text-ball">Lukket padelklub</p>
-      <h1 className="mt-4 max-w-full font-display text-[clamp(2.75rem,14vw,10rem)] leading-[0.85] tracking-[0.04em]">
-        Padel By Ramm
-      </h1>
-      <p className="mt-6 max-w-lg text-base text-line/75 sm:text-lg">
-        Velkommen til den lokale padel-liga. Log ind, hvis du allerede er
-        medlem, eller opret en konto med en invitationskode.
-      </p>
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-        <Button variant="secondary" to="/login" className="px-8 py-3">
-          Log ind
-        </Button>
-        <Button to="/register" className="px-8 py-3">
-          Opret konto
-        </Button>
+    <Page
+      center
+      className="text-center lg:max-w-4xl lg:flex-row lg:items-center lg:justify-between lg:gap-12 lg:text-left"
+    >
+      <div className="min-w-0">
+        <p className="ui-label text-ball">Lukket padelklub</p>
+        <h1 className="mt-4 max-w-full font-display text-[clamp(2.75rem,14vw,7rem)] leading-[0.85] tracking-[0.04em]">
+          Padel By Ramm
+        </h1>
+      </div>
+      <div className="mt-6 max-w-md lg:mt-0 lg:shrink-0">
+        <p className="text-base text-line/75 sm:text-lg">
+          Velkommen til den lokale padel-liga. Log ind, hvis du allerede er
+          medlem, eller opret en konto med en invitationskode.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+          <Button variant="secondary" to="/login" className="px-8 py-3">
+            Log ind
+          </Button>
+          <Button to="/register" className="px-8 py-3">
+            Opret konto
+          </Button>
+        </div>
       </div>
     </Page>
   );
@@ -137,6 +144,9 @@ function HomeDashboardView({
           : undefined;
   const ownNextMatch =
     data?.nextMatch && data.nextMatchIsOwn ? data.nextMatch : null;
+  const nextMatchWhen = ownNextMatch
+    ? formatNextMatchWhen(ownNextMatch.played_at)
+    : null;
   const nextMatchPeople = data?.nextMatchPeople ?? new Map<string, PartnerPreview>();
   const leagueTotal = data?.leagueTotal ?? 0;
   const leaguePlayed = data?.leaguePlayed ?? 0;
@@ -145,7 +155,7 @@ function HomeDashboardView({
 
   return (
     <Page>
-      <h1 className="font-display text-4xl tracking-wide sm:text-5xl">
+      <h1 className="font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
         Hej {greeting}
       </h1>
       <p className="mt-1 text-sm text-line/55">Her er status på din klub</p>
@@ -170,25 +180,29 @@ function HomeDashboardView({
         </div>
       ) : null}
 
-      <Card className="mt-6 p-5">
+      <div className="mt-6 grid gap-3 lg:grid-cols-2 lg:items-stretch">
+      <Card className="flex flex-col p-5 lg:p-6">
         {ownNextMatch ? (
-          <div className="flex items-center gap-4">
+          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-ball">Næste kamp</p>
               <p className="mt-2 font-display text-3xl tracking-wide sm:text-4xl">
-                {formatNextMatchWhen(ownNextMatch.played_at)}
+                {nextMatchWhen?.title}
               </p>
-              <Button to={`/kampe/${ownNextMatch.id}`} block className="mt-4">
+              {nextMatchWhen?.hint ? (
+                <p className="mt-1 text-xs text-line/50">{nextMatchWhen.hint}</p>
+              ) : null}
+              <Button to={`/kampe/${ownNextMatch.id}`} className="mt-4 self-start">
                 Se detaljer
               </Button>
             </div>
-            <div className="flex shrink-0 flex-col items-center gap-1">
+            <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:gap-1 lg:gap-2">
               <TeamAvatarStack
                 people={teamPlayers(ownNextMatch.players, 1).map((player) =>
                   matchPlayerPreview(player, nextMatchPeople),
                 )}
               />
-              <p className="text-xs text-line/40">vs</p>
+              <p className="text-xs text-line/40 lg:text-sm">vs</p>
               <TeamAvatarStack
                 people={teamPlayers(ownNextMatch.players, 2).map((player) =>
                   matchPlayerPreview(player, nextMatchPeople),
@@ -202,11 +216,9 @@ function HomeDashboardView({
             <p className="mt-2 text-sm text-line/55">
               Ingen planlagt kamp i kalenderen.
             </p>
-            <div className="mt-4 grid gap-2">
-              <Button to="/matchmaker" block>
-                Find kamp
-              </Button>
-              <Button to="/kampe/ny" variant="secondary" block>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button to="/matchmaker">Find kamp</Button>
+              <Button to="/kampe/ny" variant="secondary">
                 Opret kamp
               </Button>
             </div>
@@ -214,7 +226,7 @@ function HomeDashboardView({
         )}
       </Card>
 
-      <Card className="mt-3 p-5">
+      <Card className="flex flex-col p-5 lg:p-6">
         <p className="text-sm font-semibold text-ball">Liga</p>
         {data?.inLeague ? (
           <>
@@ -295,23 +307,25 @@ function HomeDashboardView({
                   : `${data.unreadDialogs} ulæste ligabeskeder`}
               </p>
             ) : null}
-            <Button to="/liga" block className="mt-4">
-              Se ligaen
-            </Button>
+            <div className="mt-auto pt-6">
+              <Button to="/liga">Se ligaen</Button>
+            </div>
           </>
         ) : (
           <>
             {leagueHint ? (
               <p className="mt-2 text-sm text-line/55">{leagueHint}</p>
             ) : null}
-            <Button to="/liga" block className={leagueHint ? "mt-4" : "mt-3"}>
-              Se ligaen
-            </Button>
+            <div className={`mt-auto ${leagueHint ? "pt-6" : "pt-4"}`}>
+              <Button to="/liga">Se ligaen</Button>
+            </div>
           </>
         )}
       </Card>
+      </div>
 
-      <p className="ui-label mt-8 mb-2 px-1">Kampe</p>
+      <div className="mt-8 lg:hidden">
+      <p className="ui-label mb-2 px-1">Kampe</p>
       <ListGroup>
         <ListRow
           to="/kampe"
@@ -358,6 +372,7 @@ function HomeDashboardView({
           <ListRow to="/admin" icon={<AdminIcon />} label="Administration" />
         ) : null}
       </ListGroup>
+      </div>
     </Page>
   );
 }

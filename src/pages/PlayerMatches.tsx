@@ -106,7 +106,7 @@ export function PlayerMatches() {
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           Kampe
         </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">
+        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
           {profile ? fullName(profile) : "Kampe"}
         </h1>
         {error ? (

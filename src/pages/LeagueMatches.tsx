@@ -131,7 +131,9 @@ export function LeagueMatches() {
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
           {title}
         </p>
-        <h1 className="mt-2 font-display text-6xl tracking-wide">Ligakampe</h1>
+        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+          Ligakampe
+        </h1>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}
