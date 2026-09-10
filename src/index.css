@@ -70,6 +70,10 @@ body {
     padding-bottom: 3rem;
   }
 
+  .ui-page.ui-page-wide {
+    max-width: 72rem;
+  }
+
   .has-desktop-nav .ui-page {
     max-width: 72rem;
     width: 100%;

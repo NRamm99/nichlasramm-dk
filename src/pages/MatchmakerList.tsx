@@ -12,6 +12,8 @@ import {
   listingIsLive,
   listingOccupied,
   listingOccupancyLabel,
+  listingInterestedCount,
+  listingInterestedLabel,
   listingGoingIds,
   personLabel,
   fetchFollowsNewListings,
@@ -194,6 +196,10 @@ export function MatchmakerList() {
                 (row) => row.listing_id === listing.id,
               );
               const occupied = listingOccupied(listing, listingRsvps);
+              const interestedCount = listingInterestedCount(
+                listing,
+                listingRsvps,
+              );
               const going = listingGoingIds(listing, listingRsvps).map((id) => {
                 const person = people.find((row) => row.id === id);
                 return (
@@ -240,8 +246,13 @@ export function MatchmakerList() {
                           </span>
                         ) : null}
                       </span>
-                      <span className="rounded-full bg-ball/15 px-2.5 py-1 text-sm font-semibold text-ball">
-                        {listingOccupancyLabel(occupied)}
+                      <span className="flex flex-col items-end gap-1">
+                        <span className="rounded-full bg-ball/15 px-2.5 py-1 text-sm font-semibold text-ball">
+                          {listingOccupancyLabel(occupied)}
+                        </span>
+                        <span className="text-[0.7rem] font-medium text-line/50">
+                          {listingInterestedLabel(interestedCount)}
+                        </span>
                       </span>
                     </span>
                   </Link>

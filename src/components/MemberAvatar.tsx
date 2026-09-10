@@ -22,13 +22,13 @@ export function MemberAvatar({
         : size === "lg"
           ? "h-28 w-28"
           : size === "stack"
-            ? "h-11 w-11 lg:h-28 lg:w-28"
+            ? "h-[4.5rem] w-[4.5rem] lg:h-28 lg:w-28"
             : "h-16 w-16";
   const initialsSize =
     size === "lg"
       ? "text-2xl"
       : size === "stack"
-        ? "text-sm lg:text-2xl"
+        ? "text-lg lg:text-2xl"
         : size === "xs"
           ? "text-[0.65rem]"
           : "text-sm";
@@ -82,7 +82,7 @@ export function TeamAvatarStack({ people }: { people: PartnerPreview[] }) {
       {people.map((person, index) => (
         <span
           key={person.id}
-          className={`relative ${index > 0 ? "-ml-2 lg:-ml-6" : ""}`}
+          className={`relative ${index > 0 ? "-ml-4 lg:-ml-6" : ""}`}
           style={{ zIndex: people.length - index }}
         >
           <MemberAvatar person={person} size="stack" ring="court" />

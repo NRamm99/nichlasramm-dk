@@ -6,15 +6,18 @@ export function Page({
   children,
   className,
   center,
+  wide,
 }: {
   children: ReactNode;
   className?: string;
   center?: boolean;
+  wide?: boolean;
 }) {
   return (
     <main
       className={cx(
         "ui-page flex flex-col",
+        wide && "ui-page-wide",
         center
           ? "min-h-[calc(100vh-5.5rem)] items-center justify-center lg:min-h-[calc(100vh-6.5rem)]"
           : "min-h-[calc(100vh-5.5rem)] lg:min-h-[calc(100vh-6.5rem)]",

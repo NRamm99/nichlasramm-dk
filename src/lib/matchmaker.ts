@@ -112,6 +112,22 @@ export function listingOccupancyLabel(occupied: number) {
   return `${occupied} · bane ${courts} (${last}/4)`;
 }
 
+export function listingInterestedCount(
+  listing: MatchmakerListing,
+  rsvps: MatchmakerRsvp[],
+) {
+  return rsvps.filter(
+    (row) =>
+      row.status === "interested" &&
+      row.profile_id !== listing.host_id &&
+      row.profile_id !== listing.brought_partner_id,
+  ).length;
+}
+
+export function listingInterestedLabel(count: number) {
+  return count === 1 ? "1 interesseret" : `${count} interesserede`;
+}
+
 export function matchIdForCourt(
   courtNumber: number,
   rows: MatchmakerListingMatch[],

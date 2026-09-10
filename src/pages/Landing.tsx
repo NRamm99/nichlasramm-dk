@@ -49,15 +49,16 @@ function GuestLanding() {
   return (
     <Page
       center
-      className="text-center lg:max-w-4xl lg:flex-row lg:items-center lg:justify-between lg:gap-12 lg:text-left"
+      wide
+      className="text-center lg:flex-row lg:items-center lg:justify-between lg:gap-16 lg:text-left"
     >
-      <div className="min-w-0">
+      <div className="min-w-0 lg:flex-1">
         <p className="ui-label text-ball">Lukket padelklub</p>
-        <h1 className="mt-4 max-w-full font-display text-[clamp(2.75rem,14vw,7rem)] leading-[0.85] tracking-[0.04em]">
+        <h1 className="mt-4 font-display text-[clamp(2.75rem,8vw,6.5rem)] leading-[0.85] tracking-[0.04em]">
           Padel By Ramm
         </h1>
       </div>
-      <div className="mt-6 max-w-md lg:mt-0 lg:shrink-0">
+      <div className="mt-6 max-w-md lg:mt-0 lg:w-[26rem] lg:shrink-0">
         <p className="text-base text-line/75 sm:text-lg">
           Velkommen til den lokale padel-liga. Log ind, hvis du allerede er
           medlem, eller opret en konto med en invitationskode.
@@ -183,7 +184,7 @@ function HomeDashboardView({
       <div className="mt-6 grid gap-3 lg:grid-cols-2 lg:items-stretch">
       <Card className="flex flex-col p-5 lg:p-6">
         {ownNextMatch ? (
-          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex flex-1 flex-row items-center gap-3 sm:gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-ball">Næste kamp</p>
               <p className="mt-2 font-display text-3xl tracking-wide sm:text-4xl">
@@ -196,7 +197,7 @@ function HomeDashboardView({
                 Se detaljer
               </Button>
             </div>
-            <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:gap-1 lg:gap-2">
+            <div className="flex shrink-0 flex-col items-center gap-1 lg:gap-2">
               <TeamAvatarStack
                 people={teamPlayers(ownNextMatch.players, 1).map((player) =>
                   matchPlayerPreview(player, nextMatchPeople),

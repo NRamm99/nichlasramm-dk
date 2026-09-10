@@ -133,7 +133,9 @@ export function Profile() {
             ? `requester_id.eq.${user.id},recipient_id.eq.${user.id}`
             : `and(requester_id.eq.${user.id},recipient_id.eq.${data.id}),and(requester_id.eq.${data.id},recipient_id.eq.${user.id})`,
         ),
-      fetchPlayerRecord(data.id).catch(() => emptyPlayerRecord()),
+      data.hide_record && !isOwn
+        ? Promise.resolve(emptyPlayerRecord())
+        : fetchPlayerRecord(data.id).catch(() => emptyPlayerRecord()),
       fetchPlayerRatingSummary(data.id).catch(() => emptyRatingSummary()),
     ]);
     setRecord(nextRecord);
@@ -259,6 +261,22 @@ export function Profile() {
     setAvatarFile(null);
     setInfo("Profilen er gemt.");
     await load();
+  }
+
+  async function handleHideRecord(hide: boolean) {
+    setError(null);
+    setProfile((current) =>
+      current ? { ...current, hide_record: hide } : current,
+    );
+    const { error: hideError } = await supabase.rpc("set_hide_record", {
+      p_hide: hide,
+    });
+    if (hideError) {
+      setProfile((current) =>
+        current ? { ...current, hide_record: !hide } : current,
+      );
+      setError(danishAuthError(hideError.message));
+    }
   }
 
   async function handleRequest(targetId: string) {
@@ -506,6 +524,10 @@ export function Profile() {
             <div className="mt-6">
               <MatchRecord
                 record={record}
+                hideFromOthers={Boolean(profile.hide_record)}
+                onHideFromOthersChange={
+                  isOwn ? (hide) => void handleHideRecord(hide) : undefined
+                }
                 matchesTo={
                   profile.username
                     ? profileMatchesPath(profile.username)
