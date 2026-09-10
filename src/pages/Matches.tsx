@@ -3,7 +3,8 @@ import { Navigate } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
 import { Button } from "../components/ui/Button";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { Page, PageHeader } from "../components/ui/Page";
+import { MatchListSkeleton, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -73,10 +74,29 @@ export function Matches() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <PageHeader
+            title="Kampe"
+            action={
+              <Button to="/kampe/ny" className="w-full sm:w-fit">
+                Opret kamp
+              </Button>
+            }
+          />
+          <SkeletonRegion>
+            <h2 className="mt-8 font-display text-2xl tracking-wide">Kommende</h2>
+            <MatchListSkeleton />
+            <h2 className="mt-8 font-display text-2xl tracking-wide">Spillet</h2>
+            <MatchListSkeleton />
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

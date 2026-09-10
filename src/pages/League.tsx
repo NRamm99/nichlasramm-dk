@@ -4,7 +4,8 @@ import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader } from "../components/ui/Page";
+import { LeaguePageSkeleton } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -267,10 +268,20 @@ export function League() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/">Hjem</BackLink>
+          <div className="mt-4">
+            <PageHeader eyebrow="Sæson" title="Liga" />
+          </div>
+          <LeaguePageSkeleton />
+        </Page>
       </SiteShell>
     );
   }

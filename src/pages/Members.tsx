@@ -4,7 +4,8 @@ import { MemberAvatar } from "../components/MemberAvatar";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { RatingMark } from "../components/RatingValue";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { Page, PageHeader } from "../components/ui/Page";
+import { SkeletonListRows, SkeletonRegion } from "../components/ui/Skeleton";
 import { fieldClass } from "../components/ui/Field";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -68,10 +69,47 @@ export function Members() {
     });
   }, [members, query]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <PageHeader eyebrow="Klubben" title="Medlemmer" />
+          <Link
+            to="/rating"
+            className="mt-4 flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-4 py-3 transition hover:border-ball/30"
+          >
+            <span className="min-w-0">
+              <span className="block font-semibold text-line">Rating</span>
+              <span className="block text-xs text-line/55">
+                Se klubbens rangliste
+              </span>
+            </span>
+            <span aria-hidden className="shrink-0 text-lg text-line/35">
+              ›
+            </span>
+          </Link>
+          <label className="mt-4 block">
+            <span className="sr-only">Søg blandt medlemmer</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Søg efter navn…"
+              autoComplete="off"
+              disabled
+              className={fieldClass("bg-court-mid text-sm placeholder:text-line/40")}
+            />
+          </label>
+          <SkeletonRegion>
+            <div className="mt-6">
+              <SkeletonListRows count={8} />
+            </div>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

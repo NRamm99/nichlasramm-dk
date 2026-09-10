@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { Page, PageHeader } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCard,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
@@ -116,10 +121,44 @@ export function MatchmakerList() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <PageHeader
+            title="Find kamp"
+            subtitle="Opslag om at spille — ikke det samme som at finde en fast partner."
+            action={
+              <Button to="/matchmaker/ny" className="w-full sm:w-fit">
+                Opret annonce
+              </Button>
+            }
+          />
+          <SkeletonRegion>
+            <SkeletonCard className="mt-3 flex min-h-14 items-center justify-between gap-4 rounded-2xl px-4 py-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-7 w-12 shrink-0 rounded-full" />
+            </SkeletonCard>
+            <ul className="mt-6 space-y-2">
+              {[0, 1, 2, 3].map((row) => (
+                <li key={row}>
+                  <SkeletonCard className="flex min-h-14 items-center justify-between gap-3 rounded-2xl px-4 py-3">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                    <Skeleton className="h-3 w-16" />
+                  </SkeletonCard>
+                </li>
+              ))}
+            </ul>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

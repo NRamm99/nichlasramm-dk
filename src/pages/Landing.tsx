@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { ListGroup, ListRow } from "../components/ui/ListGroup";
 import { Page, PageStatus } from "../components/ui/Page";
+import { HomeDashboardSkeleton } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -128,7 +129,11 @@ function HomeDashboardView({
   }, [userId]);
 
   if (!data && !error) {
-    return <PageStatus>Indlæser…</PageStatus>;
+    return (
+      <Page>
+        <HomeDashboardSkeleton />
+      </Page>
+    );
   }
 
   const greeting = data?.firstName || username || "der";

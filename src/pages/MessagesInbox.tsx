@@ -5,7 +5,8 @@ import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { Button } from "../components/ui/Button";
 import { ListEmpty, ListGroup } from "../components/ui/ListGroup";
-import { Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { Page, PageHeader } from "../components/ui/Page";
+import { SkeletonListRows, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -55,10 +56,23 @@ export function MessagesInbox() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <PageHeader
+            eyebrow="Klubben"
+            title="Beskeder"
+            subtitle="Skriv privat med andre medlemmer. Start en tråd fra medlemslisten eller en profil."
+          />
+          <SkeletonRegion>
+            <div className="mt-6">
+              <SkeletonListRows count={6} />
+            </div>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }
