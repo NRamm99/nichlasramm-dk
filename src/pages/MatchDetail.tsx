@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { AddToCalendarButton } from "../components/AddToCalendarButton";
 import { LeagueBadge } from "../components/LeagueBadge";
 import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
@@ -478,6 +479,16 @@ export function MatchDetail() {
         ) : (
           <p className="mt-2 text-sm text-line/60">Indlæser…</p>
         )}
+        {match ? (
+          <AddToCalendarButton
+            className="mt-4"
+            matchId={match.id}
+            playedAt={match.played_at}
+            status={match.status}
+            players={players}
+            league={isLeagueMatch}
+          />
+        ) : null}
 
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">

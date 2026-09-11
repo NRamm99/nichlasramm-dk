@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AddToCalendarButton } from "../components/AddToCalendarButton";
 import { SiteShell } from "../components/SiteShell";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { HomePoll } from "../components/HomePoll";
@@ -19,6 +20,7 @@ import {
 } from "../lib/home";
 import {
   formatNextMatchWhen,
+  isLeagueMatch,
   teamPlayers,
   type MatchPlayer,
 } from "../lib/match";
@@ -198,9 +200,16 @@ function HomeDashboardView({
               {nextMatchWhen?.hint ? (
                 <p className="mt-1 text-xs text-line/50">{nextMatchWhen.hint}</p>
               ) : null}
-              <Button to={`/kampe/${ownNextMatch.id}`} className="mt-4 self-start">
-                Se detaljer
-              </Button>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button to={`/kampe/${ownNextMatch.id}`}>Se detaljer</Button>
+                <AddToCalendarButton
+                  matchId={ownNextMatch.id}
+                  playedAt={ownNextMatch.played_at}
+                  status={ownNextMatch.status}
+                  players={ownNextMatch.players}
+                  league={isLeagueMatch(ownNextMatch)}
+                />
+              </div>
             </div>
             <div className="flex shrink-0 flex-col items-center gap-1 lg:gap-2">
               <TeamAvatarStack
