@@ -131,19 +131,6 @@ export function isIos() {
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
 
-export function isStandaloneDisplay() {
-  if (typeof window === "undefined") return false;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    nav.standalone === true
-  );
-}
-
-export function iosCalendarHref(_filename: string, ics: string) {
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
-}
-
 export function googleCalendarUrl({
   summary,
   playedAt,
@@ -170,11 +157,6 @@ export function googleCalendarUrl({
 }
 
 export async function openIcsFile(filename: string, ics: string, title: string) {
-  if (isIos()) {
-    window.location.assign(iosCalendarHref(filename, ics));
-    return;
-  }
-
   const file = new File([ics], filename, { type: "text/calendar" });
   const canShareFiles = (() => {
     try {
