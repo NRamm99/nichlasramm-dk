@@ -6,6 +6,7 @@ import {
   isIos,
   matchIcsKind,
   matchIcsSummary,
+  openAppleCalendarEvent,
   openExternalUrl,
   openIcsFile,
   type MatchIcsKind,
@@ -42,26 +43,6 @@ export function AddToCalendarButton({
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const matchUrl = `${origin}/kampe/${matchId}`;
   const summary = matchIcsSummary(players, resolvedKind);
-  const googleHref = googleCalendarUrl({
-    summary,
-    playedAt,
-    durationMinutes,
-    details: `${summary}\n${matchUrl}`,
-  });
-
-  if (typeof window !== "undefined" && isIos()) {
-    if (!googleHref) return null;
-    return (
-      <Button
-        variant="secondary"
-        className={cx("self-start", className)}
-        onClick={() => openExternalUrl(googleHref)}
-      >
-        Tilføj til kalender
-      </Button>
-    );
-  }
-
   const ics = buildMatchIcs({
     id: matchId,
     playedAt,
@@ -71,6 +52,35 @@ export function AddToCalendarButton({
     durationMinutes,
   });
   if (!ics) return null;
+
+  const googleHref = googleCalendarUrl({
+    summary,
+    playedAt,
+    durationMinutes,
+    details: `${summary}\n${matchUrl}`,
+  });
+
+  if (typeof window !== "undefined" && isIos()) {
+    return (
+      <div className={cx("flex flex-col items-start gap-2", className)}>
+        <Button variant="secondary" onClick={() => openAppleCalendarEvent(ics)}>
+          Tilføj til kalender
+        </Button>
+        {googleHref ? (
+          <p className="text-xs text-line/50">
+            Virker det ikke?{" "}
+            <button
+              type="button"
+              className="text-ball underline"
+              onClick={() => openExternalUrl(googleHref)}
+            >
+              Google Kalender
+            </button>
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <Button

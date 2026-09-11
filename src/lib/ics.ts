@@ -155,6 +155,16 @@ export function googleCalendarUrl({
   return `https://calendar.google.com/calendar/u/0/r/eventedit?${params}`;
 }
 
+export function openAppleCalendarEvent(ics: string) {
+  const href = `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
+  const link = document.createElement("a");
+  link.href = href;
+  link.target = "_blank";
+  document.body.append(link);
+  link.click();
+  link.remove();
+}
+
 export function openExternalUrl(url: string) {
   const opened = window.open(url, "_blank");
   if (opened) {
