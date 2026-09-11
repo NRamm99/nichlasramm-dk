@@ -105,6 +105,7 @@ export function buildMatchIcs({
     "PRODID:-//Padel By Ramm//kampe//DA",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
+    icsText("X-WR-CALNAME", summary),
     "BEGIN:VEVENT",
     `UID:match-${id}@nichlasramm.dk`,
     `DTSTAMP:${toIcsUtc(now)}`,
@@ -131,40 +132,39 @@ export function isIos() {
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
 
-function isIosSafari() {
-  if (!isIos()) return false;
-  const ua = navigator.userAgent;
-  return (
-    /Safari/i.test(ua) &&
-    !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|YaBrowser/i.test(ua)
-  );
-}
-
-export function isStandaloneDisplay() {
-  if (typeof window === "undefined") return false;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    nav.standalone === true
-  );
-}
-
 export function iosCalendarHref(filename: string, ics: string) {
   const path = `/api/ics?file=${encodeURIComponent(icsFileName(filename))}&d=${encodeIcsPayload(ics)}`;
-  if (!isIosSafari()) {
-    return `${window.location.origin.replace(/^https/i, "webcal").replace(/^http/i, "webcal")}${path}`;
-  }
-  return path;
+  return `${window.location.origin.replace(/^https/i, "webcal").replace(/^http/i, "webcal")}${path}`;
+}
+
+export function googleCalendarUrl({
+  summary,
+  playedAt,
+  durationMinutes,
+  details,
+}: {
+  summary: string;
+  playedAt: string;
+  durationMinutes?: number | null;
+  details: string;
+}) {
+  const start = new Date(playedAt);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(
+    start.getTime() + matchDurationMinutes(durationMinutes) * 60_000,
+  );
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: summary,
+    dates: `${toIcsUtc(start)}/${toIcsUtc(end)}`,
+    details,
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
 }
 
 export async function openIcsFile(filename: string, ics: string, title: string) {
   if (isIos()) {
-    const href = iosCalendarHref(filename, ics);
-    if (isStandaloneDisplay()) {
-      window.open(href, "_blank", "noopener");
-      return;
-    }
-    window.location.assign(href);
+    window.location.assign(iosCalendarHref(filename, ics));
     return;
   }
 

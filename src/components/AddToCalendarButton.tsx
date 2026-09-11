@@ -2,9 +2,9 @@ import { Button } from "./ui/Button";
 import { cx } from "./ui/cx";
 import {
   buildMatchIcs,
+  googleCalendarUrl,
   iosCalendarHref,
   isIos,
-  isStandaloneDisplay,
   matchIcsKind,
   matchIcsSummary,
   openIcsFile,
@@ -40,32 +40,47 @@ export function AddToCalendarButton({
   if (Number.isNaN(start.getTime())) return null;
 
   const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const matchUrl = `${origin}/kampe/${matchId}`;
   const ics = buildMatchIcs({
     id: matchId,
     playedAt,
     players,
     kind: resolvedKind,
-    url: `${origin}/kampe/${matchId}`,
+    url: matchUrl,
     durationMinutes,
   });
   if (!ics) return null;
 
   const filename = `padel-${matchId}.ics`;
+  const summary = matchIcsSummary(players, resolvedKind);
   const onIos = typeof window !== "undefined" && isIos();
-  const iosHref = onIos ? iosCalendarHref(filename, ics) : null;
-  const openInSafari = onIos && isStandaloneDisplay();
+  const appleHref = onIos ? iosCalendarHref(filename, ics) : null;
+  const googleHref = onIos
+    ? googleCalendarUrl({
+        summary,
+        playedAt,
+        durationMinutes,
+        details: `${summary}\n${matchUrl}`,
+      })
+    : null;
 
-  if (iosHref) {
+  if (appleHref) {
     return (
-      <Button
-        variant="secondary"
-        className={cx("self-start", className)}
-        href={iosHref}
-        target={openInSafari ? "_blank" : undefined}
-        rel={openInSafari ? "noopener noreferrer" : undefined}
-      >
-        Tilføj til kalender
-      </Button>
+      <div className={cx("flex flex-col items-start gap-2", className)}>
+        <Button variant="secondary" href={appleHref}>
+          Tilføj til kalender
+        </Button>
+        {googleHref ? (
+          <Button
+            variant="ghost"
+            href={googleHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google Kalender
+          </Button>
+        ) : null}
+      </div>
     );
   }
 
@@ -74,7 +89,7 @@ export function AddToCalendarButton({
       variant="secondary"
       className={cx("self-start", className)}
       onClick={() => {
-        void openIcsFile(filename, ics, matchIcsSummary(players, resolvedKind));
+        void openIcsFile(filename, ics, summary);
       }}
     >
       Tilføj til kalender
