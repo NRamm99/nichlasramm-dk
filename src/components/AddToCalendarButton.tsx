@@ -2,11 +2,11 @@ import { Button } from "./ui/Button";
 import { cx } from "./ui/cx";
 import {
   buildMatchIcs,
+  appleCalendarHref,
   googleCalendarUrl,
   isIos,
   matchIcsKind,
   matchIcsSummary,
-  openAppleCalendarEvent,
   openExternalUrl,
   openIcsFile,
   type MatchIcsKind,
@@ -63,7 +63,10 @@ export function AddToCalendarButton({
   if (typeof window !== "undefined" && isIos()) {
     return (
       <div className={cx("flex flex-col items-start gap-2", className)}>
-        <Button variant="secondary" onClick={() => openAppleCalendarEvent(ics)}>
+        <Button
+          variant="secondary"
+          href={appleCalendarHref(`padel-${matchId}.ics`, ics)}
+        >
           Tilføj til kalender
         </Button>
         {googleHref ? (
