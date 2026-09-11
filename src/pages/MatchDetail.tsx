@@ -10,6 +10,7 @@ import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
+  asMatchRow,
   formatMatchWhen,
   formatMatchWindow,
   isSinglesMatch,
@@ -21,6 +22,7 @@ import {
   rosterPicksToJson,
   teamPlayers,
   validateMatchSets,
+  withMatchSelect,
   type MatchComment,
   type MatchPlayer,
   type MatchResultCorrection,
@@ -81,11 +83,9 @@ export function MatchDetail() {
     if (!matchId) return;
     setError(null);
 
-    const { data, error: loadError } = await supabase
-      .from("matches")
-      .select("id, created_at, created_by, played_at, status, duration_minutes")
-      .eq("id", matchId)
-      .maybeSingle();
+    const { data, error: loadError } = await withMatchSelect((select) =>
+      supabase.from("matches").select(select).eq("id", matchId).maybeSingle(),
+    );
 
     if (loadError) {
       setError(danishAuthError(loadError.message));
@@ -153,7 +153,7 @@ export function MatchDetail() {
     }
     setUsernames(nameMap);
 
-    setMatch(data as MatchRow);
+    setMatch(asMatchRow(data as MatchRow));
     setPlayers((playerRows ?? []) as MatchPlayer[]);
     setSets((setRows ?? []) as MatchSet[]);
     setComments(

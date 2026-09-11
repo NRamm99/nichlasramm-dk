@@ -8,8 +8,9 @@ import {
   type LeagueTeamPlayer,
 } from "./league";
 import {
-  MATCH_SELECT,
+  asMatchRow,
   fetchDisputedMatchIds,
+  withMatchSelect,
   type MatchCard,
   type MatchPlayer,
   type MatchRow,
@@ -59,17 +60,15 @@ export function remainingLeagueCopy(count: number) {
 async function fetchMatchCard(matchId: string): Promise<MatchCard | null> {
   const [{ data: match }, { data: playerRows }, { data: setRows }] =
     await Promise.all([
-      supabase
-        .from("matches")
-        .select(MATCH_SELECT)
-        .eq("id", matchId)
-        .maybeSingle(),
+      withMatchSelect((select) =>
+        supabase.from("matches").select(select).eq("id", matchId).maybeSingle(),
+      ),
       supabase.from("match_players").select("*").eq("match_id", matchId),
       supabase.from("match_sets").select("*").eq("match_id", matchId),
     ]);
   if (!match) return null;
   return {
-    ...(match as MatchRow),
+    ...asMatchRow(match as MatchRow),
     players: (playerRows ?? []) as MatchPlayer[],
     sets: (setRows ?? []) as MatchSet[],
   };

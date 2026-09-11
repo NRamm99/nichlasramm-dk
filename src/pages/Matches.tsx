@@ -8,11 +8,12 @@ import { MatchListSkeleton, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
-  MATCH_SELECT,
+  asMatchRow,
   type MatchCard,
   type MatchPlayer,
   type MatchRow,
   type MatchSet,
+  withMatchSelect,
 } from "../lib/match";
 import { supabase } from "../lib/supabase";
 
@@ -23,10 +24,12 @@ export function Matches() {
   const [ready, setReady] = useState(false);
 
   const load = useCallback(async () => {
-    const { data: rows, error: loadError } = await supabase
-      .from("matches")
-      .select(MATCH_SELECT)
-      .order("played_at", { ascending: false });
+    const { data: rows, error: loadError } = await withMatchSelect((select) =>
+      supabase
+        .from("matches")
+        .select(select)
+        .order("played_at", { ascending: false }),
+    );
 
     if (loadError) {
       setError(danishAuthError(loadError.message));
@@ -34,7 +37,7 @@ export function Matches() {
       return;
     }
 
-    const list = (rows ?? []) as MatchRow[];
+    const list = ((rows ?? []) as MatchRow[]).map(asMatchRow);
     if (list.length === 0) {
       setMatches([]);
       setReady(true);

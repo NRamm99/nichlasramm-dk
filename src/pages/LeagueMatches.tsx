@@ -7,11 +7,12 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fetchLatestLeague } from "../lib/league";
 import {
-  MATCH_SELECT,
+  asMatchRow,
   type MatchCard,
   type MatchPlayer,
   type MatchRow,
   type MatchSet,
+  withMatchSelect,
 } from "../lib/match";
 import { supabase } from "../lib/supabase";
 
@@ -57,7 +58,9 @@ export function LeagueMatches() {
 
     const [{ data: rows, error: loadError }, { data: playerRows }, { data: setRows }, { data: correctionRows }] =
       await Promise.all([
-        supabase.from("matches").select(MATCH_SELECT).in("id", ids),
+        withMatchSelect((select) =>
+          supabase.from("matches").select(select).in("id", ids),
+        ),
         supabase.from("match_players").select("*").in("match_id", ids),
         supabase.from("match_sets").select("*").in("match_id", ids),
         supabase.from("match_result_corrections").select("match_id").in("match_id", ids),
@@ -73,7 +76,7 @@ export function LeagueMatches() {
     );
     setMatches(
       ((rows ?? []) as MatchRow[]).map((row) => ({
-        ...row,
+        ...asMatchRow(row),
         disputed: disputed.has(row.id),
         players: ((playerRows ?? []) as MatchPlayer[]).filter(
           (player) => player.match_id === row.id,

@@ -27,3 +27,4 @@ api/github.ts
 .vercel
 .env
 .env*.local
+supabase/.temp

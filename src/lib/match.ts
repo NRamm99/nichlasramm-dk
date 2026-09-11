@@ -43,8 +43,34 @@ export function formatMatchDuration(minutes: number) {
   return `${hourLabel} ${rest} min`;
 }
 
-export const MATCH_SELECT =
-  "id, created_at, created_by, played_at, status, duration_minutes, league_fixture_id";
+export const MATCH_COLUMNS =
+  "id, created_at, created_by, played_at, status, league_fixture_id";
+
+export const MATCH_SELECT = `${MATCH_COLUMNS}, duration_minutes`;
+
+export async function withMatchSelect(
+  run: (select: string) => PromiseLike<{
+    data: unknown;
+    error: { message: string } | null;
+  }>,
+) {
+  const first = await run(MATCH_SELECT);
+  if (first.error?.message.includes("duration_minutes")) {
+    return run(MATCH_COLUMNS);
+  }
+  return first;
+}
+
+export function asMatchRow(
+  row: Omit<MatchRow, "duration_minutes"> & {
+    duration_minutes?: number | null;
+  },
+): MatchRow {
+  return {
+    ...row,
+    duration_minutes: matchDurationMinutes(row.duration_minutes),
+  };
+}
 
 export function isLeagueMatch(row: Pick<MatchRow, "league_fixture_id">) {
   return Boolean(row.league_fixture_id);
@@ -393,17 +419,16 @@ export async function fetchPlayerMatches(profileId: string): Promise<MatchCard[]
   const ids = [...new Set(appearances.map((row) => row.match_id))];
   const [{ data: matches }, { data: playerRows }, { data: setRows }, disputed] =
     await Promise.all([
-      supabase
-        .from("matches")
-        .select(MATCH_SELECT)
-        .in("id", ids),
+      withMatchSelect((select) =>
+        supabase.from("matches").select(select).in("id", ids),
+      ),
       supabase.from("match_players").select("*").in("match_id", ids),
       supabase.from("match_sets").select("*").in("match_id", ids),
       fetchDisputedMatchIds(ids),
     ]);
 
   return ((matches ?? []) as MatchRow[]).map((row) => ({
-    ...row,
+    ...asMatchRow(row),
     disputed: disputed.has(row.id),
     players: ((playerRows ?? []) as MatchPlayer[]).filter(
       (player) => player.match_id === row.id,
