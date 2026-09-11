@@ -148,12 +148,25 @@ export function googleCalendarUrl({
     start.getTime() + matchDurationMinutes(durationMinutes) * 60_000,
   );
   const params = new URLSearchParams({
-    action: "TEMPLATE",
     text: summary,
     dates: `${toIcsUtc(start)}/${toIcsUtc(end)}`,
     details,
   });
-  return `https://calendar.google.com/calendar/render?${params}`;
+  return `https://calendar.google.com/calendar/u/0/r/eventedit?${params}`;
+}
+
+export function openExternalUrl(url: string) {
+  const opened = window.open(url, "_blank");
+  if (opened) {
+    opened.opener = null;
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  document.body.append(link);
+  link.click();
+  link.remove();
 }
 
 export async function openIcsFile(filename: string, ics: string, title: string) {

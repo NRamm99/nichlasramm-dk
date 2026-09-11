@@ -6,6 +6,7 @@ import {
   isIos,
   matchIcsKind,
   matchIcsSummary,
+  openExternalUrl,
   openIcsFile,
   type MatchIcsKind,
 } from "../lib/ics";
@@ -41,22 +42,20 @@ export function AddToCalendarButton({
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const matchUrl = `${origin}/kampe/${matchId}`;
   const summary = matchIcsSummary(players, resolvedKind);
+  const googleHref = googleCalendarUrl({
+    summary,
+    playedAt,
+    durationMinutes,
+    details: `${summary}\n${matchUrl}`,
+  });
 
   if (typeof window !== "undefined" && isIos()) {
-    const href = googleCalendarUrl({
-      summary,
-      playedAt,
-      durationMinutes,
-      details: `${summary}\n${matchUrl}`,
-    });
-    if (!href) return null;
+    if (!googleHref) return null;
     return (
       <Button
         variant="secondary"
         className={cx("self-start", className)}
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        onClick={() => openExternalUrl(googleHref)}
       >
         Tilføj til kalender
       </Button>
