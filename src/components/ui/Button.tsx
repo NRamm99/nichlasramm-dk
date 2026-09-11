@@ -14,6 +14,10 @@ const variants = {
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: keyof typeof variants;
   to?: string;
+  href?: string;
+  target?: string;
+  rel?: string;
+  download?: string | boolean;
   block?: boolean;
   children: ReactNode;
 };
@@ -21,6 +25,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 export function Button({
   variant = "primary",
   to,
+  href,
+  target,
+  rel,
+  download,
   block,
   className,
   children,
@@ -33,6 +41,20 @@ export function Button({
     block && "w-full",
     className,
   );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        className={classes}
+        target={target}
+        rel={rel}
+        download={download}
+      >
+        {children}
+      </a>
+    );
+  }
 
   if (to) {
     return (

@@ -2,6 +2,9 @@ import { Button } from "./ui/Button";
 import { cx } from "./ui/cx";
 import {
   buildMatchIcs,
+  iosCalendarHref,
+  isIos,
+  isStandaloneDisplay,
   matchIcsKind,
   matchIcsSummary,
   openIcsFile,
@@ -36,21 +39,33 @@ export function AddToCalendarButton({
   const start = new Date(playedAt);
   if (Number.isNaN(start.getTime())) return null;
 
-  async function handleClick() {
-    const url = `${window.location.origin}/kampe/${matchId}`;
-    const ics = buildMatchIcs({
-      id: matchId,
-      playedAt,
-      players,
-      kind: resolvedKind,
-      url,
-      durationMinutes,
-    });
-    if (!ics) return;
-    await openIcsFile(
-      `padel-${matchId}.ics`,
-      ics,
-      matchIcsSummary(players, resolvedKind),
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const ics = buildMatchIcs({
+    id: matchId,
+    playedAt,
+    players,
+    kind: resolvedKind,
+    url: `${origin}/kampe/${matchId}`,
+    durationMinutes,
+  });
+  if (!ics) return null;
+
+  const filename = `padel-${matchId}.ics`;
+  const onIos = typeof window !== "undefined" && isIos();
+  const iosHref = onIos ? iosCalendarHref(filename, ics) : null;
+  const openInSafari = onIos && isStandaloneDisplay();
+
+  if (iosHref) {
+    return (
+      <Button
+        variant="secondary"
+        className={cx("self-start", className)}
+        href={iosHref}
+        target={openInSafari ? "_blank" : undefined}
+        rel={openInSafari ? "noopener noreferrer" : undefined}
+      >
+        Tilføj til kalender
+      </Button>
     );
   }
 
@@ -58,7 +73,9 @@ export function AddToCalendarButton({
     <Button
       variant="secondary"
       className={cx("self-start", className)}
-      onClick={() => void handleClick()}
+      onClick={() => {
+        void openIcsFile(filename, ics, matchIcsSummary(players, resolvedKind));
+      }}
     >
       Tilføj til kalender
     </Button>

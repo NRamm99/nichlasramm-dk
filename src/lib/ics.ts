@@ -4,6 +4,7 @@ import {
   teamNames,
   type MatchPlayer,
 } from "./match";
+import { encodeIcsPayload, icsFileName } from "./icsPayload";
 
 export type MatchIcsKind = "liga" | "single" | "padel";
 
@@ -123,13 +124,50 @@ export function buildMatchIcs({
   ].join("\r\n") + "\r\n";
 }
 
-function isIos() {
+export function isIos() {
+  if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   if (/iP(hone|ad|od)/.test(ua)) return true;
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
 
+function isIosSafari() {
+  if (!isIos()) return false;
+  const ua = navigator.userAgent;
+  return (
+    /Safari/i.test(ua) &&
+    !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|YaBrowser/i.test(ua)
+  );
+}
+
+export function isStandaloneDisplay() {
+  if (typeof window === "undefined") return false;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    nav.standalone === true
+  );
+}
+
+export function iosCalendarHref(filename: string, ics: string) {
+  const path = `/api/ics?file=${encodeURIComponent(icsFileName(filename))}&d=${encodeIcsPayload(ics)}`;
+  if (!isIosSafari()) {
+    return `${window.location.origin.replace(/^https/i, "webcal").replace(/^http/i, "webcal")}${path}`;
+  }
+  return path;
+}
+
 export async function openIcsFile(filename: string, ics: string, title: string) {
+  if (isIos()) {
+    const href = iosCalendarHref(filename, ics);
+    if (isStandaloneDisplay()) {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
+    window.location.assign(href);
+    return;
+  }
+
   const file = new File([ics], filename, { type: "text/calendar" });
   const canShareFiles = (() => {
     try {
@@ -149,13 +187,6 @@ export async function openIcsFile(filename: string, ics: string, title: string) 
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
     }
-  }
-
-  if (isIos()) {
-    window.location.assign(
-      `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`,
-    );
-    return;
   }
 
   const url = URL.createObjectURL(
