@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   formatMatchWhen,
+  formatMatchWindow,
   isSinglesMatch,
   matchSetsToForm,
   parseProposedPlayers,
@@ -82,7 +83,7 @@ export function MatchDetail() {
 
     const { data, error: loadError } = await supabase
       .from("matches")
-      .select("id, created_at, created_by, played_at, status")
+      .select("id, created_at, created_by, played_at, status, duration_minutes")
       .eq("id", matchId)
       .maybeSingle();
 
@@ -474,7 +475,9 @@ export function MatchDetail() {
         </h1>
         {match ? (
           <p className="mt-2 text-sm text-line/70">
-            {formatMatchWhen(match.played_at)}
+            {match.status === "scheduled"
+              ? formatMatchWindow(match.played_at, match.duration_minutes)
+              : formatMatchWhen(match.played_at)}
           </p>
         ) : (
           <p className="mt-2 text-sm text-line/60">Indlæser…</p>
@@ -486,6 +489,7 @@ export function MatchDetail() {
             playedAt={match.played_at}
             status={match.status}
             players={players}
+            durationMinutes={match.duration_minutes}
             league={isLeagueMatch}
           />
         ) : null}

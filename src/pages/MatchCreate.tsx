@@ -7,10 +7,15 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { teamName, type LeagueTeamPlayer } from "../lib/league";
 import {
+  DEFAULT_MATCH_DURATION_MINUTES,
+  MATCH_DURATION_MINUTES,
+  formatMatchDuration,
   fromDatetimeLocalValue,
+  isMatchDurationMinutes,
   playerPickToJson,
   toDatetimeLocalValue,
   validateMatchSets,
+  type MatchDurationMinutes,
   type PlayerPick,
 } from "../lib/match";
 import {
@@ -40,6 +45,9 @@ export function MatchCreate() {
   const [members, setMembers] = useState<PartnerPreview[]>([]);
   const [clubPartnerId, setClubPartnerId] = useState<string | null>(null);
   const [when, setWhen] = useState(() => toDatetimeLocalValue(new Date()));
+  const [durationMinutes, setDurationMinutes] = useState<MatchDurationMinutes>(
+    DEFAULT_MATCH_DURATION_MINUTES,
+  );
   const [partner, setPartner] = useState<PlayerPick | null>(null);
   const [opponent1, setOpponent1] = useState<PlayerPick | null>(null);
   const [opponent2, setOpponent2] = useState<PlayerPick | null>(null);
@@ -303,6 +311,9 @@ export function MatchCreate() {
           p_status: kind,
           p_played_at: playedAt,
           p_sets: setPayload,
+          ...(kind === "scheduled"
+            ? { p_duration_minutes: durationMinutes }
+            : {}),
         })
       : listingId
         ? await supabase.rpc("create_matchmaker_court_match", {
@@ -310,6 +321,7 @@ export function MatchCreate() {
             p_court: listingCourt,
             p_played_at: playedAt,
             p_players: listingPlayers as string[],
+            p_duration_minutes: durationMinutes,
           })
       : await supabase.rpc("create_match", {
           p_status: kind,
@@ -318,6 +330,9 @@ export function MatchCreate() {
           p_opponent1: opp1Json,
           p_opponent2: format === "singles" ? null : opp2Json,
           p_sets: setPayload,
+          ...(kind === "scheduled"
+            ? { p_duration_minutes: durationMinutes }
+            : {}),
         });
     setSaving(false);
 
@@ -464,6 +479,26 @@ export function MatchCreate() {
                 className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
               />
             </label>
+
+            {kind === "scheduled" ? (
+              <label className="block text-sm font-medium text-line/80">
+                Varighed
+                <select
+                  value={durationMinutes}
+                  onChange={(event) => {
+                    const next = Number(event.target.value);
+                    if (isMatchDurationMinutes(next)) setDurationMinutes(next);
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                >
+                  {MATCH_DURATION_MINUTES.map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {formatMatchDuration(minutes)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
 
             {fixtureId ? (
               <div className="rounded-2xl border border-line/10 bg-court px-4 py-3 text-sm">

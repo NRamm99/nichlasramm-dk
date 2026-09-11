@@ -40,6 +40,7 @@ const messages: Record<string, string> = {
   CANNOT_DELETE_MATCH: "Kun spillere i kampen eller en administrator kan slette den.",
   MATCH_NOT_FOUND: "Kampen findes ikke.",
   INVALID_WHEN: "Dato og tid passer ikke til kampens type.",
+  INVALID_DURATION: "Vælg en varighed mellem 30 minutter og 4 timer.",
   INVALID_STATUS: "Vælg om kampen er spillet eller planlagt.",
   COMMENT_REQUIRED: "Skriv en kommentar.",
   RESULT_ALREADY_SET: "Kampen har allerede et resultat.",

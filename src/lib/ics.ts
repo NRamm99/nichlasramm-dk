@@ -1,6 +1,9 @@
-import { isSinglesMatch, teamNames, type MatchPlayer } from "./match";
-
-export const MATCH_ICS_DURATION_MS = 90 * 60 * 1000;
+import {
+  isSinglesMatch,
+  matchDurationMinutes,
+  teamNames,
+  type MatchPlayer,
+} from "./match";
 
 export type MatchIcsKind = "liga" | "single" | "padel";
 
@@ -75,6 +78,7 @@ export function buildMatchIcs({
   players,
   kind,
   url,
+  durationMinutes,
   now = new Date(),
 }: {
   id: string;
@@ -82,12 +86,15 @@ export function buildMatchIcs({
   players: MatchPlayer[];
   kind: MatchIcsKind;
   url: string;
+  durationMinutes?: number | null;
   now?: Date;
 }): string | null {
   const start = new Date(playedAt);
   if (Number.isNaN(start.getTime())) return null;
 
-  const end = new Date(start.getTime() + MATCH_ICS_DURATION_MS);
+  const end = new Date(
+    start.getTime() + matchDurationMinutes(durationMinutes) * 60_000,
+  );
   const summary = matchIcsSummary(players, kind);
   const description = `${summary}\nSe kampen: ${url}`;
 

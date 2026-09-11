@@ -9,11 +9,42 @@ export type MatchRow = {
   created_by: string | null;
   played_at: string;
   status: MatchStatus;
+  duration_minutes: number;
   league_fixture_id?: string | null;
 };
 
+export const MATCH_DURATION_MINUTES = [
+  30, 60, 90, 120, 150, 180, 210, 240,
+] as const;
+
+export type MatchDurationMinutes = (typeof MATCH_DURATION_MINUTES)[number];
+
+export const DEFAULT_MATCH_DURATION_MINUTES: MatchDurationMinutes = 120;
+
+export function isMatchDurationMinutes(
+  value: unknown,
+): value is MatchDurationMinutes {
+  return (
+    typeof value === "number" &&
+    (MATCH_DURATION_MINUTES as readonly number[]).includes(value)
+  );
+}
+
+export function matchDurationMinutes(value: unknown): MatchDurationMinutes {
+  return isMatchDurationMinutes(value) ? value : DEFAULT_MATCH_DURATION_MINUTES;
+}
+
+export function formatMatchDuration(minutes: number) {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const hourLabel = hours === 1 ? "1 time" : `${hours} timer`;
+  if (rest === 0) return hourLabel;
+  return `${hourLabel} ${rest} min`;
+}
+
 export const MATCH_SELECT =
-  "id, created_at, created_by, played_at, status, league_fixture_id";
+  "id, created_at, created_by, played_at, status, duration_minutes, league_fixture_id";
 
 export function isLeagueMatch(row: Pick<MatchRow, "league_fixture_id">) {
   return Boolean(row.league_fixture_id);
@@ -444,6 +475,32 @@ export function formatMatchTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+export function matchEndsAt(playedAt: string, durationMinutes?: number | null) {
+  const start = new Date(playedAt);
+  if (Number.isNaN(start.getTime())) return null;
+  return new Date(
+    start.getTime() + matchDurationMinutes(durationMinutes) * 60_000,
+  );
+}
+
+export function formatMatchTimeRange(
+  playedAt: string,
+  durationMinutes?: number | null,
+) {
+  const end = matchEndsAt(playedAt, durationMinutes);
+  if (!end) return formatMatchTime(playedAt);
+  return `${formatMatchTime(playedAt)}–${formatMatchTime(end.toISOString())}`;
+}
+
+export function formatMatchWindow(
+  playedAt: string,
+  durationMinutes?: number | null,
+) {
+  const end = matchEndsAt(playedAt, durationMinutes);
+  if (!end) return formatMatchWhen(playedAt);
+  return `${formatMatchDate(playedAt)}, ${formatMatchTimeRange(playedAt, durationMinutes)}`;
 }
 
 export function matchLocalDayKey(value: string) {

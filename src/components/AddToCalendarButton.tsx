@@ -14,6 +14,7 @@ type AddToCalendarButtonProps = {
   playedAt: string;
   status: MatchStatus;
   players: MatchPlayer[];
+  durationMinutes?: number | null;
   league?: boolean;
   kind?: MatchIcsKind;
   className?: string;
@@ -24,6 +25,7 @@ export function AddToCalendarButton({
   playedAt,
   status,
   players,
+  durationMinutes,
   league,
   kind,
   className,
@@ -42,6 +44,7 @@ export function AddToCalendarButton({
       players,
       kind: resolvedKind,
       url,
+      durationMinutes,
     });
     if (!ics) return;
     await openIcsFile(

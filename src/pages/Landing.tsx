@@ -207,6 +207,7 @@ function HomeDashboardView({
                   playedAt={ownNextMatch.played_at}
                   status={ownNextMatch.status}
                   players={ownNextMatch.players}
+                  durationMinutes={ownNextMatch.duration_minutes}
                   league={isLeagueMatch(ownNextMatch)}
                 />
               </div>

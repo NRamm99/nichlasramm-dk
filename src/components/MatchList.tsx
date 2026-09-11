@@ -5,7 +5,7 @@ import { MatchLineup } from "./MatchLineup";
 import { ListEmpty, ListGroup } from "./ui/ListGroup";
 import {
   formatMatchRelativeDay,
-  formatMatchTime,
+  formatMatchTimeRange,
   isLeagueMatch,
   isSinglesMatch,
   matchLocalDayKey,
@@ -124,7 +124,9 @@ export function MatchList({
                   ? resultForTeam(row.sets, team)
                   : null;
               const upcoming = row.status === "scheduled";
-              const time = upcoming ? formatMatchTime(row.played_at) : null;
+              const time = upcoming
+                ? formatMatchTimeRange(row.played_at, row.duration_minutes)
+                : null;
 
               return (
                 <li key={row.id}>
