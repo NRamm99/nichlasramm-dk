@@ -4,7 +4,6 @@ import {
   teamNames,
   type MatchPlayer,
 } from "./match";
-import { encodeIcsPayload, icsFileName } from "./icsPayload";
 
 export type MatchIcsKind = "liga" | "single" | "padel";
 
@@ -132,9 +131,17 @@ export function isIos() {
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
 
-export function iosCalendarHref(filename: string, ics: string) {
-  const path = `/api/ics?file=${encodeURIComponent(icsFileName(filename))}&d=${encodeIcsPayload(ics)}`;
-  return `${window.location.origin.replace(/^https/i, "webcal").replace(/^http/i, "webcal")}${path}`;
+export function isStandaloneDisplay() {
+  if (typeof window === "undefined") return false;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    nav.standalone === true
+  );
+}
+
+export function iosCalendarHref(_filename: string, ics: string) {
+  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
 }
 
 export function googleCalendarUrl({

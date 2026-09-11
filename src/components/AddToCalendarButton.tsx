@@ -5,6 +5,7 @@ import {
   googleCalendarUrl,
   iosCalendarHref,
   isIos,
+  isStandaloneDisplay,
   matchIcsKind,
   matchIcsSummary,
   openIcsFile,
@@ -67,7 +68,12 @@ export function AddToCalendarButton({
   if (appleHref) {
     return (
       <div className={cx("flex flex-col items-start gap-2", className)}>
-        <Button variant="secondary" href={appleHref}>
+        <Button
+          variant="secondary"
+          href={appleHref}
+          target={isStandaloneDisplay() ? "_blank" : undefined}
+          rel={isStandaloneDisplay() ? "noopener noreferrer" : undefined}
+        >
           Tilføj til kalender
         </Button>
         {googleHref ? (
