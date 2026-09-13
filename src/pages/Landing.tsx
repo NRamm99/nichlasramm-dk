@@ -188,13 +188,13 @@ function HomeDashboardView({
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-3 lg:grid-cols-2 lg:items-stretch">
-      <Card className="flex flex-col p-5 lg:p-6">
+      <div className="mt-6 grid min-w-0 gap-3 lg:grid-cols-2 lg:items-stretch">
+      <Card className="flex min-w-0 flex-col overflow-hidden p-5 lg:p-6">
         {ownNextMatch ? (
-          <div className="flex flex-1 flex-row items-center gap-3 sm:gap-4">
+          <div className="flex min-w-0 flex-1 flex-row items-center gap-3 sm:gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-ball">Næste kamp</p>
-              <p className="mt-2 font-display text-3xl tracking-wide sm:text-4xl">
+              <p className="mt-2 font-display text-3xl tracking-wide break-words sm:text-4xl">
                 {nextMatchWhen?.title}
               </p>
               {nextMatchWhen?.hint ? (
@@ -242,12 +242,12 @@ function HomeDashboardView({
         )}
       </Card>
 
-      <Card className="flex flex-col p-5 lg:p-6">
+      <Card className="flex min-w-0 flex-col overflow-hidden p-5 lg:p-6">
         <p className="text-sm font-semibold text-ball">Liga</p>
         {data?.inLeague ? (
           <>
             {data.leagueTable.length > 0 ? (
-              <table className="mt-3 w-full text-left text-sm">
+              <table className="mt-3 w-full table-fixed text-left text-sm">
                 <tbody>
                   {data.leagueTable.map((row) => (
                     <tr
@@ -259,7 +259,7 @@ function HomeDashboardView({
                       <td className="w-14 py-2.5 pr-2 align-middle">
                         <LeaguePlace place={row.place} />
                       </td>
-                      <td className="py-2.5 align-middle">
+                      <td className="max-w-0 py-2.5 align-middle">
                         <div className="flex min-w-0 items-center gap-2">
                           <div className="flex shrink-0">
                             {row.players.map((person, index) => (
@@ -291,7 +291,7 @@ function HomeDashboardView({
                           </p>
                         </div>
                       </td>
-                      <td className="py-2.5 pl-2 text-right align-middle font-display text-lg leading-none tabular-nums text-ball">
+                      <td className="w-10 py-2.5 pl-2 text-right align-middle font-display text-lg leading-none tabular-nums text-ball">
                         {row.points}
                       </td>
                     </tr>

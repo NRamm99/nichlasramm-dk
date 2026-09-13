@@ -108,14 +108,20 @@ function TeamStack({
               ring="court"
               className="max-lg:h-6 max-lg:w-6"
             />
-            <p
-              className={`min-w-0 truncate text-xs lg:text-sm ${
-                won ? "font-semibold text-line" : "text-line/65"
-              } ${align === "end" ? "text-right" : ""}`}
+            <div
+              className={`flex min-w-0 max-w-full flex-col lg:flex-row lg:items-baseline lg:gap-1 ${
+                align === "end" ? "items-end" : "items-start"
+              }`}
             >
-              {listPlayerName(player.display_name, person)}
+              <p
+                className={`min-w-0 max-w-full truncate text-xs lg:text-sm ${
+                  won ? "font-semibold text-line" : "text-line/65"
+                }`}
+              >
+                {listPlayerName(player.display_name, person)}
+              </p>
               <PlayerRatingSuffix rating={rating} delta={delta} />
-            </p>
+            </div>
           </div>
         );
       })}
@@ -193,19 +199,20 @@ function PlayerRatingSuffix({
   rating?: number;
   delta?: number;
 }) {
+  if (rating == null && delta == null) return null;
+
   return (
-    <>
+    <span className="mt-0.5 flex shrink-0 items-baseline gap-x-1 font-sans text-[0.65rem] leading-none tracking-normal lg:mt-0 lg:text-[0.7rem]">
       {rating != null ? (
-        <span className="font-normal tabular-nums text-line/45"> ({rating})</span>
+        <span className="font-normal tabular-nums text-line/45">({rating})</span>
       ) : null}
       {delta != null ? (
         <span
-          className={`font-sans text-[0.7rem] font-semibold tabular-nums tracking-normal ${ratingDeltaClass(delta)}`}
+          className={`font-semibold tabular-nums ${ratingDeltaClass(delta)}`}
         >
-          {" "}
-          {delta > 0 ? `+ ${delta}` : delta < 0 ? `− ${Math.abs(delta)}` : "± 0"}
+          {delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "±0"}
         </span>
       ) : null}
-    </>
+    </span>
   );
 }
