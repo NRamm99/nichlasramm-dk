@@ -4,6 +4,11 @@ import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { BackLink, Page } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCircle,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -85,14 +90,33 @@ export function MessageThread() {
     return () => window.clearInterval(timer);
   }, [load, threadId, user]);
 
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
   if (loading || (!ready && user)) {
     return (
       <SiteShell fill>
         <main className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col px-4 sm:px-6 lg:max-w-3xl">
           <ThreadBack />
-          <p className="flex flex-1 items-center justify-center text-sm text-line/60">
-            Indlæser…
-          </p>
+          <div className="flex min-h-0 flex-1 flex-col">
+          <SkeletonRegion>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex items-center gap-3 pb-3 pt-1">
+                <SkeletonCircle size="2.75rem" />
+                <Skeleton className="h-8 w-48 sm:h-10" />
+              </div>
+              <div className="min-h-0 flex-1 space-y-3 py-2">
+                <Skeleton className="h-16 w-[70%] rounded-2xl rounded-bl-md" />
+                <Skeleton className="ml-auto h-20 w-[65%] rounded-2xl rounded-br-md" />
+                <Skeleton className="h-14 w-[55%] rounded-2xl rounded-bl-md" />
+                <Skeleton className="ml-auto h-16 w-[60%] rounded-2xl rounded-br-md" />
+              </div>
+              <div className="flex items-end gap-2 border-t border-line/10 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <Skeleton className="min-h-11 flex-1 rounded-2xl" />
+                <Skeleton className="h-11 w-20 shrink-0 rounded-full" />
+              </div>
+            </div>
+          </SkeletonRegion>
+          </div>
         </main>
       </SiteShell>
     );

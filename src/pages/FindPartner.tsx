@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCard,
+  SkeletonListRows,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { messagePath } from "../lib/messages";
@@ -85,10 +91,43 @@ export function FindPartner() {
     }
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/profil">Profil</BackLink>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+            Partnerskab
+          </p>
+          <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+            Find partner
+          </h1>
+          <p className="mt-2 text-sm text-line/65">
+            Medlemmer uden partner, og dem der aktivt søger en. Du kan kun have
+            én partner.
+          </p>
+          <SkeletonRegion>
+            <SkeletonCard className="mt-8 p-5">
+              <Skeleton className="h-10 w-44 rounded-full" />
+            </SkeletonCard>
+            <section className="mt-10">
+              <h2 className="font-display text-3xl tracking-wide">Søger aktivt</h2>
+              <div className="mt-4">
+                <SkeletonListRows count={3} />
+              </div>
+            </section>
+            <section className="mt-10">
+              <h2 className="font-display text-3xl tracking-wide">Uden partner</h2>
+              <div className="mt-4">
+                <SkeletonListRows count={3} />
+              </div>
+            </section>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

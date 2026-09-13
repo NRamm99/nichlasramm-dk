@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCircle,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fullName, profilePath } from "../lib/profile";
@@ -48,10 +53,41 @@ export function RatingBoard() {
     }
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/medlemmer">Medlemmer</BackLink>
+          <div className="mt-4">
+            <PageHeader eyebrow="Klubben" title="Rating" />
+          </div>
+          <p className="mt-3 text-sm text-line/60">
+            Ratingen bevæger sig efter hver spillet kamp. Slår du et stærkere hold,
+            stiger du meget — taber du til et svagere, falder du tilsvarende.
+          </p>
+          <SkeletonRegion>
+            <ul className="mt-6 divide-y divide-line/10 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((row) => (
+                <li
+                  key={row}
+                  className="flex items-center gap-3 px-3 py-3 sm:px-4"
+                >
+                  <Skeleton className="h-7 w-6 shrink-0" />
+                  <SkeletonCircle />
+                  <span className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-2/5" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </span>
+                  <Skeleton className="h-8 w-12 shrink-0" />
+                </li>
+              ))}
+            </ul>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

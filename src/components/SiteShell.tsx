@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { ChatBubbleIcon } from "./ChatBubbleIcon";
 import { Button } from "./ui/Button";
+import { Skeleton } from "./ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { fetchUnreadDirectCount, onUnreadMessagesChanged } from "../lib/messages";
 
@@ -11,7 +12,7 @@ type SiteShellProps = {
 };
 
 export function SiteShell({ children, fill }: SiteShellProps) {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, isAdmin, signOut } = useAuth();
   const showTabs = Boolean(user) && !fill;
   const showNav = Boolean(user);
   const [unread, setUnread] = useState(0);
@@ -60,7 +61,11 @@ export function SiteShell({ children, fill }: SiteShellProps) {
       </div>
 
       {showNav ? (
-        <SideNav unread={unread} onSignOut={() => void signOut()} />
+        <SideNav
+          unread={unread}
+          isAdmin={isAdmin}
+          onSignOut={() => void signOut()}
+        />
       ) : null}
 
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
@@ -78,7 +83,7 @@ export function SiteShell({ children, fill }: SiteShellProps) {
 
           <nav className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {loading ? (
-              <span className="text-sm text-line/60">Indlæser…</span>
+              <Skeleton className="h-9 w-20 rounded-full" />
             ) : user ? (
               <Button
                 variant="secondary"
@@ -107,9 +112,11 @@ export function SiteShell({ children, fill }: SiteShellProps) {
 
 function SideNav({
   unread,
+  isAdmin,
   onSignOut,
 }: {
   unread: number;
+  isAdmin: boolean;
   onSignOut: () => void;
 }) {
   return (
@@ -142,6 +149,13 @@ function SideNav({
           />
           <SideItem to="/medlemmer" label="Medlemmer" icon={<MembersIcon />} />
           <SideItem to="/profil" end label="Profil" icon={<ProfileIcon />} />
+          {isAdmin ? (
+            <SideItem
+              to="/admin"
+              label="Administration"
+              icon={<AdminIcon />}
+            />
+          ) : null}
         </div>
       </nav>
       <div className="mt-auto shrink-0 border-t border-line/10 px-3 py-4">
@@ -369,6 +383,25 @@ function ProfileIcon() {
     >
       <circle cx="12" cy="8" r="3.2" />
       <path d="M5 19.5a7 7 0 0 1 14 0" />
+    </svg>
+  );
+}
+
+function AdminIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={iconClass()}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M8 9h8" />
+      <path d="M8 13h5" />
     </svg>
   );
 }

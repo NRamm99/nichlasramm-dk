@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCard,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -93,10 +98,32 @@ export function MatchmakerDetail() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading) {
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
+  if (loading || (!listing && !missing)) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/matchmaker">Find kamp</BackLink>
+          <SkeletonRegion>
+            <Skeleton className="mt-4 h-12 w-56 sm:h-14" />
+            <Skeleton className="mt-2 h-4 w-64" />
+            <Skeleton className="mt-1 h-4 w-32" />
+            <div className="mt-6 grid grid-cols-3 gap-2">
+              <Skeleton className="h-11 rounded-full" />
+              <Skeleton className="h-11 rounded-full" />
+              <Skeleton className="h-11 rounded-full" />
+            </div>
+            <SkeletonCard className="mt-8 p-6">
+              <h2 className="font-display text-3xl tracking-wide">Chat</h2>
+              <div className="mt-4 space-y-3">
+                <Skeleton className="h-16 w-4/5 rounded-2xl" />
+                <Skeleton className="ml-auto h-16 w-3/5 rounded-2xl" />
+                <Skeleton className="h-14 w-2/3 rounded-2xl" />
+              </div>
+            </SkeletonCard>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }
@@ -115,7 +142,9 @@ export function MatchmakerDetail() {
   if (!listing) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/matchmaker">Find kamp</BackLink>
+        </Page>
       </SiteShell>
     );
   }

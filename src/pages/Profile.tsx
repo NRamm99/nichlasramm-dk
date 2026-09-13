@@ -9,7 +9,14 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Field, fieldClass } from "../components/ui/Field";
 import { ListGroup, ListRow } from "../components/ui/ListGroup";
-import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCard,
+  SkeletonCircle,
+  SkeletonListRows,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -181,10 +188,41 @@ export function Profile() {
     };
   }, [avatarPreview]);
 
-  if (loading) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || (!profile && !missing && !error && user)) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          {usernameParam ? <BackLink to="/medlemmer">Medlemmer</BackLink> : null}
+          <SkeletonRegion>
+            <div className="mt-6 flex items-start gap-4">
+              <SkeletonCircle size="7rem" />
+              <div className="min-w-0 flex-1 space-y-3">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-10 w-48 sm:h-12" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <SkeletonCard className="mt-6 p-4">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="mt-3 h-16 w-full" />
+            </SkeletonCard>
+            <SkeletonCard className="mt-6 px-4 py-4">
+              <Skeleton className="h-3 w-16" />
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+              </div>
+            </SkeletonCard>
+            <div className="mt-6">
+              <SkeletonListRows count={3} avatar={false} />
+            </div>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }
@@ -851,9 +889,7 @@ export function Profile() {
             </div>
             </div>
           </>
-        ) : (
-          <p className="mt-8 text-sm text-line/60">Indlæser profil…</p>
-        )}
+        ) : null}
       </Page>
     </SiteShell>
   );

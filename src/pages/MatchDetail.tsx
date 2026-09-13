@@ -6,7 +6,13 @@ import { MatchRosterFields, SetScores } from "../components/MatchFields";
 import { MatchScoreboard } from "../components/MatchScoreboard";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
+import {
+  Skeleton,
+  SkeletonCard,
+  SkeletonCircle,
+  SkeletonRegion,
+} from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -185,10 +191,44 @@ export function MatchDetail() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || (!match && !missing && !error)) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page className="max-w-2xl">
+          <BackLink to="/kampe">Kampe</BackLink>
+          <h1 className="mt-4 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+            Kamp
+          </h1>
+          <SkeletonRegion>
+            <Skeleton className="mt-2 h-4 w-40" />
+            <SkeletonCard className="mt-8 overflow-hidden p-5">
+              <div className="flex items-center gap-3">
+                <SkeletonCircle size="2.5rem" />
+                <SkeletonCircle size="2.5rem" />
+                <Skeleton className="h-4 min-w-0 flex-1" />
+              </div>
+              <div className="my-4 flex items-center gap-3">
+                <span className="h-px flex-1 bg-line/10" />
+                <Skeleton className="h-4 w-8" />
+                <span className="h-px flex-1 bg-line/10" />
+              </div>
+              <div className="flex items-center gap-3">
+                <SkeletonCircle size="2.5rem" />
+                <SkeletonCircle size="2.5rem" />
+                <Skeleton className="h-4 min-w-0 flex-1" />
+              </div>
+            </SkeletonCard>
+            <SkeletonCard className="mt-8 p-6">
+              <Skeleton className="h-8 w-36" />
+              <Skeleton className="mt-4 h-3 w-full" />
+              <Skeleton className="mt-2 h-3 w-4/5" />
+            </SkeletonCard>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }
@@ -203,6 +243,21 @@ export function MatchDetail() {
         <Page center>
           <h1 className="font-display text-5xl">Kampen findes ikke</h1>
           <BackLink to="/kampe">Kampe</BackLink>
+        </Page>
+      </SiteShell>
+    );
+  }
+
+  if (!match) {
+    return (
+      <SiteShell>
+        <Page className="max-w-2xl">
+          <BackLink to="/kampe">Kampe</BackLink>
+          {error ? (
+            <p className="mt-4 text-sm text-red-300" role="alert">
+              {error}
+            </p>
+          ) : null}
         </Page>
       </SiteShell>
     );

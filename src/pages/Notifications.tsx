@@ -3,7 +3,8 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
 import { Button } from "../components/ui/Button";
 import { ListEmpty, ListGroup } from "../components/ui/ListGroup";
-import { BackLink, Page, PageHeader, PageStatus } from "../components/ui/Page";
+import { BackLink, Page, PageHeader } from "../components/ui/Page";
+import { SkeletonListRows, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -41,10 +42,25 @@ export function Notifications() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/">Hjem</BackLink>
+          <div className="mt-4">
+            <PageHeader
+              title="Nyt"
+              subtitle="Det der vedrører dig, siden sidst du kiggede her."
+            />
+          </div>
+          <SkeletonRegion>
+            <div className="mt-6">
+              <SkeletonListRows count={6} avatar={false} />
+            </div>
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

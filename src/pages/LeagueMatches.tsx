@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
+import { MatchListSkeleton, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import { fetchLatestLeague } from "../lib/league";
@@ -93,10 +94,23 @@ export function LeagueMatches() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to="/liga">Liga</BackLink>
+          <h1 className="mt-4 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
+            Ligakampe
+          </h1>
+          <SkeletonRegion>
+            <h2 className="mt-10 font-display text-3xl tracking-wide">Kommende</h2>
+            <MatchListSkeleton />
+            <h2 className="mt-10 font-display text-3xl tracking-wide">Spillet</h2>
+            <MatchListSkeleton />
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }

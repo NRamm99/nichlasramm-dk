@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { BackLink, Page } from "../components/ui/Page";
+import { MatchListSkeleton, Skeleton, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
@@ -60,10 +61,26 @@ export function PlayerMatches() {
     if (!loading && user) void load();
   }, [load, loading, user]);
 
-  if (loading || (!ready && user)) {
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading || !ready) {
     return (
       <SiteShell>
-        <PageStatus>Indlæser…</PageStatus>
+        <Page>
+          <BackLink to={profilePath(username)}>Profil</BackLink>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
+            Kampe
+          </p>
+          <SkeletonRegion>
+            <Skeleton className="mt-2 h-10 w-56 sm:h-12" />
+            <h2 className="mt-10 font-display text-3xl tracking-wide">Kommende</h2>
+            <MatchListSkeleton />
+            <h2 className="mt-10 font-display text-3xl tracking-wide">Spillet</h2>
+            <MatchListSkeleton />
+          </SkeletonRegion>
+        </Page>
       </SiteShell>
     );
   }
