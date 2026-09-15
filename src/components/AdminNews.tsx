@@ -112,7 +112,7 @@ export function AdminNews() {
       setTitle("");
       setBody("");
       setSelected(new Set());
-      setInfo("Nyheden vises som popup, indtil de trykker Forstået.");
+      setInfo("Nyheden vises som popup og sendes som push til dem, der har slået beskeder til.");
       await load();
     } catch (sendError) {
       setError(danishAuthError((sendError as Error).message));
@@ -128,8 +128,8 @@ export function AdminNews() {
       </p>
       <h2 className="mt-2 font-display text-3xl tracking-wide">Popup</h2>
       <p className="mt-2 text-sm text-line/65">
-        Vises som popup indtil de trykker Forstået. Send en push-besked ved
-        siden af, hvis de også skal have et ping.
+        Vises som popup, indtil de trykker Forstået. Der sendes samtidig en
+        push-besked med overskriften og teksten “Åbn appen for at se”.
       </p>
 
       {!open ? (

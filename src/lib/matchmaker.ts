@@ -46,6 +46,8 @@ export type AppNotification = {
     thread_id?: string;
     body?: string;
     from?: string;
+    title?: string;
+    news_id?: string;
   };
   created_at: string;
   read_at: string | null;
@@ -196,6 +198,11 @@ export function notificationCopy(row: AppNotification) {
       const body = row.payload?.body;
       if (typeof body === "string" && body.trim()) return body.trim();
       return "Besked fra klubben.";
+    }
+    case "club_news": {
+      const title = row.payload?.title;
+      if (typeof title === "string" && title.trim()) return title.trim();
+      return "Nyhed fra klubben.";
     }
     case "direct_message": {
       const from = row.payload?.from;

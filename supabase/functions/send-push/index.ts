@@ -7,7 +7,7 @@ const push = (webpush as { default?: typeof webpush }).default ?? webpush;
 type Payload = {
   recipient_id?: string;
   kind?: string;
-  payload?: { href?: string; body?: string; from?: string };
+  payload?: { href?: string; body?: string; from?: string; title?: string };
 };
 
 type PushSettings = {
@@ -43,6 +43,8 @@ function copy(kind: string | undefined) {
       return "Ny besked i en ligadialog.";
     case "admin_broadcast":
       return "Besked fra klubben.";
+    case "club_news":
+      return "Åbn appen for at se";
     case "direct_message":
       return "Ny privatbesked.";
     default:
@@ -51,6 +53,8 @@ function copy(kind: string | undefined) {
 }
 
 function title(kind: string | undefined, payload: Payload["payload"]) {
+  const custom = typeof payload?.title === "string" ? payload.title.trim() : "";
+  if (custom) return custom.slice(0, 80);
   if (kind === "direct_message") {
     const from = typeof payload?.from === "string" ? payload.from.trim() : "";
     if (from) return from;
