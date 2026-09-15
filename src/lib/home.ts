@@ -1,8 +1,11 @@
 import {
+  asLeagueFixture,
   fetchLatestLeague,
   fixtureHasUnread,
+  groupStageFixtures,
   leagueStandings,
   leagueStandingsWindow,
+  type League,
   type LeagueFixture,
   type LeagueTeam,
   type LeagueTeamPlayer,
@@ -49,6 +52,15 @@ export type HomeDashboard = {
   unreadMessages: number;
   hasPartner: boolean;
   pendingPoll: PendingPoll | null;
+  myGroupLabel: string | null;
+  groupCount: number;
+  finalsOn: string | null;
+  finalsStartsAt: string | null;
+  finalsVenue: string | null;
+  finalsNote: string | null;
+  leagueFixtures: LeagueFixture[];
+  leagueTeams: LeagueTeam[];
+  currentLeague: League | null;
 };
 
 export function remainingLeagueCopy(count: number) {
@@ -173,6 +185,15 @@ export async function fetchHomeDashboard(
     unreadMessages,
     hasPartner: Boolean(profile?.partner_id),
     pendingPoll,
+    myGroupLabel: null,
+    groupCount: 2,
+    finalsOn: null,
+    finalsStartsAt: null,
+    finalsVenue: null,
+    finalsNote: null,
+    leagueFixtures: [],
+    leagueTeams: [],
+    currentLeague: null,
   });
 
   if (!league) return empty(await nextMatchPeoplePromise);
@@ -180,13 +201,21 @@ export async function fetchHomeDashboard(
   const signupOpen =
     new Date(league.signup_deadline).getTime() >= Date.now();
 
-  const [{ data: rosterRows }, { data: fixtureRows }, nextMatchPeople] =
+  const [{ data: rosterRows }, { data: teamRows }, { data: fixtureRows }, { data: groupRows }, nextMatchPeople] =
     await Promise.all([
       supabase
         .from("league_team_players")
         .select("team_id, profile_id, slot")
         .eq("league_id", league.id),
+      supabase
+        .from("league_teams")
+        .select("id, league_id, created_at, created_by, group_id")
+        .eq("league_id", league.id),
       supabase.from("league_fixtures").select("*").eq("league_id", league.id),
+      supabase
+        .from("league_groups")
+        .select("id, label")
+        .eq("league_id", league.id),
       nextMatchPeoplePromise,
     ]);
 
@@ -205,10 +234,19 @@ export async function fetchHomeDashboard(
       ...empty(nextMatchPeople),
       signupOpen,
       leagueInvites: inviteRows?.length ?? 0,
+      currentLeague: league,
+      groupCount: league.group_count ?? 2,
+      finalsOn: league.finals_on,
+      finalsStartsAt: league.finals_starts_at,
+      finalsVenue: league.finals_venue,
+      finalsNote: league.finals_note,
+      leagueFixtures: ((fixtureRows ?? []) as LeagueFixture[]).map(
+        asLeagueFixture,
+      ),
     };
   }
 
-  const fixtures = (fixtureRows ?? []) as LeagueFixture[];
+  const fixtures = ((fixtureRows ?? []) as LeagueFixture[]).map(asLeagueFixture);
   const myFixtures = fixtures.filter(
     (row) => row.team_a_id === myTeamId || row.team_b_id === myTeamId,
   );
@@ -249,12 +287,27 @@ export async function fetchHomeDashboard(
     disputedMatchIds = disputed;
   }
 
+  const groupById = new Map(
+    ((groupRows ?? []) as { id: string; label: string }[]).map((row) => [
+      row.id,
+      row.label,
+    ]),
+  );
+  const teamGroup = new Map(
+    (
+      (teamRows ?? []) as {
+        id: string;
+        group_id: string | null;
+      }[]
+    ).map((row) => [row.id, row.group_id]),
+  );
   const teams: LeagueTeam[] = [...new Set(roster.map((row) => row.team_id))].map(
     (teamId) => ({
       id: teamId,
       league_id: league.id,
       created_at: "",
       created_by: null,
+      group_id: teamGroup.get(teamId) ?? null,
       players: roster
         .filter((row) => row.team_id === teamId)
         .sort((a, b) => a.slot - b.slot)
@@ -263,8 +316,12 @@ export async function fetchHomeDashboard(
     }),
   );
   const teamsById = new Map(teams.map((team) => [team.id, team]));
+  const myGroupId = teamsById.get(myTeamId)?.group_id ?? null;
+  const groupTeams = myGroupId
+    ? teams.filter((team) => team.group_id === myGroupId)
+    : teams.filter((team) => team.id === myTeamId);
   const standings = leagueStandings(
-    teams,
+    groupTeams,
     fixtures,
     matchPlayers,
     setsByMatch,
@@ -284,7 +341,14 @@ export async function fetchHomeDashboard(
     players: teamsById.get(row.teamId)?.players ?? [],
   }));
 
-  const remainingLeagueMatches = myFixtures.filter(
+  const myGroupFixtures = myGroupId
+    ? groupStageFixtures(myFixtures).filter((fixture) => {
+        const otherId =
+          fixture.team_a_id === myTeamId ? fixture.team_b_id : fixture.team_a_id;
+        return teamGroup.get(otherId) === myGroupId;
+      })
+    : [];
+  const remainingLeagueMatches = myGroupFixtures.filter(
     (fixture) => !fixtureIsDone(fixture, matchStatus, setsByMatch),
   ).length;
 
@@ -328,8 +392,8 @@ export async function fetchHomeDashboard(
     leaguePlace,
     leaguePoints,
     leagueTable,
-    leaguePlayed: myFixtures.length - remainingLeagueMatches,
-    leagueTotal: myFixtures.length,
+    leaguePlayed: myGroupFixtures.length - remainingLeagueMatches,
+    leagueTotal: myGroupFixtures.length,
     inLeague: true,
     signupOpen,
     leagueInvites: 0,
@@ -337,5 +401,14 @@ export async function fetchHomeDashboard(
     unreadMessages,
     hasPartner: Boolean(profile?.partner_id),
     pendingPoll,
+    myGroupLabel: myGroupId ? groupById.get(myGroupId) ?? null : null,
+    groupCount: league.group_count ?? 2,
+    finalsOn: league.finals_on,
+    finalsStartsAt: league.finals_starts_at,
+    finalsVenue: league.finals_venue,
+    finalsNote: league.finals_note,
+    leagueFixtures: fixtures,
+    leagueTeams: teams,
+    currentLeague: league,
   };
 }

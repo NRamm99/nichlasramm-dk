@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { LeagueBadge } from "./LeagueBadge";
 import { MemberAvatar } from "./MemberAvatar";
 import { ratingDeltaClass } from "./RatingValue";
 import {
@@ -9,6 +11,7 @@ import {
 } from "../lib/match";
 import {
   listPlayerName,
+  profilePath,
   type PartnerPreview,
 } from "../lib/profile";
 
@@ -18,6 +21,8 @@ type MatchLineupProps = {
   people: Map<string, PartnerPreview>;
   ratings?: Map<string, number>;
   ratingDeltas?: Map<string, number>;
+  size?: "list" | "detail";
+  linkProfiles?: boolean;
 };
 
 export function MatchLineup({
@@ -26,21 +31,53 @@ export function MatchLineup({
   people,
   ratings,
   ratingDeltas,
+  size = "list",
+  linkProfiles = false,
 }: MatchLineupProps) {
   const ordered = [...sets].sort((a, b) => a.set_number - b.set_number);
   const outcome = ordered.length > 0 ? matchOutcome(ordered) : null;
   const team1 = teamPlayers(players, 1);
   const team2 = teamPlayers(players, 2);
+  const detail = size === "detail";
+
+  const decided = outcome?.winner === 1 || outcome?.winner === 2;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 lg:gap-3">
+    <div
+      className={
+        detail
+          ? "flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-x-5 lg:gap-y-2"
+          : "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1 lg:gap-x-3"
+      }
+    >
+      {decided ? (
+        <>
+          <div
+            className={`flex min-h-5 items-center ${detail ? "hidden lg:flex" : ""}`}
+          >
+            {outcome?.winner === 1 ? <WinnerBadge detail={detail} /> : null}
+          </div>
+          <div className={detail ? "hidden lg:block" : undefined} />
+          <div
+            className={`flex min-h-5 items-center justify-end ${
+              detail ? "hidden lg:flex" : ""
+            }`}
+          >
+            {outcome?.winner === 2 ? <WinnerBadge detail={detail} /> : null}
+          </div>
+        </>
+      ) : null}
       <TeamStack
         players={team1}
         people={people}
         ratings={ratings}
         ratingDeltas={ratingDeltas}
         won={outcome?.winner === 1}
+        lost={outcome?.winner === 2}
         align="start"
+        detail={detail}
+        linkProfiles={linkProfiles}
+        mobileBadge={detail && outcome?.winner === 1}
       />
       {outcome ? (
         <MatchScore
@@ -48,9 +85,17 @@ export function MatchLineup({
           team1Won={outcome.team1}
           team2Won={outcome.team2}
           winner={outcome.winner}
+          draw={!outcome.winner}
+          detail={detail}
         />
       ) : (
-        <p className="shrink-0 px-0.5 font-display text-xl leading-none tracking-wide text-line/35 lg:px-2 lg:text-4xl">
+        <p
+          className={`shrink-0 text-center font-display leading-none tracking-wide text-line/35 ${
+            detail
+              ? "py-1 text-4xl lg:px-3 lg:py-0 lg:text-5xl"
+              : "px-0.5 text-xl lg:px-2 lg:text-4xl"
+          }`}
+        >
           vs
         </p>
       )}
@@ -60,9 +105,118 @@ export function MatchLineup({
         ratings={ratings}
         ratingDeltas={ratingDeltas}
         won={outcome?.winner === 2}
+        lost={outcome?.winner === 1}
         align="end"
+        detail={detail}
+        linkProfiles={linkProfiles}
+        mobileBadge={detail && outcome?.winner === 2}
       />
     </div>
+  );
+}
+
+export function MatchMeta({
+  time,
+  league,
+  singles,
+  isOwn,
+  disputed,
+  result,
+}: {
+  time: string | null;
+  league: boolean;
+  singles: boolean;
+  isOwn: boolean;
+  disputed: boolean;
+  result: "V" | "U" | "T" | null;
+}) {
+  const chips: { key: string; label: string; className: string }[] = [];
+  if (league) {
+    chips.push({ key: "liga", label: "Liga", className: "text-ball" });
+  } else if (singles) {
+    chips.push({
+      key: "single",
+      label: "Single",
+      className: "text-line/55",
+    });
+  }
+  if (isOwn) {
+    chips.push({
+      key: "own",
+      label: "Du spiller",
+      className: "text-ball/80",
+    });
+  } else if (disputed) {
+    chips.push({
+      key: "disputed",
+      label: "Uenighed",
+      className: "text-red-300",
+    });
+  } else if (result) {
+    chips.push({
+      key: "result",
+      label: result === "V" ? "Vundet" : result === "U" ? "Ulige" : "Tabt",
+      className:
+        result === "V"
+          ? "text-ball"
+          : result === "U"
+            ? "text-line/70"
+            : "text-line/40",
+    });
+  }
+
+  if (!time && chips.length === 0) return null;
+
+  return (
+    <div className="mb-2 flex items-center justify-between gap-3">
+      {time ? (
+        <p className="text-xs tabular-nums text-line/50">{time}</p>
+      ) : (
+        <span />
+      )}
+      {chips.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {chips.map((chip) =>
+            chip.key === "liga" ? (
+              <LeagueBadge key={chip.key} />
+            ) : (
+              <span
+                key={chip.key}
+                className={`text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${chip.className}`}
+              >
+                {chip.label}
+              </span>
+            ),
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function WinnerBadge({ detail }: { detail: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full bg-ball font-semibold uppercase tracking-[0.16em] text-court ${
+        detail ? "px-2.5 py-1 text-[0.65rem]" : "px-1.5 py-0.5 text-[0.55rem]"
+      }`}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className={detail ? "h-3 w-3" : "h-2.5 w-2.5"}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M8 4h8v3a4 4 0 0 1-8 0V4Z" />
+        <path d="M12 11v2.5" />
+        <path d="M9 19h6" />
+      </svg>
+      Vinder
+    </span>
   );
 }
 
@@ -72,21 +226,52 @@ function TeamStack({
   ratings,
   ratingDeltas,
   won,
+  lost,
   align,
+  detail,
+  linkProfiles,
+  mobileBadge = false,
 }: {
   players: MatchPlayer[];
   people: Map<string, PartnerPreview>;
   ratings?: Map<string, number>;
   ratingDeltas?: Map<string, number>;
   won: boolean;
+  lost: boolean;
   align: "start" | "end";
+  detail: boolean;
+  linkProfiles: boolean;
+  mobileBadge?: boolean;
 }) {
   return (
     <div
-      className={`flex min-w-0 flex-col gap-0.5 lg:gap-1 ${
-        align === "end" ? "items-end" : "items-start"
+      className={`flex min-w-0 flex-col ${
+        detail
+          ? "w-full gap-2 px-3 py-2.5 lg:w-auto lg:gap-2 lg:px-2.5 lg:py-2"
+          : "gap-0.5 lg:gap-1"
+      } ${
+        detail
+          ? align === "end"
+            ? "items-start lg:items-end"
+            : "items-start"
+          : align === "end"
+            ? "items-end"
+            : "items-start"
+      } ${
+        won && detail
+          ? "rounded-2xl bg-ball/10 ring-1 ring-ball/40"
+          : lost && detail
+            ? "rounded-2xl bg-line/[0.04] opacity-70 lg:rounded-none lg:bg-transparent lg:opacity-50"
+            : detail
+              ? "rounded-2xl bg-line/[0.04] lg:rounded-none lg:bg-transparent"
+              : ""
       }`}
     >
+      {mobileBadge ? (
+        <div className="lg:hidden">
+          <WinnerBadge detail />
+        </div>
+      ) : null}
       {players.map((player) => {
         const person = playerPreview(player, people);
         const rating = player.profile_id
@@ -95,31 +280,61 @@ function TeamStack({
         const delta = player.profile_id
           ? ratingDeltas?.get(player.profile_id)
           : undefined;
+        const nameClass = `min-w-0 truncate ${
+          detail ? "text-sm lg:text-base" : "max-w-full text-xs lg:text-sm"
+        } ${
+          won
+            ? "font-semibold text-ball"
+            : lost
+              ? "text-line/50"
+              : "text-line/65"
+        }`;
+        const name = listPlayerName(player.display_name, person);
+        const nameNode =
+          linkProfiles && person.username ? (
+            <Link
+              to={profilePath(person.username)}
+              className={`${nameClass} hover:text-ball`}
+            >
+              {name}
+            </Link>
+          ) : (
+            <p className={nameClass}>{name}</p>
+          );
+
         return (
           <div
             key={player.id}
-            className={`flex min-w-0 max-w-full items-center gap-1.5 lg:gap-2 ${
-              align === "end" ? "flex-row-reverse" : ""
+            className={`flex min-w-0 items-center ${
+              detail
+                ? "w-full gap-2.5 lg:w-auto lg:max-w-full lg:gap-2.5"
+                : "max-w-full gap-1.5 lg:gap-2"
+            } ${
+              align === "end"
+                ? detail
+                  ? "lg:flex-row-reverse"
+                  : "flex-row-reverse"
+                : ""
             }`}
           >
             <MemberAvatar
               person={person}
-              size="xs"
-              ring="court"
-              className="max-lg:h-6 max-lg:w-6"
+              size={detail ? "sm" : "xs"}
+              ring={won ? "ball" : "court"}
+              className={detail ? "max-lg:h-9 max-lg:w-9" : "max-lg:h-6 max-lg:w-6"}
             />
             <div
-              className={`flex min-w-0 max-w-full flex-col lg:flex-row lg:items-baseline lg:gap-1 ${
-                align === "end" ? "items-end" : "items-start"
-              }`}
+              className={
+                detail
+                  ? `flex min-w-0 flex-1 items-baseline justify-between gap-2 lg:flex-none lg:justify-start lg:gap-1 ${
+                      align === "end" ? "lg:flex-row-reverse" : ""
+                    }`
+                  : `flex min-w-0 max-w-full flex-col lg:flex-row lg:items-baseline lg:gap-1 ${
+                      align === "end" ? "items-end" : "items-start"
+                    }`
+              }
             >
-              <p
-                className={`min-w-0 max-w-full truncate text-xs lg:text-sm ${
-                  won ? "font-semibold text-line" : "text-line/65"
-                }`}
-              >
-                {listPlayerName(player.display_name, person)}
-              </p>
+              {nameNode}
               <PlayerRatingSuffix rating={rating} delta={delta} />
             </div>
           </div>
@@ -134,24 +349,57 @@ function MatchScore({
   team1Won,
   team2Won,
   winner,
+  draw,
+  detail,
 }: {
   sets: MatchSet[];
   team1Won: number;
   team2Won: number;
   winner: 1 | 2 | null;
+  draw: boolean;
+  detail: boolean;
 }) {
   return (
-    <div className="flex shrink-0 flex-col items-center gap-0.5 px-0.5 lg:gap-1 lg:px-1">
-      <p className="font-display text-xl leading-none tracking-wide lg:text-4xl">
-        <span className={winner === 1 ? "text-ball" : "text-line/40"}>
+    <div
+      className={`flex shrink-0 flex-col items-center ${
+        detail
+          ? "gap-1 py-1 lg:gap-1.5 lg:px-2 lg:py-0"
+          : "gap-0.5 px-0.5 lg:gap-1 lg:px-1"
+      }`}
+    >
+      <p
+        className={`font-display leading-none tracking-wide ${
+          detail ? "text-4xl lg:text-5xl" : "text-xl lg:text-4xl"
+        }`}
+      >
+        <span
+          className={
+            winner === 1 ? "text-ball" : draw ? "text-line/70" : "text-line/35"
+          }
+        >
           {team1Won}
         </span>
         <span className="text-line/25">–</span>
-        <span className={winner === 2 ? "text-ball" : "text-line/40"}>
+        <span
+          className={
+            winner === 2 ? "text-ball" : draw ? "text-line/70" : "text-line/35"
+          }
+        >
           {team2Won}
         </span>
       </p>
-      <p className="max-w-[5.75rem] text-center text-[0.62rem] font-medium leading-tight tabular-nums text-line/45 lg:max-w-none lg:text-[0.7rem]">
+      {draw ? (
+        <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-line/45">
+          Uafgjort
+        </p>
+      ) : null}
+      <p
+        className={`text-center font-medium leading-tight tabular-nums text-line/45 ${
+          detail
+            ? "max-w-none text-xs lg:text-sm"
+            : "max-w-[5.75rem] text-[0.62rem] lg:max-w-none lg:text-[0.7rem]"
+        }`}
+      >
         {sets.map((row, index) => (
           <span key={row.id}>
             {index > 0 ? <span className="text-line/20"> · </span> : null}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
+import { LeagueFinalsCard } from "../components/LeagueFinalsCard";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, MemberNameLink } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
@@ -9,16 +10,24 @@ import { LeaguePageSkeleton } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
+  asLeagueFixture,
   fetchLatestLeague,
+  finalsQualifyCopy,
   fixtureHasUnread,
+  fixtureRoundLabel,
   formatLeagueDay,
   formatLeagueWhen,
+  groupLabel,
+  groupStageFixtures,
+  isKnockoutFixture,
+  knockoutFixtures,
   leagueIsRunning,
   leagueStandings,
   messageAuthorName,
   teamName,
   type League,
   type LeagueFixture,
+  type LeagueGroup,
   type LeagueJoinRequest,
   type LeagueMessage,
   type LeagueTeam,
@@ -76,6 +85,14 @@ export function League() {
   const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
   const [joinRequests, setJoinRequests] = useState<LeagueJoinRequest[]>([]);
   const [ratings, setRatings] = useState<Map<string, number>>(new Map());
+  const [groups, setGroups] = useState<LeagueGroup[]>([]);
+  const [groupCount, setGroupCount] = useState(2);
+  const [teamGroups, setTeamGroups] = useState<Record<string, string>>({});
+  const [finalsOn, setFinalsOn] = useState("");
+  const [finalsStarts, setFinalsStarts] = useState("");
+  const [finalsVenue, setFinalsVenue] = useState("");
+  const [finalsNote, setFinalsNote] = useState("");
+  const [finalsTba, setFinalsTba] = useState(false);
 
   function fillSeasonFromLeague(current: League) {
     setName(current.name);
@@ -117,11 +134,13 @@ export function League() {
       setFixtures([]);
       setJoinRequests([]);
       setUnreadFixtures(new Set());
+      setGroups([]);
+      setTeamGroups({});
       setReady(true);
       return;
     }
 
-    const [{ data: teamRows }, { data: rosterRows }, { data: fixtureRows }, { data: requestRows }] =
+    const [{ data: teamRows }, { data: rosterRows }, { data: fixtureRows }, { data: requestRows }, { data: groupRows }] =
       await Promise.all([
         supabase.from("league_teams").select("*").eq("league_id", latest.id),
         supabase
@@ -133,6 +152,11 @@ export function League() {
           .from("league_join_requests")
           .select("id, league_id, requester_id, recipient_id, created_at")
           .eq("league_id", latest.id),
+        supabase
+          .from("league_groups")
+          .select("id, league_id, label, sort_order")
+          .eq("league_id", latest.id)
+          .order("sort_order"),
       ]);
 
     const roster = (rosterRows ?? []) as LeagueTeamPlayer[];
@@ -164,6 +188,7 @@ export function League() {
       "players"
     >[]).map((team) => ({
       ...team,
+      group_id: team.group_id ?? null,
       players: roster
         .filter((row) => row.team_id === team.id)
         .sort((a, b) => a.slot - b.slot)
@@ -171,8 +196,26 @@ export function League() {
         .filter((person): person is PartnerPreview => Boolean(person)),
     }));
     setTeams(mappedTeams);
+    setGroups((groupRows ?? []) as LeagueGroup[]);
+    setGroupCount(latest.group_count ?? 2);
+    setTeamGroups(
+      Object.fromEntries(
+        mappedTeams.map((team) => [team.id, team.group_id ?? ""]),
+      ),
+    );
+    setFinalsOn(latest.finals_on?.slice(0, 10) ?? "");
+    setFinalsStarts(
+      latest.finals_starts_at
+        ? toDatetimeLocalValue(new Date(latest.finals_starts_at))
+        : "",
+    );
+    setFinalsVenue(latest.finals_venue ?? "");
+    setFinalsNote(latest.finals_note ?? "");
+    setFinalsTba(Boolean(latest.finals_tba));
 
-    const mappedFixtures = (fixtureRows ?? []) as LeagueFixture[];
+    const mappedFixtures = ((fixtureRows ?? []) as LeagueFixture[]).map(
+      asLeagueFixture,
+    );
     setFixtures(mappedFixtures);
 
     const matchIds = mappedFixtures
@@ -303,27 +346,52 @@ export function League() {
     (request) => request.requester_id === user.id,
   );
   const seasonRunning = Boolean(league && leagueIsRunning(league));
-  const standings = league
-    ? leagueStandings(
-        teams,
-        fixtures,
-        players,
-        setsByMatch,
-        matchStatus,
-        disputedMatchIds,
-        ratings,
+  function shownGroupId(team: LeagueTeam) {
+    return teamGroups[team.id] ?? team.group_id ?? "";
+  }
+
+  const groupsDirty = teams.some(
+    (team) => (team.group_id ?? "") !== (teamGroups[team.id] ?? ""),
+  );
+  const unassignedTeams = teams.filter((team) => !shownGroupId(team));
+  const previewLeague = league
+    ? {
+        ...league,
+        finals_tba: isAdmin ? finalsTba : league.finals_tba,
+        finals_on: isAdmin ? finalsOn || null : league.finals_on,
+        finals_starts_at: isAdmin
+          ? finalsStarts
+            ? new Date(finalsStarts).toISOString()
+            : null
+          : league.finals_starts_at,
+        finals_venue: isAdmin ? finalsVenue.trim() || null : league.finals_venue,
+        finals_note: isAdmin ? finalsNote.trim() || null : league.finals_note,
+      }
+    : null;
+
+  function moveTeamToGroup(teamId: string, groupId: string) {
+    setTeamGroups((current) => ({ ...current, [teamId]: groupId }));
+  }
+
+  function resetGroupPreview() {
+    setTeamGroups(
+      Object.fromEntries(teams.map((team) => [team.id, team.group_id ?? ""])),
+    );
+  }
+  const mine = myTeam
+    ? fixtures.filter(
+        (row) => row.team_a_id === myTeam.id || row.team_b_id === myTeam.id,
       )
     : [];
-  const myFixtures = fixtures
-    .filter(
-      (row) =>
-        myTeam &&
-        (row.team_a_id === myTeam.id || row.team_b_id === myTeam.id),
-    )
-    .sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
+  const myGroupFixtures = myTeam?.group_id
+    ? groupStageFixtures(mine).filter((fixture) => {
+        const otherId =
+          fixture.team_a_id === myTeam.id ? fixture.team_b_id : fixture.team_a_id;
+        return teams.find((team) => team.id === otherId)?.group_id === myTeam.group_id;
+      })
+    : [];
+  const myKnockout = knockoutFixtures(mine);
+  const myFixtures = [...myGroupFixtures, ...myKnockout];
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -415,6 +483,126 @@ export function League() {
       return;
     }
     setInfo(`${label} er fjernet fra ligaen.`);
+    await load();
+  }
+
+  async function handleGroupCount(nextCount: number) {
+    if (!league || nextCount === groupCount) return;
+    if (
+      groupsDirty &&
+      !window.confirm(
+        "Du har ugemte gruppeændringer. Skift antal grupper alligevel?",
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    const { error: countError } = await supabase.rpc("set_league_group_count", {
+      p_league_id: league.id,
+      p_group_count: nextCount,
+    });
+    setSaving(false);
+    if (countError) {
+      setError(danishAuthError(countError.message));
+      return;
+    }
+    setInfo(`Ligaen har nu ${nextCount} grupper.`);
+    await load();
+  }
+
+  async function handleSaveGroups() {
+    if (!league) return;
+    setError(null);
+    setSaving(true);
+    const { error: saveError } = await supabase.rpc("set_league_team_groups", {
+      p_league_id: league.id,
+      p_assignments: teams.map((team) => ({
+        team_id: team.id,
+        group_id: teamGroups[team.id] || null,
+      })),
+    });
+    setSaving(false);
+    if (saveError) {
+      setError(danishAuthError(saveError.message));
+      return;
+    }
+    setInfo("Gruppeplaceringen er gemt. Gruppekampene er opdateret.");
+    await load();
+  }
+
+  async function handleSeedGroups() {
+    if (!league) return;
+    if (
+      !window.confirm(
+        "Fordel alle hold efter rating? Manuelle placeringer overskrives, og uspillede gruppekampe laves om.",
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    const { error: seedError } = await supabase.rpc("seed_league_groups", {
+      p_league_id: league.id,
+    });
+    setSaving(false);
+    if (seedError) {
+      setError(danishAuthError(seedError.message));
+      return;
+    }
+    setInfo("Holdene er fordelt efter rating.");
+    await load();
+  }
+
+  async function handleSaveFinals(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!league) return;
+    setError(null);
+    setSaving(true);
+    const { error: finalsError } = await supabase.rpc("update_league_finals", {
+      p_league_id: league.id,
+      p_finals_on: finalsOn || null,
+      p_finals_starts_at: finalsStarts
+        ? new Date(finalsStarts).toISOString()
+        : null,
+      p_finals_venue: finalsVenue,
+      p_finals_note: finalsNote,
+      p_finals_tba: finalsTba,
+    });
+    setSaving(false);
+    if (finalsError) {
+      setError(danishAuthError(finalsError.message));
+      return;
+    }
+    setInfo(
+      finalsTba
+        ? "Finaledagen vises som TBA. Du kan sætte datoen senere."
+        : "Finaledagen er gemt.",
+    );
+    await load();
+  }
+
+  async function handleGenerateKnockout() {
+    if (!league) return;
+    if (
+      !window.confirm(
+        "Opret semifinaler ud fra den aktuelle gruppetabel? Uspillede slutspilskampe laves om.",
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    const { error: knockoutError } = await supabase.rpc(
+      "generate_league_knockout",
+      { p_league_id: league.id },
+    );
+    setSaving(false);
+    if (knockoutError) {
+      setError(danishAuthError(knockoutError.message));
+      return;
+    }
+    setInfo("Slutspillet er oprettet.");
     await load();
   }
 
@@ -562,9 +750,10 @@ export function League() {
                 {signupOpen ? " · åben" : " · lukket"}
               </p>
               <p className="mt-4 text-sm text-line/75">
-                3 point for sejr, 1 for uafgjort, 0 for nederlag. Inden sæsonens
-                slut skal I have spillet én ligakamp mod hvert andet hold. I
-                finder selv dato og skriver sammen i kamp-dialogerne.
+                3 point for sejr, 1 for uafgjort, 0 for nederlag. I spiller kun
+                mod de andre hold i jeres gruppe. {finalsQualifyCopy(league.group_count ?? 2)}{" "}
+                I finder selv dato til gruppekampene og skriver sammen i
+                kamp-dialogerne.
               </p>
               <Link
                 to="/liga/kampe"
@@ -574,14 +763,23 @@ export function League() {
               </Link>
             </section>
 
+            {previewLeague ? (
+              <LeagueFinalsCard
+                league={previewLeague}
+                teams={teams}
+                fixtures={fixtures}
+                ratings={ratings}
+              />
+            ) : null}
+
             {isAdmin ? (
               <section className="mt-8 space-y-4 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
                 <h2 className="font-display text-3xl tracking-wide">
                   Liga-admin
                 </h2>
                 <p className="text-sm text-line/60">
-                  Ret datoer, luk tilmelding eller fjern et hold, der tilmeldte
-                  forkert.
+                  Ret datoer, luk tilmelding, sæt grupper eller planlæg
+                  finaledagen.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -738,34 +936,228 @@ export function League() {
                 ) : null}
 
                 <div className="border-t border-line/10 pt-4">
-                  <h3 className="text-sm font-semibold">Hold</h3>
+                  <h3 className="text-sm font-semibold">Grupper</h3>
+                  <p className="mt-2 text-sm text-line/60">
+                    Flyt holdene mellem grupperne. Tabellen opdateres med det
+                    samme. Gem for at oprette kampene.
+                  </p>
+                  <label className="mt-3 block text-sm">
+                    Antal grupper
+                    <select
+                      value={groupCount}
+                      disabled={saving}
+                      onChange={(event) =>
+                        void handleGroupCount(Number(event.target.value))
+                      }
+                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                    >
+                      <option value={2}>2 grupper</option>
+                      <option value={3}>3 grupper</option>
+                      <option value={4}>4 grupper</option>
+                    </select>
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={saving || teams.length === 0}
+                      onClick={() => void handleSeedGroups()}
+                      className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                    >
+                      Fordel efter rating
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving || teams.length === 0 || !groupsDirty}
+                      onClick={() => void handleSaveGroups()}
+                      className="rounded-full bg-ball px-4 py-2 text-sm font-semibold text-court disabled:opacity-60"
+                    >
+                      {saving ? "Gemmer…" : "Gem grupper"}
+                    </button>
+                    {groupsDirty ? (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={resetGroupPreview}
+                        className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                      >
+                        Fortryd
+                      </button>
+                    ) : null}
+                  </div>
+                  {groupsDirty ? (
+                    <p className="mt-2 text-sm text-ball">
+                      Ugemte ændringer. Tabellen nedenunder er en
+                      forhåndsvisning.
+                    </p>
+                  ) : null}
+
                   {teams.length === 0 ? (
-                    <p className="mt-2 text-sm text-line/55">
+                    <p className="mt-3 text-sm text-line/55">
                       Ingen hold tilmeldt.
                     </p>
                   ) : (
-                    <ul className="mt-3 space-y-2">
-                      {teams.map((team) => (
-                        <li
-                          key={team.id}
-                          className="flex items-center justify-between gap-3 rounded-2xl border border-line/10 bg-court px-4 py-3"
-                        >
-                          <span className="text-sm font-semibold">
-                            {teamName(team.players, ratings)}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={removingTeamId === team.id}
-                            onClick={() => void handleRemoveTeam(team)}
-                            className="shrink-0 text-sm text-red-300/90 hover:text-red-200 disabled:opacity-60"
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {groups.map((group) => {
+                        const columnTeams = teams.filter(
+                          (team) => shownGroupId(team) === group.id,
+                        );
+                        return (
+                          <section
+                            key={group.id}
+                            className="rounded-2xl border border-line/10 bg-court p-3"
                           >
-                            {removingTeamId === team.id ? "Fjerner…" : "Fjern"}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="flex items-baseline justify-between gap-2">
+                              <h4 className="text-sm font-semibold text-ball">
+                                {groupLabel(group.label)}
+                              </h4>
+                              <span className="text-xs text-line/45">
+                                {columnTeams.length}
+                              </span>
+                            </div>
+                            <ul className="mt-2 min-h-12 space-y-2">
+                              {columnTeams.length === 0 ? (
+                                <li className="rounded-xl border border-dashed border-line/10 px-3 py-4 text-xs text-line/40">
+                                  Ingen hold
+                                </li>
+                              ) : (
+                                columnTeams.map((team) => (
+                                  <AdminTeamCard
+                                    key={team.id}
+                                    team={team}
+                                    groups={groups}
+                                    groupId={group.id}
+                                    ratings={ratings}
+                                    removing={removingTeamId === team.id}
+                                    onMove={moveTeamToGroup}
+                                    onRemove={() => void handleRemoveTeam(team)}
+                                  />
+                                ))
+                              )}
+                            </ul>
+                          </section>
+                        );
+                      })}
+                      <section className="rounded-2xl border border-dashed border-line/15 bg-court/60 p-3">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <h4 className="text-sm font-semibold text-line/55">
+                            Ikke placeret
+                          </h4>
+                          <span className="text-xs text-line/45">
+                            {unassignedTeams.length}
+                          </span>
+                        </div>
+                        <ul className="mt-2 min-h-12 space-y-2">
+                          {unassignedTeams.length === 0 ? (
+                            <li className="rounded-xl border border-dashed border-line/10 px-3 py-4 text-xs text-line/40">
+                              Alle hold er placeret
+                            </li>
+                          ) : (
+                            unassignedTeams.map((team) => (
+                              <AdminTeamCard
+                                key={team.id}
+                                team={team}
+                                groups={groups}
+                                groupId=""
+                                ratings={ratings}
+                                removing={removingTeamId === team.id}
+                                onMove={moveTeamToGroup}
+                                onRemove={() => void handleRemoveTeam(team)}
+                              />
+                            ))
+                          )}
+                        </ul>
+                      </section>
+                    </div>
                   )}
                 </div>
+
+                <form
+                  onSubmit={(event) => void handleSaveFinals(event)}
+                  className="space-y-4 border-t border-line/10 pt-4"
+                >
+                  <h3 className="text-sm font-semibold">Finaledag</h3>
+                  <p className="text-sm text-line/60">
+                    Dato og sted vises på forsiden, også før slutspillet er
+                    oprettet. Kortet opdateres med det samme, mens du skriver.
+                  </p>
+                  <label className="flex items-center gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={finalsTba}
+                      onChange={(event) => setFinalsTba(event.target.checked)}
+                      className="size-4 rounded border-line/30 accent-ball"
+                    />
+                    Vis dato som TBA
+                  </label>
+                  <p className="text-sm text-line/55">
+                    {finalsTba
+                      ? "Finaledagen vises som TBA, indtil du fjerner fluebenet og gemmer en dato."
+                      : "Du kan skifte til TBA senere, hvis datoen ikke er klar."}
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm">
+                      Dato
+                      <input
+                        type="date"
+                        value={finalsOn}
+                        onChange={(event) => setFinalsOn(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      Start
+                      <input
+                        type="datetime-local"
+                        value={finalsStarts}
+                        onChange={(event) => setFinalsStarts(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                      />
+                    </label>
+                  </div>
+                  <label className="block text-sm">
+                    Sted
+                    <input
+                      value={finalsVenue}
+                      onChange={(event) => setFinalsVenue(event.target.value)}
+                      maxLength={80}
+                      placeholder="Hal, baner…"
+                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    Note
+                    <textarea
+                      value={finalsNote}
+                      onChange={(event) => setFinalsNote(event.target.value)}
+                      maxLength={280}
+                      rows={2}
+                      className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
+                    >
+                      {saving ? "Gemmer…" : "Gem finaledag"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving || finalsTba || !finalsOn}
+                      onClick={() => void handleGenerateKnockout()}
+                      className="rounded-full border border-line/20 px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                    >
+                      Opret slutspil
+                    </button>
+                  </div>
+                  {finalsTba ? (
+                    <p className="text-sm text-line/55">
+                      Slutspillet kan først oprettes, når finaledagen har en
+                      rigtig dato.
+                    </p>
+                  ) : null}
+                </form>
               </section>
             ) : null}
 
@@ -901,56 +1293,58 @@ export function League() {
             <h2 className="mt-10 font-display text-3xl tracking-wide lg:mt-0">
               Tabel
             </h2>
-            {standings.length === 0 ? (
+            {isAdmin && groupsDirty ? (
+              <p className="mt-2 text-sm text-ball">
+                Forhåndsvisning af ugemte gruppeændringer.
+              </p>
+            ) : null}
+            {teams.length === 0 ? (
               <p className="mt-4 rounded-2xl border border-line/10 bg-court-mid px-5 py-4 text-sm text-line/60">
                 Ingen hold endnu.
               </p>
             ) : (
-              <div className="mt-4 overflow-x-auto rounded-2xl border border-line/10 bg-court-mid">
-                <table className="w-full text-left text-sm">
-                  <thead className="text-[0.65rem] uppercase tracking-[0.16em] text-line/40">
-                    <tr>
-                      <th className="w-16 px-3 py-3 font-semibold">Plads</th>
-                      <th className="px-2 py-3 font-semibold">Hold</th>
-                      <th className="px-2 py-3 font-semibold">K</th>
-                      <th className="px-2 py-3 font-semibold">V</th>
-                      <th className="px-2 py-3 font-semibold">U</th>
-                      <th className="px-2 py-3 font-semibold">T</th>
-                      <th className="px-4 py-3 text-right font-semibold">P</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {standings.map((row, index) => {
-                      const place = index + 1;
-                      return (
-                        <tr
-                          key={row.teamId}
-                          className={`border-t border-line/10 ${
-                            place === 1
-                              ? "bg-ball/[0.07]"
-                              : place === 2
-                                ? "bg-line/[0.04]"
-                                : place === 3
-                                  ? "bg-amber-700/15"
-                                  : ""
-                          }`}
-                        >
-                          <td className="px-3 py-3">
-                            <LeaguePlace place={place} />
-                          </td>
-                          <td className="px-2 py-3 font-semibold">{row.name}</td>
-                          <td className="px-2 py-3 text-line/70">{row.played}</td>
-                          <td className="px-2 py-3 text-line/70">{row.wins}</td>
-                          <td className="px-2 py-3 text-line/70">{row.draws}</td>
-                          <td className="px-2 py-3 text-line/70">{row.losses}</td>
-                          <td className="px-4 py-3 text-right font-display text-2xl leading-none text-ball">
-                            {row.points}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="mt-4 space-y-6">
+                {groups.map((group) => {
+                  const groupTeams = teams.filter(
+                    (team) => shownGroupId(team) === group.id,
+                  );
+                  const rows = leagueStandings(
+                    groupTeams,
+                    fixtures,
+                    players,
+                    setsByMatch,
+                    matchStatus,
+                    disputedMatchIds,
+                    ratings,
+                  );
+                  const qualifyUntil = (league.group_count ?? 2) === 4 ? 1 : 2;
+                  return (
+                    <div key={group.id}>
+                      <h3 className="text-sm font-semibold text-ball">
+                        {groupLabel(group.label)}
+                      </h3>
+                      {rows.length === 0 ? (
+                        <p className="mt-2 rounded-2xl border border-line/10 bg-court-mid px-5 py-4 text-sm text-line/60">
+                          Ingen hold i gruppen endnu.
+                        </p>
+                      ) : (
+                        <GroupTable rows={rows} qualifyUntil={qualifyUntil} />
+                      )}
+                    </div>
+                  );
+                })}
+                {unassignedTeams.length > 0 ? (
+                  <div>
+                    <h3 className="text-sm font-semibold text-line/55">
+                      Ikke placeret
+                    </h3>
+                    <ul className="mt-2 space-y-1 text-sm text-line/70">
+                      {unassignedTeams.map((team) => (
+                        <li key={team.id}>{teamName(team.players, ratings)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             )}
             </div>
@@ -961,13 +1355,15 @@ export function League() {
                   Jeres kampe
                 </h2>
                 <p className="mt-2 text-sm text-line/65">
-                  I skal nå én kamp mod hvert hold inden{" "}
-                  {formatLeagueDay(league.ends_on)}.
+                  {myTeam?.group_id
+                    ? `I skal nå gruppekampene inden ${formatLeagueDay(league.ends_on)}.`
+                    : "Administratoren placerer jer i en gruppe. Derefter oprettes jeres gruppekampe."}
                 </p>
                 {myFixtures.length === 0 ? (
                   <p className="mt-4 rounded-2xl border border-line/10 bg-court-mid px-5 py-4 text-sm text-line/60">
-                    Vent på at flere hold tilmelder sig. Så oprettes
-                    kamp-dialogerne automatisk.
+                    {myTeam?.group_id
+                      ? "Vent på at flere hold kommer i jeres gruppe."
+                      : "I er tilmeldt og venter på en gruppe."}
                   </p>
                 ) : (
                   <ul className="mt-4 space-y-3">
@@ -975,6 +1371,14 @@ export function League() {
                       <FixtureDialog
                         key={fixture.id}
                         index={index + 1}
+                        title={
+                          isKnockoutFixture(fixture)
+                            ? fixtureRoundLabel(fixture, 0)
+                            : fixtureRoundLabel(
+                                fixture,
+                                myGroupFixtures.indexOf(fixture) + 1,
+                              )
+                        }
                         fixture={fixture}
                         myTeamId={myTeam.id}
                         teams={teams}
@@ -1023,8 +1427,121 @@ export function League() {
   );
 }
 
+function AdminTeamCard({
+  team,
+  groups,
+  groupId,
+  ratings,
+  removing,
+  onMove,
+  onRemove,
+}: {
+  team: LeagueTeam;
+  groups: LeagueGroup[];
+  groupId: string;
+  ratings: Map<string, number>;
+  removing: boolean;
+  onMove: (teamId: string, nextGroupId: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <li className="rounded-xl border border-line/10 bg-court-mid px-3 py-2.5">
+      <p className="text-sm font-semibold leading-snug">
+        {teamName(team.players, ratings)}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {groups.map((group) => (
+          <button
+            key={group.id}
+            type="button"
+            onClick={() => onMove(team.id, group.id)}
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              groupId === group.id
+                ? "bg-ball text-court"
+                : "border border-line/20 text-line/70 hover:border-ball/50"
+            }`}
+          >
+            {group.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => onMove(team.id, "")}
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            groupId === ""
+              ? "bg-line/20 text-line"
+              : "border border-line/20 text-line/55 hover:border-ball/50"
+          }`}
+        >
+          —
+        </button>
+        <button
+          type="button"
+          disabled={removing}
+          onClick={onRemove}
+          className="ml-auto text-xs text-red-300/90 hover:text-red-200 disabled:opacity-60"
+        >
+          {removing ? "Fjerner…" : "Fjern"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function GroupTable({
+  rows,
+  qualifyUntil,
+}: {
+  rows: { teamId: string; name: string; played: number; wins: number; draws: number; losses: number; points: number }[];
+  qualifyUntil: number;
+}) {
+  return (
+    <div className="mt-2 overflow-x-auto rounded-2xl border border-line/10 bg-court-mid">
+      <table className="w-full text-left text-sm">
+        <thead className="text-[0.65rem] uppercase tracking-[0.16em] text-line/40">
+          <tr>
+            <th className="w-16 px-3 py-3 font-semibold">Plads</th>
+            <th className="px-2 py-3 font-semibold">Hold</th>
+            <th className="px-2 py-3 font-semibold">K</th>
+            <th className="px-2 py-3 font-semibold">V</th>
+            <th className="px-2 py-3 font-semibold">U</th>
+            <th className="px-2 py-3 font-semibold">T</th>
+            <th className="px-4 py-3 text-right font-semibold">P</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const place = index + 1;
+            return (
+              <tr
+                key={row.teamId}
+                className={`border-t border-line/10 ${
+                  place <= qualifyUntil ? "bg-ball/[0.07]" : ""
+                }`}
+              >
+                <td className="px-3 py-3">
+                  <LeaguePlace place={place} />
+                </td>
+                <td className="px-2 py-3 font-semibold">{row.name}</td>
+                <td className="px-2 py-3 text-line/70">{row.played}</td>
+                <td className="px-2 py-3 text-line/70">{row.wins}</td>
+                <td className="px-2 py-3 text-line/70">{row.draws}</td>
+                <td className="px-2 py-3 text-line/70">{row.losses}</td>
+                <td className="px-4 py-3 text-right font-display text-2xl leading-none text-ball">
+                  {row.points}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function FixtureDialog({
   index,
+  title,
   fixture,
   myTeamId,
   teams,
@@ -1038,6 +1555,7 @@ function FixtureDialog({
   onSent,
 }: {
   index: number;
+  title?: string;
   fixture: LeagueFixture;
   myTeamId: string;
   teams: LeagueTeam[];
@@ -1124,7 +1642,7 @@ function FixtureDialog({
       >
         <div>
           <p className="flex items-center gap-2 font-display text-2xl tracking-wide">
-            Kamp {index}
+            {title ?? `Kamp ${index}`}
             {hasUnread ? (
               <span className="rounded-full bg-ball px-2 py-0.5 font-sans text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-court">
                 Ny

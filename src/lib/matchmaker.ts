@@ -239,6 +239,17 @@ export async function setFollowNewListings(follow: boolean) {
   return Boolean(data);
 }
 
+const UNREAD_NOTIFICATIONS_EVENT = "padel:unread-notifications";
+
+export function onUnreadNotificationsChanged(listener: () => void) {
+  window.addEventListener(UNREAD_NOTIFICATIONS_EVENT, listener);
+  return () => window.removeEventListener(UNREAD_NOTIFICATIONS_EVENT, listener);
+}
+
+export function notifyUnreadNotificationsChanged() {
+  window.dispatchEvent(new Event(UNREAD_NOTIFICATIONS_EVENT));
+}
+
 export async function fetchUnreadNotificationCount() {
   const { count, error } = await supabase
     .from("notifications")
@@ -246,6 +257,14 @@ export async function fetchUnreadNotificationCount() {
     .is("read_at", null);
   if (error) throw error;
   return count ?? 0;
+}
+
+export async function markMatchCommentsRead(matchId: string) {
+  const { error } = await supabase.rpc("mark_match_comments_read", {
+    p_match_id: matchId,
+  });
+  if (error) throw error;
+  notifyUnreadNotificationsChanged();
 }
 
 export function listingHasUnreadChat(

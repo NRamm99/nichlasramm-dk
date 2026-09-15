@@ -486,7 +486,7 @@ function localDayDiff(from: Date, to: Date) {
   );
 }
 
-function formatMatchDate(value: string) {
+export function formatMatchDate(value: string) {
   return new Intl.DateTimeFormat("da-DK", {
     weekday: "short",
     day: "numeric",

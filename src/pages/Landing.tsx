@@ -3,6 +3,7 @@ import { AddToCalendarButton } from "../components/AddToCalendarButton";
 import { SiteShell } from "../components/SiteShell";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { HomePoll } from "../components/HomePoll";
+import { LeagueFinalsCard } from "../components/LeagueFinalsCard";
 import { LeaguePlace } from "../components/LeaguePlace";
 import { MemberAvatar, TeamAvatarStack } from "../components/MemberAvatar";
 import { PushNotifications } from "../components/PushNotifications";
@@ -18,6 +19,7 @@ import {
   remainingLeagueCopy,
   type HomeDashboard,
 } from "../lib/home";
+import { leagueHasFinalsPromo } from "../lib/league";
 import {
   formatNextMatchWhen,
   isLeagueMatch,
@@ -104,6 +106,9 @@ function HomeDashboardView({
           ...dashboard.leagueTable.flatMap((row) =>
             row.players.map((person) => person.id),
           ),
+          ...dashboard.leagueTeams.flatMap((team) =>
+            team.players.map((person) => person.id),
+          ),
           ...dashboard.nextMatchPeople.keys(),
         ];
         const ratingRows = await fetchPlayerRatingsByIds(ratingIds).catch(
@@ -188,6 +193,19 @@ function HomeDashboardView({
         </div>
       ) : null}
 
+      {data?.currentLeague &&
+      leagueHasFinalsPromo(data.currentLeague, data.leagueFixtures) ? (
+        <div className="mt-6">
+          <LeagueFinalsCard
+            compact
+            league={data.currentLeague}
+            teams={data.leagueTeams}
+            fixtures={data.leagueFixtures}
+            ratings={ratings}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-6 grid min-w-0 gap-3 lg:grid-cols-2 lg:items-stretch">
       <Card className="flex min-w-0 flex-col overflow-hidden p-5 lg:p-6">
         {ownNextMatch ? (
@@ -243,9 +261,17 @@ function HomeDashboardView({
       </Card>
 
       <Card className="flex min-w-0 flex-col overflow-hidden p-5 lg:p-6">
-        <p className="text-sm font-semibold text-ball">Liga</p>
+        <p className="text-sm font-semibold text-ball">
+          Liga
+          {data?.myGroupLabel ? ` · Gruppe ${data.myGroupLabel}` : ""}
+        </p>
         {data?.inLeague ? (
           <>
+            {!data.myGroupLabel ? (
+              <p className="mt-2 text-sm text-line/55">
+                I venter på at blive placeret i en gruppe.
+              </p>
+            ) : null}
             {data.leagueTable.length > 0 ? (
               <table className="mt-3 w-full table-fixed text-left text-sm">
                 <tbody>

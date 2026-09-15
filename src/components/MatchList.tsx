@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { LeagueBadge } from "./LeagueBadge";
-import { MatchLineup } from "./MatchLineup";
+import { MatchLineup, MatchMeta } from "./MatchLineup";
 import { ListEmpty, ListGroup } from "./ui/ListGroup";
 import {
   formatMatchRelativeDay,
@@ -134,7 +133,7 @@ export function MatchList({
                     to={`/kampe/${row.id}`}
                     className="block px-3 py-3 transition hover:bg-line/[0.03] lg:px-4 lg:py-3.5"
                   >
-                    <MatchRowMeta
+                    <MatchMeta
                       time={time}
                       league={isLeagueMatch(row)}
                       singles={isSinglesMatch(row.players)}
@@ -169,85 +168,6 @@ export function MatchList({
           </ListGroup>
         </section>
       ))}
-    </div>
-  );
-}
-
-function MatchRowMeta({
-  time,
-  league,
-  singles,
-  isOwn,
-  disputed,
-  result,
-}: {
-  time: string | null;
-  league: boolean;
-  singles: boolean;
-  isOwn: boolean;
-  disputed: boolean;
-  result: "V" | "U" | "T" | null;
-}) {
-  const chips: { key: string; label: string; className: string }[] = [];
-  if (league) {
-    chips.push({ key: "liga", label: "Liga", className: "text-ball" });
-  } else if (singles) {
-    chips.push({
-      key: "single",
-      label: "Single",
-      className: "text-line/55",
-    });
-  }
-  if (isOwn) {
-    chips.push({
-      key: "own",
-      label: "Du spiller",
-      className: "text-ball/80",
-    });
-  } else if (disputed) {
-    chips.push({
-      key: "disputed",
-      label: "Uenighed",
-      className: "text-red-300",
-    });
-  } else if (result) {
-    chips.push({
-      key: "result",
-      label: result === "V" ? "Vundet" : result === "U" ? "Ulige" : "Tabt",
-      className:
-        result === "V"
-          ? "text-ball"
-          : result === "U"
-            ? "text-line/70"
-            : "text-line/40",
-    });
-  }
-
-  if (!time && chips.length === 0) return null;
-
-  return (
-    <div className="mb-2 flex items-center justify-between gap-3">
-      {time ? (
-        <p className="text-xs tabular-nums text-line/50">{time}</p>
-      ) : (
-        <span />
-      )}
-      {chips.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {chips.map((chip) =>
-            chip.key === "liga" ? (
-              <LeagueBadge key={chip.key} />
-            ) : (
-              <span
-                key={chip.key}
-                className={`text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${chip.className}`}
-              >
-                {chip.label}
-              </span>
-            ),
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }

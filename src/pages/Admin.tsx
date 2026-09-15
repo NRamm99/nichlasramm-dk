@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
+import { AdminNews } from "../components/AdminNews";
 import { AdminPolls } from "../components/AdminPolls";
 import { AdminPushBroadcast } from "../components/AdminPushBroadcast";
 import { SiteShell } from "../components/SiteShell";
@@ -59,7 +60,7 @@ function AdminFold({
 }
 
 export function Admin() {
-  const { user, loading, isAdmin, refreshProfile } = useAuth();
+  const { user, loading, canAdmin, setAdminView, refreshProfile } = useAuth();
   const [codes, setCodes] = useState<InviteCode[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -98,10 +99,14 @@ export function Admin() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (canAdmin) setAdminView(true);
+  }, [canAdmin, setAdminView]);
+
+  useEffect(() => {
+    if (canAdmin) {
       void loadCodes();
     }
-  }, [isAdmin, loadCodes]);
+  }, [canAdmin, loadCodes]);
 
   if (loading) {
     return (
@@ -304,7 +309,7 @@ export function Admin() {
           dem fra oversigten til arkivet.
         </p>
 
-        {!isAdmin ? (
+        {!canAdmin ? (
           <section className="mt-10 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-8">
             <p className="text-sm text-line/75">
               Der er endnu ikke sat en administrator. Hvis det er din klub, kan
@@ -332,6 +337,7 @@ export function Admin() {
         ) : (
           <>
             <AdminPushBroadcast />
+            <AdminNews />
             <AdminPolls />
 
             <div className="mt-8 flex flex-wrap items-center gap-4">

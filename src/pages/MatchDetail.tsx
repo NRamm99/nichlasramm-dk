@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { AddToCalendarButton } from "../components/AddToCalendarButton";
-import { LeagueBadge } from "../components/LeagueBadge";
 import { MatchRosterFields, SetScores } from "../components/MatchFields";
-import { MatchScoreboard } from "../components/MatchScoreboard";
+import { MatchLineup, MatchMeta } from "../components/MatchLineup";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
-import { BackLink, Page } from "../components/ui/Page";
+import { BackLink, Page, PageHeader } from "../components/ui/Page";
+import { ListGroup } from "../components/ui/ListGroup";
 import {
   Skeleton,
   SkeletonCard,
@@ -14,11 +14,15 @@ import {
   SkeletonRegion,
 } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
+import { syncAppBadge } from "../lib/appBadge";
 import { danishAuthError } from "../lib/authErrors";
 import {
   asMatchRow,
+  formatMatchDate,
+  formatMatchRelativeDay,
+  formatMatchTime,
+  formatMatchTimeRange,
   formatMatchWhen,
-  formatMatchWindow,
   isSinglesMatch,
   matchSetsToForm,
   parseProposedPlayers,
@@ -26,7 +30,6 @@ import {
   picksFromMatchPlayers,
   proposedSetScoreLine,
   rosterPicksToJson,
-  teamPlayers,
   validateMatchSets,
   withMatchSelect,
   type MatchComment,
@@ -37,10 +40,10 @@ import {
   type PlayerPick,
   type ProposedMatchPlayer,
 } from "../lib/match";
+import { markMatchCommentsRead } from "../lib/matchmaker";
 import {
   fetchMembersByIds,
   fullName,
-  profilePath,
   type PartnerPreview,
 } from "../lib/profile";
 import { fetchMatchRatingEvents, fetchPlayerRatingsByIds, withRating, type RatingEvent } from "../lib/rating";
@@ -54,7 +57,6 @@ export function MatchDetail() {
   const [players, setPlayers] = useState<MatchPlayer[]>([]);
   const [sets, setSets] = useState<MatchSet[]>([]);
   const [comments, setComments] = useState<MatchComment[]>([]);
-  const [usernames, setUsernames] = useState<Map<string, string>>(new Map());
   const [ratingEvents, setRatingEvents] = useState<Map<string, RatingEvent>>(
     new Map(),
   );
@@ -76,6 +78,9 @@ export function MatchDetail() {
   const [editingResult, setEditingResult] = useState(false);
   const [savingCorrection, setSavingCorrection] = useState(false);
   const [members, setMembers] = useState<PartnerPreview[]>([]);
+  const [peopleById, setPeopleById] = useState<Map<string, PartnerPreview>>(
+    new Map(),
+  );
   const [isLeagueMatch, setIsLeagueMatch] = useState(false);
   const [rosterPicks, setRosterPicks] = useState<Array<PlayerPick | null>>([
     null,
@@ -87,6 +92,7 @@ export function MatchDetail() {
 
   const load = useCallback(async () => {
     if (!matchId) return;
+    const userId = user?.id;
     setError(null);
 
     const { data, error: loadError } = await withMatchSelect((select) =>
@@ -153,12 +159,6 @@ export function MatchDetail() {
       ).catch(() => new Map()),
     ]);
 
-    const nameMap = new Map<string, string>();
-    for (const [id, person] of people) {
-      if (person.username) nameMap.set(id, person.username);
-    }
-    setUsernames(nameMap);
-
     setMatch(asMatchRow(data as MatchRow));
     setPlayers((playerRows ?? []) as MatchPlayer[]);
     setSets((setRows ?? []) as MatchSet[]);
@@ -170,6 +170,7 @@ export function MatchDetail() {
     );
     setIsLeagueMatch(Boolean(fixtureRow));
     setMembers((memberRows ?? []) as PartnerPreview[]);
+    setPeopleById(people);
     setRatingEvents(matchRatings);
     const liveRatings = new Map<string, number>();
     for (const [id, row] of ratingRows) liveRatings.set(id, row.rating);
@@ -185,7 +186,18 @@ export function MatchDetail() {
           }
         : null,
     );
-  }, [matchId]);
+
+    if (
+      userId &&
+      (playerRows ?? []).some((row) => row.profile_id === userId)
+    ) {
+      void markMatchCommentsRead(matchId)
+        .then(() => void syncAppBadge())
+        .catch(() => {
+          /* Keep the match page usable if the receipt fails. */
+        });
+    }
+  }, [matchId, user?.id]);
 
   useEffect(() => {
     if (!loading && user) void load();
@@ -198,28 +210,24 @@ export function MatchDetail() {
   if (loading || (!match && !missing && !error)) {
     return (
       <SiteShell>
-        <Page className="max-w-2xl">
+        <Page>
           <BackLink to="/kampe">Kampe</BackLink>
-          <h1 className="mt-4 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
-            Kamp
-          </h1>
+          <div className="mt-4">
+            <PageHeader title="Kamp" />
+          </div>
           <SkeletonRegion>
             <Skeleton className="mt-2 h-4 w-40" />
-            <SkeletonCard className="mt-8 overflow-hidden p-5">
-              <div className="flex items-center gap-3">
-                <SkeletonCircle size="2.5rem" />
-                <SkeletonCircle size="2.5rem" />
-                <Skeleton className="h-4 min-w-0 flex-1" />
-              </div>
-              <div className="my-4 flex items-center gap-3">
-                <span className="h-px flex-1 bg-line/10" />
-                <Skeleton className="h-4 w-8" />
-                <span className="h-px flex-1 bg-line/10" />
-              </div>
-              <div className="flex items-center gap-3">
-                <SkeletonCircle size="2.5rem" />
-                <SkeletonCircle size="2.5rem" />
-                <Skeleton className="h-4 min-w-0 flex-1" />
+            <SkeletonCard className="mt-6 p-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <SkeletonCircle size="2.75rem" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-8 w-10" />
+                <div className="flex items-center justify-end gap-2">
+                  <Skeleton className="h-4 w-24" />
+                  <SkeletonCircle size="2.75rem" />
+                </div>
               </div>
             </SkeletonCard>
             <SkeletonCard className="mt-8 p-6">
@@ -251,7 +259,7 @@ export function MatchDetail() {
   if (!match) {
     return (
       <SiteShell>
-        <Page className="max-w-2xl">
+        <Page>
           <BackLink to="/kampe">Kampe</BackLink>
           {error ? (
             <p className="mt-4 text-sm text-red-300" role="alert">
@@ -513,41 +521,24 @@ export function MatchDetail() {
 
   return (
     <SiteShell>
-      <Page className="max-w-2xl">
+      <Page>
         <BackLink to="/kampe">Kampe</BackLink>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-            {match?.status === "played" ? "Spillet" : "Planlagt"}
-          </p>
-          {isLeagueMatch ? <LeagueBadge /> : null}
-        </div>
-        <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
-          {isLeagueMatch
-            ? "Ligakamp"
-            : isSinglesMatch(players)
-              ? "Single"
-              : "Kamp"}
-        </h1>
-        {match ? (
-          <p className="mt-2 text-sm text-line/70">
-            {match.status === "scheduled"
-              ? formatMatchWindow(match.played_at, match.duration_minutes)
-              : formatMatchWhen(match.played_at)}
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-line/60">Indlæser…</p>
-        )}
-        {match ? (
-          <AddToCalendarButton
-            className="mt-4"
-            matchId={match.id}
-            playedAt={match.played_at}
-            status={match.status}
-            players={players}
-            durationMinutes={match.duration_minutes}
-            league={isLeagueMatch}
+        <div className="mt-4">
+          <PageHeader
+            title={formatMatchRelativeDay(match.played_at)}
+            subtitle={formatMatchDate(match.played_at)}
+            action={
+              <AddToCalendarButton
+                matchId={match.id}
+                playedAt={match.played_at}
+                status={match.status}
+                players={players}
+                durationMinutes={match.duration_minutes}
+                league={isLeagueMatch}
+              />
+            }
           />
-        ) : null}
+        </div>
 
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
@@ -560,15 +551,44 @@ export function MatchDetail() {
           </p>
         ) : null}
 
+        <ListGroup className="mt-6">
+          <li className="px-4 py-4">
+            <MatchMeta
+              time={
+                match.status === "scheduled"
+                  ? formatMatchTimeRange(
+                      match.played_at,
+                      match.duration_minutes,
+                    )
+                  : formatMatchTime(match.played_at)
+              }
+              league={isLeagueMatch}
+              singles={isSinglesMatch(players)}
+              isOwn={isPlayer && match.status === "scheduled"}
+              disputed={Boolean(correction)}
+              result={null}
+            />
+            <MatchLineup
+              players={players}
+              sets={match.status === "played" ? sets : []}
+              people={peopleById}
+              ratings={playerRatings}
+              ratingDeltas={
+                match.status === "played" ? playerDeltas : undefined
+              }
+              size="detail"
+              linkProfiles
+            />
+            {correction ? (
+              <p className="mt-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-300">
+                Uenighed om resultatet
+              </p>
+            ) : null}
+          </li>
+        </ListGroup>
+
         {sets.length > 0 ? (
           <section className="mt-8">
-            <MatchScoreboard
-              players={players}
-              sets={sets}
-              usernames={usernames}
-              ratings={playerRatings}
-              ratingDeltas={playerDeltas}
-            />
             {correction ? (
               <div className="mt-4 rounded-[var(--radius-card)] border border-red-400/30 bg-red-400/5 p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
@@ -644,7 +664,7 @@ export function MatchDetail() {
                     onSubmit={(event) => void handlePropose(event)}
                     className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
                   >
-                    <h2 className="font-display text-3xl tracking-wide">
+                    <h2 className="font-display text-2xl tracking-wide">
                       Ret kamp
                     </h2>
                     <p className="mt-2 text-sm text-line/65">
@@ -715,21 +735,6 @@ export function MatchDetail() {
           </section>
         ) : (
           <>
-            <section className="mt-8 grid gap-4 sm:grid-cols-2">
-              <TeamCard
-                title="Hold 1"
-                players={teamPlayers(players, 1)}
-                usernames={usernames}
-                ratings={playerRatings}
-              />
-              <TeamCard
-                title="Hold 2"
-                players={teamPlayers(players, 2)}
-                usernames={usernames}
-                ratings={playerRatings}
-              />
-            </section>
-
             {correction ? (
               <div className="mt-4 rounded-[var(--radius-card)] border border-red-400/30 bg-red-400/5 p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
@@ -798,7 +803,7 @@ export function MatchDetail() {
                     onSubmit={(event) => void handleProposeRoster(event)}
                     className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
                   >
-                    <h2 className="font-display text-3xl tracking-wide">
+                    <h2 className="font-display text-2xl tracking-wide">
                       Ret spillere
                     </h2>
                     <p className="mt-2 text-sm text-line/65">
@@ -846,7 +851,7 @@ export function MatchDetail() {
             ) : null}
 
             <section className="mt-8 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
-              <h2 className="font-display text-3xl tracking-wide">Resultat</h2>
+              <h2 className="font-display text-2xl tracking-wide">Resultat</h2>
               {isPlayer ? (
                 <form
                   onSubmit={(event) => void handleResult(event)}
@@ -878,8 +883,8 @@ export function MatchDetail() {
           </>
         )}
 
-        <section className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
-          <h2 className="font-display text-3xl tracking-wide">Kommentarer</h2>
+        <section className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-4 lg:p-6">
+          <h2 className="font-display text-2xl tracking-wide">Kommentarer</h2>
           <div className="mt-4">
             <ChatThread
               scrollKey={`${comments.length}:${comments[comments.length - 1]?.id ?? "empty"}`}
@@ -958,59 +963,4 @@ function proposedRosterLine(
       return player.guest_name || "Gæst";
     })
     .join(" · ");
-}
-
-function TeamCard({
-  title,
-  players,
-  usernames,
-  ratings,
-}: {
-  title: string;
-  players: MatchPlayer[];
-  usernames: Map<string, string>;
-  ratings: Map<string, number>;
-}) {
-  return (
-    <div className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-        {title}
-      </p>
-      <ul className="mt-3 space-y-2">
-        {players.map((player) => {
-          const username = player.profile_id
-            ? usernames.get(player.profile_id)
-            : undefined;
-          const rating = player.profile_id
-            ? ratings.get(player.profile_id)
-            : undefined;
-          const name =
-            rating == null
-              ? player.display_name
-              : `${player.display_name} (${rating})`;
-          return (
-            <li key={player.id} className="text-sm font-semibold text-line">
-              {username ? (
-                <Link
-                  to={profilePath(username)}
-                  className="hover:text-ball hover:underline"
-                >
-                  {name}
-                </Link>
-              ) : (
-                <>
-                  {name}{" "}
-                  {player.guest_name ? (
-                    <span className="text-xs font-normal text-line/45">
-                      gæst
-                    </span>
-                  ) : null}
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
 }

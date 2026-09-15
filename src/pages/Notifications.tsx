@@ -10,6 +10,7 @@ import { danishAuthError } from "../lib/authErrors";
 import {
   notificationCopy,
   notificationHref,
+  notifyUnreadNotificationsChanged,
   type AppNotification,
 } from "../lib/matchmaker";
 import { supabase } from "../lib/supabase";
@@ -70,6 +71,7 @@ export function Notifications() {
   async function openRow(row: AppNotification) {
     if (!row.read_at) {
       await supabase.rpc("mark_notification_read", { p_id: row.id });
+      notifyUnreadNotificationsChanged();
       void syncAppBadge();
     }
     navigate(notificationHref(row));
@@ -84,6 +86,7 @@ export function Notifications() {
       return;
     }
     await load();
+    notifyUnreadNotificationsChanged();
     void syncAppBadge();
   }
 
@@ -97,6 +100,7 @@ export function Notifications() {
       return;
     }
     await load();
+    notifyUnreadNotificationsChanged();
     void setAppBadgeCount(0);
   }
 
@@ -138,27 +142,53 @@ export function Notifications() {
           {rows.length === 0 ? (
             <ListEmpty>Intet nyt.</ListEmpty>
           ) : (
-            rows.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  onClick={() => void openRow(row)}
-                  className="flex w-full min-h-14 flex-col items-start px-4 py-3 text-left touch-manipulation hover:bg-line/[0.03]"
-                >
-                  <span className={`font-semibold ${row.read_at ? "text-line/80" : "text-line"}`}>
-                    {notificationCopy(row)}
-                  </span>
-                  <span className="mt-1 text-xs text-line/50">
-                    {new Intl.DateTimeFormat("da-DK", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }).format(new Date(row.created_at))}
-                  </span>
-                </button>
-              </li>
-            ))
+            rows.map((row) => {
+              const isUnread = !row.read_at;
+              return (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    onClick={() => void openRow(row)}
+                    className={`flex w-full min-h-14 items-start gap-3 px-4 py-3 text-left touch-manipulation hover:bg-line/[0.03] ${
+                      isUnread ? "bg-ball/[0.08]" : ""
+                    }`}
+                  >
+                    <span
+                      className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${
+                        isUnread ? "bg-ball" : "invisible"
+                      }`}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block font-semibold ${
+                          isUnread ? "text-line" : "text-line/45"
+                        }`}
+                      >
+                        {notificationCopy(row)}
+                      </span>
+                      <span
+                        className={`mt-1 block text-xs ${
+                          isUnread ? "text-line/60" : "text-line/35"
+                        }`}
+                      >
+                        {new Intl.DateTimeFormat("da-DK", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(new Date(row.created_at))}
+                      </span>
+                    </span>
+                    {isUnread ? (
+                      <span className="mt-0.5 shrink-0 rounded-full bg-ball px-2 py-0.5 font-sans text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-court">
+                        Ny
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })
           )}
         </ListGroup>
       </Page>

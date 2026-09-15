@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -21,11 +22,23 @@ type SignUpDetails = {
   lastName: string;
 };
 
+const ADMIN_VIEW_KEY = "pbr-admin-view";
+
+function readStoredAdminView() {
+  try {
+    return localStorage.getItem(ADMIN_VIEW_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
 type AuthContextValue = {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  canAdmin: boolean;
+  setAdminView: (next: boolean) => void;
   username: string | null;
   signIn: (
     username: string,
@@ -50,12 +63,22 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [canAdmin, setCanAdmin] = useState(false);
+  const [adminView, setAdminViewState] = useState(readStoredAdminView);
   const [username, setUsername] = useState<string | null>(null);
+
+  const setAdminView = useCallback((next: boolean) => {
+    setAdminViewState(next);
+    try {
+      localStorage.setItem(ADMIN_VIEW_KEY, next ? "1" : "0");
+    } catch {
+      /* Keep the in-memory choice even if storage is blocked. */
+    }
+  }, []);
 
   async function loadProfile(userId: string | undefined) {
     if (!userId) {
-      setIsAdmin(false);
+      setCanAdmin(false);
       setUsername(null);
       return;
     }
@@ -67,13 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (data?.banned_at) {
-      setIsAdmin(false);
+      setCanAdmin(false);
       setUsername(null);
       await supabase.auth.signOut();
       return;
     }
 
-    setIsAdmin(Boolean(data?.is_admin));
+    setCanAdmin(Boolean(data?.is_admin));
     setUsername(data?.username ?? null);
   }
 
@@ -129,12 +152,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const isAdmin = canAdmin && adminView;
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
       session,
       loading,
       isAdmin,
+      canAdmin,
+      setAdminView,
       username,
       async signIn(usernameValue, password) {
         const normalized = normalizeUsername(usernameValue);
@@ -208,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadProfile(session?.user.id);
       },
     }),
-    [isAdmin, loading, session, username],
+    [adminView, canAdmin, isAdmin, loading, session, setAdminView, username],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,10 +1,21 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ChatBubbleIcon } from "./ChatBubbleIcon";
+import { NewsDialog } from "./NewsDialog";
 import { Button } from "./ui/Button";
 import { Skeleton } from "./ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
+import {
+  fetchUnreadNotificationCount,
+  onUnreadNotificationsChanged,
+} from "../lib/matchmaker";
 import { fetchUnreadDirectCount, onUnreadMessagesChanged } from "../lib/messages";
+import {
+  fetchPendingClubNews,
+  markClubNewsShown,
+  onClubNewsChanged,
+  type PendingClubNews,
+} from "../lib/news";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -12,14 +23,31 @@ type SiteShellProps = {
 };
 
 export function SiteShell({ children, fill }: SiteShellProps) {
-  const { user, loading, isAdmin, signOut } = useAuth();
+  const { user, loading, isAdmin, canAdmin, setAdminView, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const showTabs = Boolean(user) && !fill;
   const showNav = Boolean(user);
   const [unread, setUnread] = useState(0);
+  const [unreadNews, setUnreadNews] = useState(0);
+  const [clubNews, setClubNews] = useState<PendingClubNews | null>(null);
+
+  function viewAsMember() {
+    setAdminView(false);
+    if (location.pathname.startsWith("/admin")) {
+      navigate("/");
+    }
+  }
+
+  function viewAsAdmin() {
+    setAdminView(true);
+  }
 
   useEffect(() => {
     if (!user) {
       setUnread(0);
+      setUnreadNews(0);
+      setClubNews(null);
       return;
     }
 
@@ -27,26 +55,59 @@ export function SiteShell({ children, fill }: SiteShellProps) {
 
     async function load() {
       try {
-        const count = await fetchUnreadDirectCount();
-        if (!cancelled) setUnread(count);
+        const [messages, news] = await Promise.all([
+          fetchUnreadDirectCount(),
+          fetchUnreadNotificationCount(),
+        ]);
+        if (!cancelled) {
+          setUnread(messages);
+          setUnreadNews(news);
+        }
       } catch {
-        if (!cancelled) setUnread(0);
+        if (!cancelled) {
+          setUnread(0);
+          setUnreadNews(0);
+        }
+      }
+    }
+
+    async function loadClubNews() {
+      try {
+        const pending = await fetchPendingClubNews();
+        if (!cancelled) setClubNews(pending);
+      } catch {
+        if (!cancelled) setClubNews(null);
       }
     }
 
     void load();
+    void loadClubNews();
 
     function onVisible() {
-      if (document.visibilityState === "visible") void load();
+      if (document.visibilityState === "visible") {
+        void load();
+        void loadClubNews();
+      }
     }
     document.addEventListener("visibilitychange", onVisible);
     const stopUnread = onUnreadMessagesChanged(() => void load());
+    const stopNews = onUnreadNotificationsChanged(() => void load());
+    const stopClubNews = onClubNewsChanged(() => void loadClubNews());
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
       stopUnread();
+      stopNews();
+      stopClubNews();
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!clubNews) return;
+    void markClubNewsShown(clubNews.id).catch(() => {
+      /* Keep the dialog even if the impression fails. */
+    });
+  }, [clubNews?.id]);
 
   return (
     <div
@@ -63,7 +124,11 @@ export function SiteShell({ children, fill }: SiteShellProps) {
       {showNav ? (
         <SideNav
           unread={unread}
+          unreadNews={unreadNews}
           isAdmin={isAdmin}
+          canAdmin={canAdmin}
+          onViewAsMember={viewAsMember}
+          onViewAsAdmin={viewAsAdmin}
           onSignOut={() => void signOut()}
         />
       ) : null}
@@ -85,13 +150,24 @@ export function SiteShell({ children, fill }: SiteShellProps) {
             {loading ? (
               <Skeleton className="h-9 w-20 rounded-full" />
             ) : user ? (
-              <Button
-                variant="secondary"
-                className="px-3 py-2 text-xs sm:px-4 sm:text-sm"
-                onClick={() => void signOut()}
-              >
-                Log ud
-              </Button>
+              <>
+                {canAdmin && isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={viewAsMember}
+                    className="rounded-full border border-line/20 px-3 py-2 text-xs font-semibold text-line/70 hover:border-ball hover:text-ball sm:px-4 sm:text-sm"
+                  >
+                    Se som medlem
+                  </button>
+                ) : null}
+                <Button
+                  variant="secondary"
+                  className="px-3 py-2 text-xs sm:px-4 sm:text-sm"
+                  onClick={() => void signOut()}
+                >
+                  Log ud
+                </Button>
+              </>
             ) : null}
           </nav>
         </header>
@@ -101,22 +177,54 @@ export function SiteShell({ children, fill }: SiteShellProps) {
             showTabs ? "pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0" : ""
           }`}
         >
+          {canAdmin && !isAdmin ? (
+            <div className="flex items-center justify-between gap-3 border-b border-ball/25 bg-ball/10 px-4 py-2.5 sm:px-10 lg:px-6">
+              <p className="text-xs font-semibold text-ball sm:text-sm">
+                Du ser klubben som medlem
+              </p>
+              <button
+                type="button"
+                onClick={viewAsAdmin}
+                className="shrink-0 rounded-full bg-ball px-3 py-1.5 text-xs font-semibold text-court"
+              >
+                Admin-visning
+              </button>
+            </div>
+          ) : null}
           {children}
         </div>
 
         {showTabs ? <TabBar unread={unread} /> : null}
       </div>
+      {clubNews ? (
+        <NewsDialog
+          news={clubNews}
+          onAcked={() => {
+            void fetchPendingClubNews()
+              .then(setClubNews)
+              .catch(() => setClubNews(null));
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
 function SideNav({
   unread,
+  unreadNews,
   isAdmin,
+  canAdmin,
+  onViewAsMember,
+  onViewAsAdmin,
   onSignOut,
 }: {
   unread: number;
+  unreadNews: number;
   isAdmin: boolean;
+  canAdmin: boolean;
+  onViewAsMember: () => void;
+  onViewAsAdmin: () => void;
   onSignOut: () => void;
 }) {
   return (
@@ -147,6 +255,12 @@ function SideNav({
             icon={<ChatBubbleIcon className="h-5 w-5" />}
             badge={unread}
           />
+          <SideItem
+            to="/nyt"
+            label="Nyt"
+            icon={<BellIcon />}
+            badge={unreadNews}
+          />
           <SideItem to="/medlemmer" label="Medlemmer" icon={<MembersIcon />} />
           <SideItem to="/profil" end label="Profil" icon={<ProfileIcon />} />
           {isAdmin ? (
@@ -159,6 +273,15 @@ function SideNav({
         </div>
       </nav>
       <div className="mt-auto shrink-0 border-t border-line/10 px-3 py-4">
+        {canAdmin ? (
+          <button
+            type="button"
+            onClick={isAdmin ? onViewAsMember : onViewAsAdmin}
+            className="mb-2 w-full rounded-full border border-line/20 px-3 py-2 text-sm font-semibold text-line/70 hover:border-ball hover:text-ball"
+          >
+            {isAdmin ? "Se som medlem" : "Admin-visning"}
+          </button>
+        ) : null}
         <Button
           variant="secondary"
           block
@@ -383,6 +506,24 @@ function ProfileIcon() {
     >
       <circle cx="12" cy="8" r="3.2" />
       <path d="M5 19.5a7 7 0 0 1 14 0" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={iconClass()}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 11H3c0-4 3-4 3-11Z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
     </svg>
   );
 }

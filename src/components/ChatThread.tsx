@@ -44,14 +44,20 @@ export function ChatThread({
   return (
     <div
       className={`flex min-h-0 flex-col ${
-        fill ? "flex-1" : "h-[min(22rem,calc(100dvh-14rem))]"
+        fill
+          ? "flex-1"
+          : "max-lg:gap-4 lg:h-[min(22rem,calc(100dvh-14rem))]"
       }`}
     >
       {header}
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        className={
+          fill
+            ? "min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            : "min-h-0 max-lg:overflow-visible lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+        }
       >
         {children}
       </div>
