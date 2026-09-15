@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AddToCalendarButton } from "../components/AddToCalendarButton";
 import { SiteShell } from "../components/SiteShell";
-import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
 import { HomePoll } from "../components/HomePoll";
 import { LeagueFinalsCard } from "../components/LeagueFinalsCard";
 import { LeaguePlace } from "../components/LeaguePlace";
@@ -20,7 +19,7 @@ import {
   remainingLeagueCopy,
   type HomeDashboard,
 } from "../lib/home";
-import { leagueHasFinalsPromo } from "../lib/league";
+import { groupQualifyMark, leagueHasFinalsPromo } from "../lib/league";
 import {
   formatNextMatchWhen,
   isLeagueMatch,
@@ -195,7 +194,7 @@ function HomeDashboardView({
       ) : null}
 
       {data?.currentLeague &&
-      leagueHasFinalsPromo(data.currentLeague, data.leagueFixtures) ? (
+      leagueHasFinalsPromo(data.currentLeague) ? (
         <div className="mt-6">
           <LeagueFinalsCard
             compact
@@ -251,8 +250,7 @@ function HomeDashboardView({
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
-            <p className="text-sm font-semibold text-ball">Næste kamp</p>
-            <p className="mt-2 font-display text-3xl tracking-wide sm:text-4xl">
+            <p className="font-display text-3xl tracking-wide sm:text-4xl">
               Klar til at spille?
             </p>
             <p className="mt-2 max-w-sm text-sm text-line/55">
@@ -301,7 +299,14 @@ function HomeDashboardView({
                       }`}
                     >
                       <td className="w-14 py-2.5 pr-2 align-middle">
-                        <LeaguePlace place={row.place} />
+                        <LeaguePlace
+                          place={row.place}
+                          mark={groupQualifyMark(
+                            row.place,
+                            data.groupCount,
+                          )}
+                          groupCount={data.groupCount}
+                        />
                       </td>
                       <td className="max-w-0 py-2.5 align-middle">
                         <div className="flex min-w-0 items-center gap-2">
@@ -319,20 +324,27 @@ function HomeDashboardView({
                               </span>
                             ))}
                           </div>
-                          <p
-                            className={`min-w-0 truncate ${
+                          <div
+                            className={`min-w-0 ${
                               row.mine ? "font-semibold" : ""
                             }`}
                           >
-                            {row.players
-                              .map((person) =>
-                                withRating(
-                                  shortDisplayName(person),
-                                  ratings.get(person.id),
-                                ),
-                              )
-                              .join(" / ") || "Ukendt hold"}
-                          </p>
+                            {row.players.length === 0 ? (
+                              <p>Ukendt hold</p>
+                            ) : (
+                              row.players.map((person) => (
+                                <p
+                                  key={person.id}
+                                  className="truncate leading-snug"
+                                >
+                                  {withRating(
+                                    shortDisplayName(person),
+                                    ratings.get(person.id),
+                                  )}
+                                </p>
+                              ))
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="w-10 py-2.5 pl-2 text-right align-middle font-display text-lg leading-none tabular-nums text-ball">
@@ -384,31 +396,10 @@ function HomeDashboardView({
       </Card>
       </div>
 
+      {(data && !data.hasPartner) || isAdmin ? (
       <div className="mt-8 lg:hidden">
-      <p className="ui-label mb-2 px-1">Kampe</p>
+      <p className="ui-label mb-2 px-1">Klub</p>
       <ListGroup>
-        <ListRow
-          to="/kampe"
-          icon={<MatchesIcon />}
-          label="Se alle kampe"
-        />
-        <ListRow
-          to="/matchmaker"
-          icon={<SearchIcon />}
-          label="Find kamp"
-          hint="Opslag om at spille"
-        />
-        <ListRow to="/kampe/ny" icon={<PlusIcon />} label="Opret kamp" />
-      </ListGroup>
-
-      <p className="ui-label mt-8 mb-2 px-1">Klub</p>
-      <ListGroup>
-        <ListRow
-          to="/beskeder"
-          icon={<ChatBubbleIcon className="h-5 w-5" />}
-          label="Beskeder"
-          badge={data?.unreadMessages}
-        />
         {data && !data.hasPartner ? (
           <ListRow
             to="/find-partner"
@@ -417,22 +408,12 @@ function HomeDashboardView({
             hint="Fast makker, ikke en enkelt kamp"
           />
         ) : null}
-        <ListRow
-          to="/medlemmer"
-          icon={<MembersIcon />}
-          label="Medlemsliste"
-        />
-        <ListRow
-          to="/nyt"
-          icon={<BellIcon />}
-          label="Nyt"
-          badge={data?.unreadNotifications}
-        />
         {isAdmin ? (
           <ListRow to="/admin" icon={<AdminIcon />} label="Administration" />
         ) : null}
       </ListGroup>
       </div>
+      ) : null}
     </Page>
   );
 }
@@ -510,24 +491,6 @@ function iconClass() {
   return "h-5 w-5";
 }
 
-function BellIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 11H3c0-4 3-4 3-11Z" />
-      <path d="M10 20a2 2 0 0 0 4 0" />
-    </svg>
-  );
-}
-
 function HandshakeIcon() {
   return (
     <svg
@@ -564,24 +527,6 @@ function SearchIcon() {
   );
 }
 
-function MatchesIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-    >
-      <path d="M5 7h14" />
-      <path d="M5 12h14" />
-      <path d="M5 17h10" />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
     <svg
@@ -595,26 +540,6 @@ function PlusIcon() {
     >
       <path d="M12 5v14" />
       <path d="M5 12h14" />
-    </svg>
-  );
-}
-
-function MembersIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="9" cy="8" r="3" />
-      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
-      <circle cx="17" cy="9" r="2.4" />
-      <path d="M20.5 19a4.5 4.5 0 0 0-6-4.2" />
     </svg>
   );
 }

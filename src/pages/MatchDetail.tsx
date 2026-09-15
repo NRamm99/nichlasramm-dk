@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { AddToCalendarButton } from "../components/AddToCalendarButton";
 import { MatchRosterFields, SetScores } from "../components/MatchFields";
+import { LeagueMatchTitle } from "../components/LeagueBadge";
 import { MatchLineup, MatchMeta } from "../components/MatchLineup";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
@@ -552,7 +553,14 @@ export function MatchDetail() {
         ) : null}
 
         <ListGroup className="mt-6">
-          <li className="px-4 py-4">
+          <li
+            className={`px-4 pb-4 ${
+              isLeagueMatch
+                ? "bg-ball/[0.05] pt-4 shadow-[inset_0_0_0_1px_rgba(214,255,61,0.16)]"
+                : "pt-4"
+            }`}
+          >
+            {isLeagueMatch ? <LeagueMatchTitle /> : null}
             <MatchMeta
               time={
                 match.status === "scheduled"
@@ -562,7 +570,6 @@ export function MatchDetail() {
                     )
                   : formatMatchTime(match.played_at)
               }
-              league={isLeagueMatch}
               singles={isSinglesMatch(players)}
               isOwn={isPlayer && match.status === "scheduled"}
               disputed={Boolean(correction)}

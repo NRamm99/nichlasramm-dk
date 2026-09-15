@@ -194,13 +194,6 @@ export function HomeDashboardSkeleton() {
           </div>
         </SkeletonCard>
       </div>
-
-      <div className="mt-8 lg:hidden">
-        <Skeleton className="mb-2 h-3 w-16" />
-        <SkeletonListRows count={3} avatar={false} />
-        <Skeleton className="mt-8 mb-2 h-3 w-12" />
-        <SkeletonListRows count={4} avatar={false} />
-      </div>
     </SkeletonRegion>
   );
 }

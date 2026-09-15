@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { LeagueBadge } from "./LeagueBadge";
 import { MemberAvatar } from "./MemberAvatar";
 import { ratingDeltaClass } from "./RatingValue";
 import {
@@ -40,8 +39,6 @@ export function MatchLineup({
   const team2 = teamPlayers(players, 2);
   const detail = size === "detail";
 
-  const decided = outcome?.winner === 1 || outcome?.winner === 2;
-
   return (
     <div
       className={
@@ -50,23 +47,6 @@ export function MatchLineup({
           : "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1 lg:gap-x-3"
       }
     >
-      {decided ? (
-        <>
-          <div
-            className={`flex min-h-5 items-center ${detail ? "hidden lg:flex" : ""}`}
-          >
-            {outcome?.winner === 1 ? <WinnerBadge detail={detail} /> : null}
-          </div>
-          <div className={detail ? "hidden lg:block" : undefined} />
-          <div
-            className={`flex min-h-5 items-center justify-end ${
-              detail ? "hidden lg:flex" : ""
-            }`}
-          >
-            {outcome?.winner === 2 ? <WinnerBadge detail={detail} /> : null}
-          </div>
-        </>
-      ) : null}
       <TeamStack
         players={team1}
         people={people}
@@ -77,7 +57,6 @@ export function MatchLineup({
         align="start"
         detail={detail}
         linkProfiles={linkProfiles}
-        mobileBadge={detail && outcome?.winner === 1}
       />
       {outcome ? (
         <MatchScore
@@ -109,7 +88,6 @@ export function MatchLineup({
         align="end"
         detail={detail}
         linkProfiles={linkProfiles}
-        mobileBadge={detail && outcome?.winner === 2}
       />
     </div>
   );
@@ -117,23 +95,19 @@ export function MatchLineup({
 
 export function MatchMeta({
   time,
-  league,
   singles,
   isOwn,
   disputed,
   result,
 }: {
   time: string | null;
-  league: boolean;
   singles: boolean;
   isOwn: boolean;
   disputed: boolean;
   result: "V" | "U" | "T" | null;
 }) {
   const chips: { key: string; label: string; className: string }[] = [];
-  if (league) {
-    chips.push({ key: "liga", label: "Liga", className: "text-ball" });
-  } else if (singles) {
+  if (singles) {
     chips.push({
       key: "single",
       label: "Single",
@@ -176,47 +150,17 @@ export function MatchMeta({
       )}
       {chips.length > 0 ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {chips.map((chip) =>
-            chip.key === "liga" ? (
-              <LeagueBadge key={chip.key} />
-            ) : (
-              <span
-                key={chip.key}
-                className={`text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${chip.className}`}
-              >
-                {chip.label}
-              </span>
-            ),
-          )}
+          {chips.map((chip) => (
+            <span
+              key={chip.key}
+              className={`text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${chip.className}`}
+            >
+              {chip.label}
+            </span>
+          ))}
         </div>
       ) : null}
     </div>
-  );
-}
-
-function WinnerBadge({ detail }: { detail: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full bg-ball font-semibold uppercase tracking-[0.16em] text-court ${
-        detail ? "px-2.5 py-1 text-[0.65rem]" : "px-1.5 py-0.5 text-[0.55rem]"
-      }`}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden
-        className={detail ? "h-3 w-3" : "h-2.5 w-2.5"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M8 4h8v3a4 4 0 0 1-8 0V4Z" />
-        <path d="M12 11v2.5" />
-        <path d="M9 19h6" />
-      </svg>
-      Vinder
-    </span>
   );
 }
 
@@ -230,7 +174,6 @@ function TeamStack({
   align,
   detail,
   linkProfiles,
-  mobileBadge = false,
 }: {
   players: MatchPlayer[];
   people: Map<string, PartnerPreview>;
@@ -241,7 +184,6 @@ function TeamStack({
   align: "start" | "end";
   detail: boolean;
   linkProfiles: boolean;
-  mobileBadge?: boolean;
 }) {
   return (
     <div
@@ -267,11 +209,6 @@ function TeamStack({
               : ""
       }`}
     >
-      {mobileBadge ? (
-        <div className="lg:hidden">
-          <WinnerBadge detail />
-        </div>
-      ) : null}
       {players.map((player) => {
         const person = playerPreview(player, people);
         const rating = player.profile_id

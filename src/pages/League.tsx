@@ -18,6 +18,8 @@ import {
   formatLeagueDay,
   formatLeagueWhen,
   groupLabel,
+  groupQualifyMark,
+  groupQualifyUntil,
   groupStageFixtures,
   isKnockoutFixture,
   knockoutFixtures,
@@ -32,6 +34,7 @@ import {
   type LeagueMessage,
   type LeagueTeam,
   type LeagueTeamPlayer,
+  type StandingRow,
 } from "../lib/league";
 import {
   formatMatchWhen,
@@ -1317,7 +1320,7 @@ export function League() {
                     disputedMatchIds,
                     ratings,
                   );
-                  const qualifyUntil = (league.group_count ?? 2) === 4 ? 1 : 2;
+                  const groupCount = league.group_count ?? 2;
                   return (
                     <div key={group.id}>
                       <h3 className="text-sm font-semibold text-ball">
@@ -1328,7 +1331,7 @@ export function League() {
                           Ingen hold i gruppen endnu.
                         </p>
                       ) : (
-                        <GroupTable rows={rows} qualifyUntil={qualifyUntil} />
+                        <GroupTable rows={rows} groupCount={groupCount} />
                       )}
                     </div>
                   );
@@ -1490,11 +1493,12 @@ function AdminTeamCard({
 
 function GroupTable({
   rows,
-  qualifyUntil,
+  groupCount,
 }: {
-  rows: { teamId: string; name: string; played: number; wins: number; draws: number; losses: number; points: number }[];
-  qualifyUntil: number;
+  rows: StandingRow[];
+  groupCount: number;
 }) {
+  const qualifyUntil = groupQualifyUntil(groupCount);
   return (
     <div className="mt-2 overflow-x-auto rounded-2xl border border-line/10 bg-court-mid">
       <table className="w-full text-left text-sm">
@@ -1520,9 +1524,19 @@ function GroupTable({
                 }`}
               >
                 <td className="px-3 py-3">
-                  <LeaguePlace place={place} />
+                  <LeaguePlace
+                    place={place}
+                    mark={groupQualifyMark(place, groupCount)}
+                    groupCount={groupCount}
+                  />
                 </td>
-                <td className="px-2 py-3 font-semibold">{row.name}</td>
+                <td className="px-2 py-3 font-semibold">
+                  <span className="flex flex-col gap-0.5 leading-snug">
+                    {row.names.map((label, index) => (
+                      <span key={`${row.teamId}-${index}`}>{label}</span>
+                    ))}
+                  </span>
+                </td>
                 <td className="px-2 py-3 text-line/70">{row.played}</td>
                 <td className="px-2 py-3 text-line/70">{row.wins}</td>
                 <td className="px-2 py-3 text-line/70">{row.draws}</td>
@@ -1638,9 +1652,22 @@ function FixtureDialog({
             return next;
           });
         }}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-line/[0.04]"
       >
-        <div>
+        {opponent && opponent.players.length > 0 ? (
+          <div className="flex shrink-0">
+            {opponent.players.map((person, playerIndex) => (
+              <span
+                key={person.id}
+                className={`relative ${playerIndex > 0 ? "-ml-2" : ""}`}
+                style={{ zIndex: opponent.players.length - playerIndex }}
+              >
+                <MemberAvatar person={person} size="sm" ring="court" />
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 font-display text-2xl tracking-wide">
             {title ?? `Kamp ${index}`}
             {hasUnread ? (
@@ -1649,13 +1676,36 @@ function FixtureDialog({
               </span>
             ) : null}
           </p>
-          <p className="mt-1 text-sm text-line/70">
-            {opponent ? teamName(opponent.players, ratings) : "Modstander"}
-          </p>
+          <div className="mt-1 min-w-0 text-sm leading-snug">
+            {opponent ? (
+              opponent.players.map((person) => {
+                const rating = ratings.get(person.id);
+                return (
+                  <p key={person.id} className="truncate text-line/80">
+                    {fullName(person)}
+                    {rating != null ? (
+                      <span className="font-normal tabular-nums text-line/45">
+                        {" "}
+                        ({rating})
+                      </span>
+                    ) : null}
+                  </p>
+                );
+              })
+            ) : (
+              <p className="text-line/70">Modstander</p>
+            )}
+          </div>
         </div>
-        <p
-          className={`text-[0.65rem] font-semibold uppercase tracking-[0.16em] ${
-            hasDispute ? "text-red-300" : done ? "text-ball" : "text-line/45"
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${
+            hasDispute
+              ? "bg-red-400/15 text-red-300"
+              : done
+                ? "bg-ball/15 text-ball"
+                : matchStatus === "scheduled"
+                  ? "bg-line/10 text-line/60"
+                  : "bg-line/10 text-line/45"
           }`}
         >
           {hasDispute
@@ -1665,7 +1715,7 @@ function FixtureDialog({
               : matchStatus === "scheduled"
                 ? "Planlagt"
                 : "Åben"}
-        </p>
+        </span>
       </button>
       {open ? (
         <div className="border-t border-line/10 px-5 py-4">

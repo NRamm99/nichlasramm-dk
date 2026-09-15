@@ -59,7 +59,14 @@ function fileExtension(file: File) {
 
 export function Profile() {
   const { username: usernameParam } = useParams();
-  const { user, loading, username: myUsername, setOwnAvatar, signOut } = useAuth();
+  const {
+    user,
+    loading,
+    username: myUsername,
+    setOwnAvatar,
+    signOut,
+    refreshProfile,
+  } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [record, setRecord] = useState<PlayerRecord>(emptyPlayerRecord());
@@ -298,7 +305,7 @@ export function Profile() {
     setEditing(false);
     setAvatarFile(null);
     setInfo("Profilen er gemt.");
-    await load();
+    await Promise.all([load(), refreshProfile()]);
   }
 
   async function handleHideRecord(hide: boolean) {

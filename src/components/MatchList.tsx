@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { LeagueMatchTitle } from "./LeagueBadge";
 import { MatchLineup, MatchMeta } from "./MatchLineup";
 import { ListEmpty, ListGroup } from "./ui/ListGroup";
 import {
@@ -126,16 +127,24 @@ export function MatchList({
               const time = upcoming
                 ? formatMatchTimeRange(row.played_at, row.duration_minutes)
                 : null;
+              const league = isLeagueMatch(row);
 
               return (
-                <li key={row.id}>
+                <li
+                  key={row.id}
+                  className={league ? "bg-ball/[0.05]" : undefined}
+                >
                   <Link
                     to={`/kampe/${row.id}`}
-                    className="block px-3 py-3 transition hover:bg-line/[0.03] lg:px-4 lg:py-3.5"
+                    className={`relative block px-3 pb-3 transition lg:px-4 lg:pb-3.5 ${
+                      league
+                        ? "pt-3 shadow-[inset_0_0_0_1px_rgba(214,255,61,0.16)] hover:bg-ball/[0.07] lg:pt-3.5"
+                        : "pt-3 hover:bg-line/[0.03] lg:pt-3.5"
+                    }`}
                   >
+                    {league ? <LeagueMatchTitle /> : null}
                     <MatchMeta
                       time={time}
-                      league={isLeagueMatch(row)}
                       singles={isSinglesMatch(row.players)}
                       isOwn={isOwn}
                       disputed={Boolean(row.disputed)}

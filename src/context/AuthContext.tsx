@@ -40,6 +40,9 @@ type AuthContextValue = {
   canAdmin: boolean;
   setAdminView: (next: boolean) => void;
   username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
   signIn: (
     username: string,
     password: string,
@@ -66,6 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [canAdmin, setCanAdmin] = useState(false);
   const [adminView, setAdminViewState] = useState(readStoredAdminView);
   const [username, setUsername] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [lastName, setLastName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const setAdminView = useCallback((next: boolean) => {
     setAdminViewState(next);
@@ -80,24 +86,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId) {
       setCanAdmin(false);
       setUsername(null);
+      setFirstName(null);
+      setLastName(null);
+      setAvatarUrl(null);
       return;
     }
 
     const { data } = await supabase
       .from("profiles")
-      .select("is_admin, banned_at, username")
+      .select("is_admin, banned_at, username, first_name, last_name, avatar_url")
       .eq("id", userId)
       .maybeSingle();
 
     if (data?.banned_at) {
       setCanAdmin(false);
       setUsername(null);
+      setFirstName(null);
+      setLastName(null);
+      setAvatarUrl(null);
       await supabase.auth.signOut();
       return;
     }
 
     setCanAdmin(Boolean(data?.is_admin));
     setUsername(data?.username ?? null);
+    setFirstName(data?.first_name ?? null);
+    setLastName(data?.last_name ?? null);
+    setAvatarUrl(data?.avatar_url ?? null);
   }
 
   useEffect(() => {
@@ -163,6 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canAdmin,
       setAdminView,
       username,
+      firstName,
+      lastName,
+      avatarUrl,
       async signIn(usernameValue, password) {
         const normalized = normalizeUsername(usernameValue);
         if (!isValidUsername(normalized)) {
@@ -226,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async setOwnAvatar(url) {
         const { error } = await supabase.rpc("set_own_avatar", { p_url: url });
+        if (!error) setAvatarUrl(url);
         return { error: error?.message ?? null };
       },
       async signOut() {
@@ -235,7 +254,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadProfile(session?.user.id);
       },
     }),
-    [adminView, canAdmin, isAdmin, loading, session, setAdminView, username],
+    [
+      adminView,
+      avatarUrl,
+      canAdmin,
+      firstName,
+      isAdmin,
+      lastName,
+      loading,
+      session,
+      setAdminView,
+      username,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

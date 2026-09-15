@@ -76,6 +76,7 @@ export type LeagueMessage = {
 export type StandingRow = {
   teamId: string;
   name: string;
+  names: string[];
   played: number;
   wins: number;
   draws: number;
@@ -102,14 +103,21 @@ export function formatLeagueWhen(value: string) {
   }).format(new Date(value));
 }
 
-export function teamName(
+export function teamPlayerLabels(
   players: PartnerPreview[],
   ratings?: Map<string, number>,
 ) {
   const names = players.map((player) =>
     withRating(fullName(player), ratings?.get(player.id)),
   );
-  return names.join(" / ") || "Ukendt hold";
+  return names.length > 0 ? names : ["Ukendt hold"];
+}
+
+export function teamName(
+  players: PartnerPreview[],
+  ratings?: Map<string, number>,
+) {
+  return teamPlayerLabels(players, ratings).join(" / ");
 }
 
 export function messageAuthorName(
@@ -148,6 +156,7 @@ export function leagueStandings(
     rows.set(team.id, {
       teamId: team.id,
       name: teamName(team.players, ratings),
+      names: teamPlayerLabels(team.players, ratings),
       played: 0,
       wins: 0,
       draws: 0,
@@ -282,6 +291,36 @@ export function finalsQualifyCopy(groupCount: number) {
   return "De 4 gruppevindere spiller semifinaler og finale.";
 }
 
+export type LeagueQualifyMark = "qualify" | "best-second";
+
+export function groupQualifyUntil(groupCount: number) {
+  return groupCount >= 4 ? 1 : 2;
+}
+
+export function groupQualifyMark(
+  place: number,
+  groupCount: number,
+): LeagueQualifyMark | null {
+  if (place < 1) return null;
+  if (groupCount >= 4) return place === 1 ? "qualify" : null;
+  if (groupCount === 3) {
+    if (place === 1) return "qualify";
+    if (place === 2) return "best-second";
+    return null;
+  }
+  return place <= 2 ? "qualify" : null;
+}
+
+export function groupQualifyTitle(
+  mark: LeagueQualifyMark | null,
+  groupCount: number,
+) {
+  if (mark === "best-second") return "Bedste 2’er går videre til semifinale";
+  if (mark !== "qualify") return null;
+  if (groupCount >= 4) return "Gruppevinder – videre til semifinale";
+  return "Videre til semifinale";
+}
+
 export function formatFinalsWhen(
   league: Pick<League, "finals_on" | "finals_starts_at" | "finals_tba">,
 ) {
@@ -292,14 +331,10 @@ export function formatFinalsWhen(
 }
 
 export function leagueHasFinalsPromo(
-  league: Pick<League, "finals_on" | "finals_tba">,
-  fixtures: LeagueFixture[],
+  league: Pick<League, "finals_on" | "finals_starts_at" | "finals_tba">,
 ) {
-  return Boolean(
-    league.finals_tba ||
-      league.finals_on ||
-      fixtures.some((row) => row.stage === "knockout"),
-  );
+  if (league.finals_tba) return false;
+  return Boolean(league.finals_starts_at || league.finals_on);
 }
 
 const LEAGUE_SELECT =
