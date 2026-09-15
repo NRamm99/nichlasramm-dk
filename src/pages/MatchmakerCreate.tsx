@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { SiteShell } from "../components/SiteShell";
 import { BackLink, Page, PageStatus } from "../components/ui/Page";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
+import {
+  MATCH_FINDER_COPY,
+  slotFromPrefill,
+  slotLabel,
+} from "../lib/matchFinder";
 import { fullName, type PartnerPreview } from "../lib/profile";
 import {
   fetchPlayerRatingsByIds,
@@ -18,14 +23,31 @@ function todayDateInput() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_PATTERN = /^\d{2}:\d{2}$/;
+
+function readPrefill(params: URLSearchParams) {
+  const dato = params.get("dato");
+  const fra = params.get("fra");
+  const til = params.get("til");
+  return {
+    dato: dato && DATE_PATTERN.test(dato) ? dato : null,
+    fra: fra && TIME_PATTERN.test(fra) ? fra : null,
+    til: til && TIME_PATTERN.test(til) ? til : null,
+  };
+}
+
 export function MatchmakerCreate() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [prefill] = useState(() => readPrefill(searchParams));
+  const prefillSlot = useMemo(() => slotFromPrefill(prefill), [prefill]);
   const [members, setMembers] = useState<PartnerPreview[]>([]);
   const [clubPartnerId, setClubPartnerId] = useState<string | null>(null);
-  const [date, setDate] = useState(todayDateInput);
-  const [startTime, setStartTime] = useState("16:00");
-  const [endTime, setEndTime] = useState("20:00");
+  const [date, setDate] = useState(() => prefill.dato ?? todayDateInput());
+  const [startTime, setStartTime] = useState(prefill.fra ?? "16:00");
+  const [endTime, setEndTime] = useState(prefill.til ?? "20:00");
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
   const [bringPartner, setBringPartner] = useState(false);
@@ -109,6 +131,12 @@ export function MatchmakerCreate() {
       <Page>
         <BackLink to="/matchmaker">Find kamp</BackLink>
         <h1 className="mt-4 font-display text-5xl tracking-wide">Ny annonce</h1>
+        {prefill.dato || prefill.fra || prefill.til ? (
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ball/15 px-3 py-1 text-xs font-semibold text-ball">
+            Fra {MATCH_FINDER_COPY.title}
+            {prefillSlot ? ` · ${slotLabel(prefillSlot)}` : ""}
+          </p>
+        ) : null}
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}

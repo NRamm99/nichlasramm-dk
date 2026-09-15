@@ -11,6 +11,28 @@
   --radius-card: 1.25rem;
   --animate-home-nudge: home-nudge 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.55s
     both;
+  --animate-sheet-up: sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-sheet-fade: sheet-fade 0.22s ease-out both;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(2rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes home-nudge {

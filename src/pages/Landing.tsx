@@ -5,6 +5,8 @@ import { SiteShell } from "../components/SiteShell";
 import { HomePoll } from "../components/HomePoll";
 import { LeagueFinalsCard } from "../components/LeagueFinalsCard";
 import { LeaguePlace } from "../components/LeaguePlace";
+import { MatchFinderCard } from "../components/MatchFinderCard";
+import { MatchFinderSheet } from "../components/MatchFinderSheet";
 import { MemberAvatar, TeamAvatarStack } from "../components/MemberAvatar";
 import { PushNotifications } from "../components/PushNotifications";
 import { Button } from "../components/ui/Button";
@@ -20,6 +22,7 @@ import {
   type HomeDashboard,
 } from "../lib/home";
 import { groupQualifyMark, leagueHasFinalsPromo } from "../lib/league";
+import { MATCH_FINDER_COPY, hasAnyPrefs } from "../lib/matchFinder";
 import {
   formatNextMatchWhen,
   isLeagueMatch,
@@ -88,10 +91,11 @@ function HomeDashboardView({
   userId: string;
   username: string | null;
 }) {
-  const { isAdmin } = useAuth();
   const [data, setData] = useState<HomeDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ratings, setRatings] = useState<Map<string, number>>(new Map());
+  const [timesSheetOpen, setTimesSheetOpen] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +107,7 @@ function HomeDashboardView({
         setData(dashboard);
         void setAppBadgeCount(dashboard.unreadNotifications);
         const ratingIds = [
+          userId,
           ...dashboard.leagueTable.flatMap((row) =>
             row.players.map((person) => person.id),
           ),
@@ -110,6 +115,7 @@ function HomeDashboardView({
             team.players.map((person) => person.id),
           ),
           ...dashboard.nextMatchPeople.keys(),
+          ...dashboard.matchFinder.people.keys(),
         ];
         const ratingRows = await fetchPlayerRatingsByIds(ratingIds).catch(
           () => new Map(),
@@ -133,7 +139,15 @@ function HomeDashboardView({
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", onVisible);
     };
-  }, [userId]);
+  }, [userId, reloadTick]);
+
+  const reload = () => setReloadTick((tick) => tick + 1);
+  const setMatchFinderHiddenLocal = (hidden: boolean) =>
+    setData((current) =>
+      current
+        ? { ...current, matchFinder: { ...current.matchFinder, hidden } }
+        : current,
+    );
 
   if (!data && !error) {
     return (
@@ -272,9 +286,27 @@ function HomeDashboardView({
                 hint="Sæt tid og spillere"
               />
             </div>
+            {data && !hasAnyPrefs(data.matchFinder.mine) ? (
+              <div className="mt-3 text-center">
+                <Button variant="ghost" onClick={() => setTimesSheetOpen(true)}>
+                  {MATCH_FINDER_COPY.setTimes}
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </Card>
+
+      {data ? (
+        <MatchFinderCard
+          className="lg:col-span-2 lg:order-last"
+          userId={userId}
+          matchFinder={data.matchFinder}
+          ratings={ratings}
+          onChanged={reload}
+          onHiddenChange={setMatchFinderHiddenLocal}
+        />
+      ) : null}
 
       <Card className="flex min-w-0 flex-col overflow-hidden p-5 lg:p-6">
         <p className="text-sm font-semibold text-ball">
@@ -396,23 +428,29 @@ function HomeDashboardView({
       </Card>
       </div>
 
-      {(data && !data.hasPartner) || isAdmin ? (
+      {data && !data.hasPartner ? (
       <div className="mt-8 lg:hidden">
       <p className="ui-label mb-2 px-1">Klub</p>
       <ListGroup>
-        {data && !data.hasPartner ? (
-          <ListRow
-            to="/find-partner"
-            icon={<HandshakeIcon />}
-            label="Find partner"
-            hint="Fast makker, ikke en enkelt kamp"
-          />
-        ) : null}
-        {isAdmin ? (
-          <ListRow to="/admin" icon={<AdminIcon />} label="Administration" />
-        ) : null}
+        <ListRow
+          to="/find-partner"
+          icon={<HandshakeIcon />}
+          label="Find partner"
+          hint="Fast makker, ikke en enkelt kamp"
+        />
       </ListGroup>
       </div>
+      ) : null}
+
+      {data ? (
+        <MatchFinderSheet
+          open={timesSheetOpen}
+          onClose={() => setTimesSheetOpen(false)}
+          prefs={data.matchFinder.mine}
+          hidden={data.matchFinder.hidden}
+          onSaved={reload}
+          onHiddenChange={setMatchFinderHiddenLocal}
+        />
       ) : null}
     </Page>
   );
@@ -540,25 +578,6 @@ function PlusIcon() {
     >
       <path d="M12 5v14" />
       <path d="M5 12h14" />
-    </svg>
-  );
-}
-
-function AdminIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={iconClass()}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="5" width="16" height="14" rx="2" />
-      <path d="M8 9h8" />
-      <path d="M8 13h5" />
     </svg>
   );
 }

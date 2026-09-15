@@ -268,10 +268,12 @@ function AccountLinks({
   unread,
   unreadNews,
   onSignOut,
+  showAdmin = false,
 }: {
   unread: number;
   unreadNews: number;
   onSignOut: () => void;
+  showAdmin?: boolean;
 }) {
   return (
     <>
@@ -289,6 +291,9 @@ function AccountLinks({
       />
       <SideItem to="/medlemmer" label="Medlemmer" icon={<MembersIcon />} />
       <SideItem to="/profil" end label="Profil" icon={<ProfileIcon />} />
+      {showAdmin ? (
+        <SideItem to="/admin" label="Administration" icon={<AdminIcon />} />
+      ) : null}
       <button
         type="button"
         onClick={onSignOut}
@@ -443,7 +448,8 @@ function MobileAccountMenu({
   const highlight =
     menuOpen ||
     onAccountPage ||
-    location.pathname.startsWith("/medlemmer");
+    location.pathname.startsWith("/medlemmer") ||
+    location.pathname.startsWith("/admin");
 
   return (
     <>
@@ -491,6 +497,7 @@ function MobileAccountMenu({
             unread={unread}
             unreadNews={unreadNews}
             onSignOut={onSignOut}
+            showAdmin={isAdmin}
           />
           {isAdmin ? (
             <button

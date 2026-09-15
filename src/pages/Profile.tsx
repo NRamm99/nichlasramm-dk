@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { MatchFinderSheet } from "../components/MatchFinderSheet";
 import { MatchRecord } from "../components/MatchRecord";
 import { RatingInline } from "../components/RatingValue";
 import { PushNotifications } from "../components/PushNotifications";
@@ -24,6 +25,15 @@ import {
   fetchPlayerRecord,
   type PlayerRecord,
 } from "../lib/match";
+import {
+  effectiveSlots,
+  emptyMemberPrefs,
+  fetchMatchFinderRows,
+  formatSlots,
+  groupPreferences,
+  temporaryActive,
+  type MemberPrefs,
+} from "../lib/matchFinder";
 import {
   emptyRatingSummary,
   fetchPlayerRatingsByIds,
@@ -95,6 +105,10 @@ export function Profile() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [matchFinderPrefs, setMatchFinderPrefs] = useState<MemberPrefs>(
+    emptyMemberPrefs,
+  );
+  const [timesSheetOpen, setTimesSheetOpen] = useState(false);
 
   const isOwn = Boolean(
     user &&
@@ -102,11 +116,24 @@ export function Profile() {
         usernameParam.toLowerCase() === (myUsername ?? "").toLowerCase()),
   );
 
+  const loadMatchFinder = useCallback(async () => {
+    if (!user || !isOwn) return;
+    try {
+      const rows = await fetchMatchFinderRows();
+      setMatchFinderPrefs(
+        groupPreferences(rows).get(user.id) ?? emptyMemberPrefs(),
+      );
+    } catch {
+      setMatchFinderPrefs(emptyMemberPrefs());
+    }
+  }, [isOwn, user]);
+
   const load = useCallback(async () => {
     if (!user) return;
 
     setError(null);
     setMissing(false);
+    void loadMatchFinder();
 
     const { data: me } = await supabase
       .from("profiles")
@@ -181,7 +208,7 @@ export function Profile() {
     );
     setIncoming(requests.filter((row) => row.recipient_id === user.id));
     setOutgoing(requests.filter((row) => row.requester_id === user.id));
-  }, [isOwn, user, usernameParam]);
+  }, [isOwn, loadMatchFinder, user, usernameParam]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -478,6 +505,11 @@ export function Profile() {
   const pendingIncoming = incoming[0] ?? null;
   const pendingOutgoing = outgoing[0] ?? null;
   const viewerHasPartner = Boolean(viewerPartnerId);
+  const mySlots = effectiveSlots(matchFinderPrefs);
+  const timesHint =
+    mySlots.length === 0
+      ? "Ikke sat"
+      : `${temporaryActive(matchFinderPrefs) ? "Midlertidigt: " : ""}${formatSlots(mySlots)}`;
 
   return (
     <SiteShell>
@@ -849,6 +881,12 @@ export function Profile() {
                         hint="Navn, billede og info"
                       />
                       <ListRow
+                        onClick={() => setTimesSheetOpen(true)}
+                        icon={<ClockIcon />}
+                        label="Spilletider"
+                        hint={timesHint}
+                      />
+                      <ListRow
                         to="/liga/kampe"
                         icon={<TrophyIcon />}
                         label="Ligakampe"
@@ -895,10 +933,44 @@ export function Profile() {
             )}
             </div>
             </div>
+            {isOwn ? (
+              <MatchFinderSheet
+                open={timesSheetOpen}
+                onClose={() => setTimesSheetOpen(false)}
+                prefs={matchFinderPrefs}
+                hidden={Boolean(profile.match_finder_hidden)}
+                onSaved={() => void loadMatchFinder()}
+                onHiddenChange={(hidden) =>
+                  setProfile((current) =>
+                    current
+                      ? { ...current, match_finder_hidden: hidden }
+                      : current,
+                  )
+                }
+              />
+            ) : null}
           </>
         ) : null}
       </Page>
     </SiteShell>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l2.5 2.5" />
+    </svg>
   );
 }
 

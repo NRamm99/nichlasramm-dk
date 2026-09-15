@@ -193,6 +193,54 @@ export function HomeDashboardSkeleton() {
             <Skeleton className="h-10 w-28 rounded-full" />
           </div>
         </SkeletonCard>
+
+        <SkeletonCard className="flex flex-col p-5 lg:order-last lg:col-span-2 lg:p-6">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-5 w-28 rounded-full" />
+          </div>
+          <div className="mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-10">
+            <div>
+              <div className="flex items-center gap-3 lg:hidden">
+                <div className="flex">
+                  <SkeletonCircle size="1.75rem" />
+                  <SkeletonCircle size="1.75rem" className="-ml-2" />
+                  <SkeletonCircle size="1.75rem" className="-ml-2" />
+                </div>
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <div className="mt-3 flex gap-2 lg:hidden">
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-8 w-20 rounded-full" />
+              </div>
+              <div className="hidden grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1.5 lg:grid">
+                {Array.from({ length: 32 }, (_, index) => (
+                  <Skeleton
+                    key={index}
+                    className={index < 8 ? "h-6 rounded-lg" : "h-10 rounded-xl"}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 space-y-0 lg:mt-0">
+              {[0, 1, 2].map((row) => (
+                <div
+                  key={row}
+                  className="flex min-h-14 items-center gap-3 border-t border-line/10 py-2 first:border-t-0"
+                >
+                  <SkeletonCircle size="2.75rem" />
+                  <span className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-2/5" />
+                    <Skeleton className="h-3 w-3/5" />
+                  </span>
+                  <SkeletonCircle size="2.5rem" />
+                </div>
+              ))}
+              <Skeleton className="mt-4 h-10 w-36 rounded-full" />
+            </div>
+          </div>
+        </SkeletonCard>
       </div>
     </SkeletonRegion>
   );

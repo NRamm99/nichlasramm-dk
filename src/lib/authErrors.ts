@@ -123,6 +123,10 @@ const messages: Record<string, string> = {
   CANNOT_MESSAGE_SELF: "Du kan ikke sende besked til dig selv.",
   THREAD_NOT_FOUND: "Samtalen findes ikke.",
   MESSAGE_REQUIRED: "Skriv en besked.",
+  INVALID_KIND: "Vælg om tiderne er faste eller midlertidige.",
+  INVALID_SLOT: "Vælg gyldige dage og tidspunkter.",
+  INVALID_EXPIRY:
+    "Midlertidige tider skal udløbe mellem 1 time og 30 dage fra nu.",
 };
 
 export function danishAuthError(message: string | null | undefined): string {

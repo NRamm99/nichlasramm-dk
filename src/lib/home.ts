@@ -19,6 +19,13 @@ import {
   type MatchRow,
   type MatchSet,
 } from "./match";
+import {
+  emptyMemberPrefs,
+  fetchMatchFinderRows,
+  groupPreferences,
+  type MatchFinderPreference,
+  type MemberPrefs,
+} from "./matchFinder";
 import { fetchUnreadNotificationCount } from "./matchmaker";
 import { fetchUnreadDirectCount } from "./messages";
 import { fetchPendingPoll, type PendingPoll } from "./poll";
@@ -31,6 +38,14 @@ export type HomeLeagueTableRow = {
   points: number;
   mine: boolean;
   players: PartnerPreview[];
+};
+
+export type HomeMatchFinder = {
+  mine: MemberPrefs;
+  hidden: boolean;
+  rows: MatchFinderPreference[];
+  byProfile: Map<string, MemberPrefs>;
+  people: Map<string, PartnerPreview>;
 };
 
 export type HomeDashboard = {
@@ -61,6 +76,7 @@ export type HomeDashboard = {
   leagueFixtures: LeagueFixture[];
   leagueTeams: LeagueTeam[];
   currentLeague: League | null;
+  matchFinder: HomeMatchFinder;
 };
 
 export function remainingLeagueCopy(count: number) {
@@ -148,11 +164,12 @@ export async function fetchHomeDashboard(
     unreadNotifications,
     unreadMessages,
     pendingPoll,
+    matchFinderRows,
   ] =
     await Promise.all([
     supabase
       .from("profiles")
-      .select("first_name, partner_id")
+      .select("first_name, partner_id, match_finder_hidden")
       .eq("id", userId)
       .maybeSingle(),
     fetchNextScheduledMatch(userId),
@@ -160,11 +177,25 @@ export async function fetchHomeDashboard(
     fetchUnreadNotificationCount(),
     fetchUnreadDirectCount(),
     fetchPendingPoll(),
+    // The dashboard must still render if this table is unreachable.
+    fetchMatchFinderRows().catch(() => [] as MatchFinderPreference[]),
   ]);
 
-  const nextMatchPeoplePromise = fetchMembersByIds(
-    (next.match?.players ?? []).map((player) => player.profile_id),
-  );
+  const matchFinderByProfile = groupPreferences(matchFinderRows);
+  const nextMatchPeoplePromise = fetchMembersByIds([
+    ...(next.match?.players ?? []).map((player) => player.profile_id),
+    ...matchFinderByProfile.keys(),
+  ]);
+
+  const matchFinderFor = (
+    people: Map<string, PartnerPreview>,
+  ): HomeMatchFinder => ({
+    mine: matchFinderByProfile.get(userId) ?? emptyMemberPrefs(),
+    hidden: Boolean(profile?.match_finder_hidden),
+    rows: matchFinderRows,
+    byProfile: matchFinderByProfile,
+    people,
+  });
 
   const empty = (nextMatchPeople: Map<string, PartnerPreview>): HomeDashboard => ({
     firstName: profile?.first_name ?? null,
@@ -194,6 +225,7 @@ export async function fetchHomeDashboard(
     leagueFixtures: [],
     leagueTeams: [],
     currentLeague: null,
+    matchFinder: matchFinderFor(nextMatchPeople),
   });
 
   if (!league) return empty(await nextMatchPeoplePromise);
@@ -410,5 +442,6 @@ export async function fetchHomeDashboard(
     leagueFixtures: fixtures,
     leagueTeams: teams,
     currentLeague: league,
+    matchFinder: matchFinderFor(nextMatchPeople),
   };
 }
