@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { AddToCalendarButton } from "../components/AddToCalendarButton";
 import { SiteShell } from "../components/SiteShell";
 import { ChatBubbleIcon } from "../components/ChatBubbleIcon";
@@ -207,7 +208,11 @@ function HomeDashboardView({
       ) : null}
 
       <div className="mt-6 grid min-w-0 gap-3 lg:grid-cols-2 lg:items-stretch">
-      <Card className="flex min-w-0 flex-col overflow-hidden p-5 lg:p-6">
+      <Card
+        className={`flex min-w-0 flex-col p-5 lg:p-6 ${
+          ownNextMatch ? "overflow-hidden" : ""
+        }`}
+      >
         {ownNextMatch ? (
           <div className="flex min-w-0 flex-1 flex-row items-center gap-3 sm:gap-4">
             <div className="min-w-0 flex-1">
@@ -245,18 +250,31 @@ function HomeDashboardView({
             </div>
           </div>
         ) : (
-          <>
+          <div className="flex min-h-0 flex-1 flex-col">
             <p className="text-sm font-semibold text-ball">Næste kamp</p>
-            <p className="mt-2 text-sm text-line/55">
-              Ingen planlagt kamp i kalenderen.
+            <p className="mt-2 font-display text-3xl tracking-wide sm:text-4xl">
+              Klar til at spille?
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button to="/matchmaker">Find kamp</Button>
-              <Button to="/kampe/ny" variant="secondary">
-                Opret kamp
-              </Button>
+            <p className="mt-2 max-w-sm text-sm text-line/55">
+              Kalenderen er tom. Find nogen i klubben, eller sæt selv en kamp i
+              gang.
+            </p>
+            <div className="mt-5 grid flex-1 grid-cols-2 gap-2 lg:mt-auto lg:min-h-[9rem] lg:pt-4">
+              <HomePlayAction
+                to="/matchmaker"
+                icon={<SearchIcon />}
+                title="Find kamp"
+                hint="Se åbne opslag"
+                featured
+              />
+              <HomePlayAction
+                to="/kampe/ny"
+                icon={<PlusIcon />}
+                title="Opret kamp"
+                hint="Sæt tid og spillere"
+              />
             </div>
-          </>
+          </div>
         )}
       </Card>
 
@@ -416,6 +434,51 @@ function HomeDashboardView({
       </ListGroup>
       </div>
     </Page>
+  );
+}
+
+function HomePlayAction({
+  to,
+  icon,
+  title,
+  hint,
+  featured = false,
+}: {
+  to: string;
+  icon: ReactNode;
+  title: string;
+  hint: string;
+  featured?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={`flex min-h-[7.25rem] flex-col justify-between rounded-2xl px-3.5 py-3.5 transition touch-manipulation lg:min-h-0 lg:px-4 lg:py-4 ${
+        featured
+          ? "bg-ball/15 text-ball ring-1 ring-ball/35 hover:bg-ball/25 hover:ring-ball/50 motion-safe:animate-home-nudge"
+          : "border border-line/15 bg-court/40 text-line hover:border-ball hover:text-ball"
+      }`}
+    >
+      <span
+        className={`flex h-9 w-9 items-center justify-center rounded-full ${
+          featured ? "bg-ball/20" : "bg-line/10 text-ball"
+        }`}
+      >
+        {icon}
+      </span>
+      <span>
+        <span className="mt-5 block font-display text-lg tracking-wide lg:text-xl">
+          {title}
+        </span>
+        <span
+          className={`mt-1 block text-xs ${
+            featured ? "text-ball/70" : "text-line/50"
+          }`}
+        >
+          {hint}
+        </span>
+      </span>
+    </Link>
   );
 }
 
