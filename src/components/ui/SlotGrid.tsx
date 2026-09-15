@@ -26,18 +26,19 @@ type SlotGridProps = {
   className?: string;
 };
 
+// Absolute steps: 1, 2, 3 and 4+ members, so full colour always means
+// "enough for a court" regardless of how busy the busiest slot is.
 const HEAT_STEPS = [
-  "bg-line/[0.04] text-line/35",
-  "bg-ball/15 text-ball/80",
-  "bg-ball/30 text-ball",
-  "bg-ball/50 text-court",
-  "bg-ball/75 text-court",
+  "bg-line/[0.04]",
+  "bg-ball/15",
+  "bg-ball/30",
+  "bg-ball/50",
+  "bg-ball/80",
 ];
 
-function heatClass(count: number, max: number) {
-  if (count <= 0 || max <= 0) return HEAT_STEPS[0];
-  const step = Math.max(1, Math.ceil((count / max) * (HEAT_STEPS.length - 1)));
-  return HEAT_STEPS[Math.min(step, HEAT_STEPS.length - 1)];
+function heatClass(count: number) {
+  if (count <= 0) return HEAT_STEPS[0];
+  return HEAT_STEPS[Math.min(count, HEAT_STEPS.length - 1)];
 }
 
 export function SlotGrid({
@@ -52,7 +53,6 @@ export function SlotGrid({
 }: SlotGridProps) {
   const editable = Boolean(onToggle);
   const selected = value ?? new Set<SlotKey>();
-  const maxHeat = heat ? Math.max(0, ...heat.values()) : 0;
 
   const rowSlots = (band: Slot["band"]): Slot[] =>
     WEEKDAYS.map((day) => ({ weekday: day.id, band }));
@@ -133,27 +133,13 @@ export function SlotGrid({
                 ? isSelected
                   ? "bg-ball text-court hover:bg-line"
                   : "bg-line/[0.06] text-line/30 hover:bg-line/15"
-                : heatClass(count, maxHeat),
+                : heatClass(count),
               !editable && isSelected && "ring-2 ring-inset ring-ball",
               isHighlighted && "outline outline-2 outline-offset-1 outline-line",
             );
 
-            const content = editable ? (
-              isSelected ? (
-                <CheckIcon compact={compact} />
-              ) : null
-            ) : count > 0 ? (
-              <>
-                <span className="hidden lg:inline">{count}</span>
-                <span
-                  aria-hidden
-                  className={cx(
-                    "rounded-full bg-current lg:hidden",
-                    compact ? "h-1.5 w-1.5" : "h-2 w-2",
-                  )}
-                />
-              </>
-            ) : null;
+            const content =
+              editable && isSelected ? <CheckIcon compact={compact} /> : null;
 
             const srText = editable
               ? label

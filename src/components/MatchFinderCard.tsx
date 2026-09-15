@@ -514,10 +514,11 @@ function HeatLegend({ extra = [] }: { extra?: string[] }) {
       <li className="flex items-center gap-2">
         <span aria-hidden className="flex shrink-0 gap-0.5">
           <span className="h-3.5 w-3.5 rounded-[0.3rem] bg-ball/15" />
-          <span className="h-3.5 w-3.5 rounded-[0.3rem] bg-ball/40" />
-          <span className="h-3.5 w-3.5 rounded-[0.3rem] bg-ball/75" />
+          <span className="h-3.5 w-3.5 rounded-[0.3rem] bg-ball/30" />
+          <span className="h-3.5 w-3.5 rounded-[0.3rem] bg-ball/50" />
+          <span className="h-3.5 w-3.5 rounded-[0.3rem] bg-ball/80" />
         </span>
-        Lysere felter = flere i klubben kan
+        Flere i klubben kan · fuld farve = nok til en bane
       </li>
       {extra.map((line) => (
         <li key={line} className="flex items-center gap-2">
