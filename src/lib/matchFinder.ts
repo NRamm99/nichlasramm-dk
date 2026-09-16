@@ -101,6 +101,27 @@ export function formatSlots(slots: Slot[]) {
   return sortSlots(slots).map(slotLabel).join(" · ");
 }
 
+export function weekdayHours(slots: Slot[]) {
+  const map = new Map<Weekday, { from: string; to: string }>();
+  for (const slot of sortSlots(slots)) {
+    const band = bandInfo(slot.band);
+    const current = map.get(slot.weekday);
+    if (!current) {
+      map.set(slot.weekday, { from: band.from, to: band.to });
+      continue;
+    }
+    if (band.from < current.from) current.from = band.from;
+    if (band.to > current.to) current.to = band.to;
+  }
+  return map;
+}
+
+export function compactHourRange(from: string, to: string) {
+  const start = String(Number(from.slice(0, 2)));
+  const end = String(Number(to.slice(0, 2)));
+  return `${start}–${end}`;
+}
+
 export function slotCountCopy(count: number) {
   return count === 1 ? "1 tid" : `${count} tider`;
 }
@@ -481,6 +502,18 @@ export async function fetchMatchFinderRows() {
     .select("profile_id, kind, weekday, band, expires_at, updated_at");
   if (error) throw error;
   return (data ?? []) as MatchFinderPreference[];
+}
+
+export async function fetchMemberPrefs(profileId: string) {
+  const { data, error } = await supabase
+    .from("match_finder_preferences")
+    .select("profile_id, kind, weekday, band, expires_at, updated_at")
+    .eq("profile_id", profileId);
+  if (error) throw error;
+  return (
+    groupPreferences((data ?? []) as MatchFinderPreference[]).get(profileId) ??
+    emptyMemberPrefs()
+  );
 }
 
 export async function saveMatchFinderPreferences(

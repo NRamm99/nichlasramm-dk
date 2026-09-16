@@ -22,7 +22,7 @@ export function MatchRecord({
   const showStats = canToggle || !hideFromOthers;
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-line/10 bg-court px-4 py-4">
+    <div className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
       <div className="flex items-start justify-between gap-3">
         <p className="ui-label">Record</p>
         {canToggle && hideFromOthers ? (
@@ -88,7 +88,7 @@ export function MatchRecord({
           role="switch"
           aria-checked={hideFromOthers}
           onClick={() => onHideFromOthersChange(!hideFromOthers)}
-          className="mt-4 flex w-full items-center justify-between gap-4 rounded-2xl border border-line/10 bg-court-mid px-4 py-3 text-left touch-manipulation"
+          className="mt-4 flex w-full items-center justify-between gap-4 rounded-2xl border border-line/10 bg-court px-4 py-3 text-left touch-manipulation"
         >
           <span>
             <span className="block text-sm font-semibold text-line">

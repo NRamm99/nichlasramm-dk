@@ -1,5 +1,5 @@
-import { matchOutcome, type MatchPlayer, type MatchSet } from "./match";
-import { fullName, type PartnerPreview } from "./profile";
+import { matchOutcome, fetchDisputedMatchIds, type MatchPlayer, type MatchSet } from "./match";
+import { fetchMembersByIds, fullName, type PartnerPreview } from "./profile";
 import { withRating } from "./rating";
 import { supabase } from "./supabase";
 
@@ -358,5 +358,179 @@ export async function fetchLatestLeague() {
     finals_venue: row.finals_venue ?? null,
     finals_note: row.finals_note ?? null,
     finals_tba: Boolean(row.finals_tba),
+  };
+}
+
+export type PlayerLeagueCard = {
+  leagueId: string;
+  leagueName: string;
+  groupLabel: string | null;
+  place: number | null;
+  qualifyMark: LeagueQualifyMark | null;
+  groupCount: number;
+  teamMates: PartnerPreview[];
+};
+
+export async function fetchPlayerLeagueCard(
+  profileId: string,
+): Promise<PlayerLeagueCard | null> {
+  const league = await fetchLatestLeague();
+  if (!league) return null;
+
+  const { data: myRoster, error: rosterError } = await supabase
+    .from("league_team_players")
+    .select("team_id, profile_id, slot")
+    .eq("league_id", league.id)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (rosterError) throw rosterError;
+  if (!myRoster) return null;
+
+  const teamId = myRoster.team_id as string;
+  const groupCount = league.group_count ?? 2;
+
+  const [{ data: teamRow }, { data: teamPlayerRows }] = await Promise.all([
+    supabase
+      .from("league_teams")
+      .select("id, group_id")
+      .eq("id", teamId)
+      .maybeSingle(),
+    supabase
+      .from("league_team_players")
+      .select("team_id, profile_id, slot")
+      .eq("team_id", teamId),
+  ]);
+
+  const people = await fetchMembersByIds(
+    (teamPlayerRows ?? []).map((row) => row.profile_id as string),
+  );
+  const teamMates = (teamPlayerRows ?? [])
+    .slice()
+    .sort((a, b) => Number(a.slot) - Number(b.slot))
+    .map((row) => people.get(row.profile_id as string))
+    .filter((person): person is PartnerPreview => Boolean(person));
+
+  const groupId = (teamRow?.group_id as string | null | undefined) ?? null;
+  if (!groupId) {
+    return {
+      leagueId: league.id,
+      leagueName: league.name,
+      groupLabel: null,
+      place: null,
+      qualifyMark: null,
+      groupCount,
+      teamMates,
+    };
+  }
+
+  const [{ data: groupRow }, { data: groupTeamRows }, { data: fixtureRows }] =
+    await Promise.all([
+      supabase
+        .from("league_groups")
+        .select("id, label")
+        .eq("id", groupId)
+        .maybeSingle(),
+      supabase
+        .from("league_teams")
+        .select("id, league_id, created_at, created_by, group_id")
+        .eq("league_id", league.id)
+        .eq("group_id", groupId),
+      supabase.from("league_fixtures").select("*").eq("league_id", league.id),
+    ]);
+
+  const groupTeamsMeta = (groupTeamRows ?? []) as Array<{
+    id: string;
+    league_id: string;
+    created_at: string;
+    created_by: string | null;
+    group_id: string | null;
+  }>;
+  const groupTeamIds = groupTeamsMeta.map((row) => row.id);
+
+  const { data: groupRosterRows } =
+    groupTeamIds.length > 0
+      ? await supabase
+          .from("league_team_players")
+          .select("team_id, profile_id, slot")
+          .eq("league_id", league.id)
+          .in("team_id", groupTeamIds)
+      : { data: [] as Array<{ team_id: string; profile_id: string; slot: number }> };
+
+  const groupPeople = await fetchMembersByIds(
+    (groupRosterRows ?? []).map((row) => row.profile_id as string),
+  );
+
+  const teams: LeagueTeam[] = groupTeamsMeta.map((team) => ({
+    id: team.id,
+    league_id: team.league_id,
+    created_at: team.created_at,
+    created_by: team.created_by,
+    group_id: team.group_id,
+    players: (groupRosterRows ?? [])
+      .filter((row) => row.team_id === team.id)
+      .sort((a, b) => Number(a.slot) - Number(b.slot))
+      .map((row) => groupPeople.get(row.profile_id as string))
+      .filter((person): person is PartnerPreview => Boolean(person)),
+  }));
+
+  const fixtures = ((fixtureRows ?? []) as LeagueFixture[])
+    .map(asLeagueFixture)
+    .filter(
+      (fixture) =>
+        groupTeamIds.includes(fixture.team_a_id) &&
+        groupTeamIds.includes(fixture.team_b_id),
+    );
+
+  const matchIds = fixtures
+    .map((fixture) => fixture.match_id)
+    .filter((id): id is string => Boolean(id));
+
+  const matchStatus = new Map<string, "scheduled" | "played">();
+  const setsByMatch = new Map<string, MatchSet[]>();
+  let matchPlayers: MatchPlayer[] = [];
+  let disputedMatchIds = new Set<string>();
+
+  if (matchIds.length > 0) {
+    const [{ data: matchRows }, { data: playerRows }, { data: setRows }, disputed] =
+      await Promise.all([
+        supabase.from("matches").select("id, status").in("id", matchIds),
+        supabase.from("match_players").select("*").in("match_id", matchIds),
+        supabase.from("match_sets").select("*").in("match_id", matchIds),
+        fetchDisputedMatchIds(matchIds),
+      ]);
+    for (const row of (matchRows ?? []) as Array<{
+      id: string;
+      status: "scheduled" | "played";
+    }>) {
+      matchStatus.set(row.id, row.status);
+    }
+    matchPlayers = (playerRows ?? []) as MatchPlayer[];
+    for (const row of (setRows ?? []) as MatchSet[]) {
+      const list = setsByMatch.get(row.match_id) ?? [];
+      list.push(row);
+      setsByMatch.set(row.match_id, list);
+    }
+    disputedMatchIds = disputed;
+  }
+
+  const standings = leagueStandings(
+    teams,
+    fixtures,
+    matchPlayers,
+    setsByMatch,
+    matchStatus,
+    disputedMatchIds,
+  );
+  const standingIndex = standings.findIndex((row) => row.teamId === teamId);
+  const place = standingIndex >= 0 ? standingIndex + 1 : null;
+
+  return {
+    leagueId: league.id,
+    leagueName: league.name,
+    groupLabel: (groupRow?.label as string | null | undefined) ?? null,
+    place,
+    qualifyMark: place != null ? groupQualifyMark(place, groupCount) : null,
+    groupCount,
+    teamMates,
   };
 }

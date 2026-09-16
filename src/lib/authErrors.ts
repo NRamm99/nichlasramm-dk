@@ -8,6 +8,7 @@ const messages: Record<string, string> = {
   INVITE_REQUIRED: "Du skal bruge en invitationskode for at oprette en konto.",
   INVITE_INVALID: "Invitationskoden er ugyldig eller allerede brugt.",
   NAME_REQUIRED: "Fornavn og efternavn er påkrævet.",
+  INVALID_PLAY_STYLE: "Vælg venstre, højre, eller lad feltet være tomt.",
   USERNAME_INVALID:
     "Brugernavn skal være 3–24 tegn og kun indeholde bogstaver, tal, punktum, bindestreg eller understreg.",
   USERNAME_TAKEN: "Brugernavnet er optaget.",

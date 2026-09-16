@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { MatchList } from "../components/MatchList";
 import { SiteShell } from "../components/SiteShell";
 import { BackLink, Page } from "../components/ui/Page";
@@ -8,15 +8,24 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   fetchPlayerMatches,
+  isSameTeamDuo,
   type MatchCard,
 } from "../lib/match";
-import { fullName, profilePath, type PublicProfile } from "../lib/profile";
+import {
+  fullName,
+  profilePath,
+  type PartnerPreview,
+  type PublicProfile,
+} from "../lib/profile";
 import { supabase } from "../lib/supabase";
 
 export function PlayerMatches() {
   const { username } = useParams();
+  const [searchParams] = useSearchParams();
+  const duoUsername = searchParams.get("duo")?.trim().toLowerCase() || null;
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [duoPartner, setDuoPartner] = useState<PartnerPreview | null>(null);
   const [matches, setMatches] = useState<MatchCard[]>([]);
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +35,7 @@ export function PlayerMatches() {
     if (!username) return;
     setError(null);
     setMissing(false);
+    setDuoPartner(null);
 
     const { data, error: loadError } = await supabase
       .from("profiles")
@@ -50,12 +60,30 @@ export function PlayerMatches() {
     const person = { ...data, partner: null } as PublicProfile;
     setProfile(person);
     try {
-      setMatches(await fetchPlayerMatches(data.id));
+      const all = await fetchPlayerMatches(data.id);
+      if (!duoUsername) {
+        setMatches(all);
+      } else {
+        const { data: mate } = await supabase
+          .from("profiles")
+          .select("id, username, first_name, last_name, avatar_url")
+          .eq("username", duoUsername)
+          .is("banned_at", null)
+          .maybeSingle();
+        if (mate) {
+          setDuoPartner(mate as PartnerPreview);
+          setMatches(
+            all.filter((row) => isSameTeamDuo(data.id, mate.id as string, row)),
+          );
+        } else {
+          setMatches([]);
+        }
+      }
     } catch {
       setMatches([]);
     }
     setReady(true);
-  }, [username]);
+  }, [duoUsername, username]);
 
   useEffect(() => {
     if (!loading && user) void load();
@@ -121,10 +149,14 @@ export function PlayerMatches() {
       <Page>
         <BackLink to={profilePath(profile?.username)}>Profil</BackLink>
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-ball">
-          Kampe
+          {duoPartner ? "Duo-kampe" : "Kampe"}
         </p>
         <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
-          {profile ? fullName(profile) : "Kampe"}
+          {duoPartner && profile
+            ? `${fullName(profile)} / ${fullName(duoPartner)}`
+            : profile
+              ? fullName(profile)
+              : "Kampe"}
         </h1>
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
@@ -133,12 +165,21 @@ export function PlayerMatches() {
         ) : null}
 
         <h2 className="mt-10 font-display text-3xl tracking-wide">Kommende</h2>
-        <MatchList rows={upcoming} empty="Ingen planlagte kampe." />
+        <MatchList
+          rows={upcoming}
+          empty={
+            duoPartner
+              ? "Ingen planlagte kampe som duo."
+              : "Ingen planlagte kampe."
+          }
+        />
 
         <h2 className="mt-10 font-display text-3xl tracking-wide">Spillet</h2>
         <MatchList
           rows={played}
-          empty="Ingen kampe registreret."
+          empty={
+            duoPartner ? "Ingen kampe sammen." : "Ingen kampe registreret."
+          }
           resultFor={profile?.id}
         />
       </Page>

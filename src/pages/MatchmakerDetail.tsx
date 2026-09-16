@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
+import { MatchmakerCourtDiagram } from "../components/MatchmakerCourtDiagram";
+import { MemberAvatar } from "../components/MemberAvatar";
 import { SiteShell } from "../components/SiteShell";
 import { BackLink, Page } from "../components/ui/Page";
+import { Button } from "../components/ui/Button";
+import { cx } from "../components/ui/cx";
 import {
   Skeleton,
   SkeletonCard,
@@ -12,21 +16,27 @@ import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import {
   canChat,
-  formatListingWindow,
+  formatListingCardTitle,
   listingCourts,
+  listingDisplayCourts,
   listingGoingIds,
+  listingInterestedLabel,
   listingIsLive,
-  listingOccupied,
-  listingOccupancyLabel,
+  listingNeedCount,
+  listingNeedLabel,
   matchIdForCourt,
-  personLabel,
   type MatchmakerListing,
   type MatchmakerListingMatch,
   type MatchmakerMessage,
   type MatchmakerRsvp,
   type MatchmakerRsvpStatus,
 } from "../lib/matchmaker";
-import { fetchMembersByIds, fullName, type PartnerPreview } from "../lib/profile";
+import {
+  fetchMembersByIds,
+  fullName,
+  profilePath,
+  type PartnerPreview,
+} from "../lib/profile";
 import { formatMatchWhen } from "../lib/match";
 import {
   fetchPlayerRatingsByIds,
@@ -103,25 +113,20 @@ export function MatchmakerDetail() {
   if (loading || (!listing && !missing)) {
     return (
       <SiteShell>
-        <Page>
+        <Page wide>
           <BackLink to="/matchmaker">Find kamp</BackLink>
           <SkeletonRegion>
-            <Skeleton className="mt-4 h-12 w-56 sm:h-14" />
-            <Skeleton className="mt-2 h-4 w-64" />
-            <Skeleton className="mt-1 h-4 w-32" />
-            <div className="mt-6 grid grid-cols-3 gap-2">
-              <Skeleton className="h-11 rounded-full" />
-              <Skeleton className="h-11 rounded-full" />
-              <Skeleton className="h-11 rounded-full" />
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <SkeletonCard className="h-[28rem] rounded-[var(--radius-card)]" />
+              <SkeletonCard className="h-[28rem] rounded-[var(--radius-card)] p-6">
+                <h2 className="font-display text-3xl tracking-wide">Chat</h2>
+                <div className="mt-4 space-y-3">
+                  <Skeleton className="h-16 w-4/5 rounded-2xl" />
+                  <Skeleton className="ml-auto h-16 w-3/5 rounded-2xl" />
+                  <Skeleton className="h-14 w-2/3 rounded-2xl" />
+                </div>
+              </SkeletonCard>
             </div>
-            <SkeletonCard className="mt-8 p-6">
-              <h2 className="font-display text-3xl tracking-wide">Chat</h2>
-              <div className="mt-4 space-y-3">
-                <Skeleton className="h-16 w-4/5 rounded-2xl" />
-                <Skeleton className="ml-auto h-16 w-3/5 rounded-2xl" />
-                <Skeleton className="h-14 w-2/3 rounded-2xl" />
-              </div>
-            </SkeletonCard>
           </SkeletonRegion>
         </Page>
       </SiteShell>
@@ -150,10 +155,11 @@ export function MatchmakerDetail() {
   }
 
   const live = listingIsLive(listing);
-  const occupied = listingOccupied(listing, rsvps);
-  const courts = listingCourts(listing, rsvps);
+  const displayCourts = listingDisplayCourts(listing, rsvps);
+  const realCourts = listingCourts(listing, rsvps);
+  const need = listingNeedCount(displayCourts);
   const assignedIds = new Set(
-    courtMatches.flatMap((row) => courts[row.court_number - 1] ?? []),
+    courtMatches.flatMap((row) => realCourts[row.court_number - 1] ?? []),
   );
   const isHost = listing.host_id === user.id;
   const isLockedSeat =
@@ -162,6 +168,10 @@ export function MatchmakerDetail() {
   const interested = rsvps.filter((row) => row.status === "interested");
   const declined = rsvps.filter((row) => row.status === "declined");
   const chatOk = canChat(listing, rsvps, user.id);
+  const host = people.find((row) => row.id === listing.host_id);
+  const hostName = host ? fullName(host) : "Medlem";
+  const title = formatListingCardTitle(listing.starts_at, listing.ends_at);
+  const labeledCourts = displayCourts.length > 1;
 
   async function setRsvp(status: MatchmakerRsvpStatus) {
     if (!listingId) return;
@@ -228,230 +238,323 @@ export function MatchmakerDetail() {
     await load();
   }
 
+  function extrasForPerson(id: string) {
+    const badge =
+      id === listing.host_id
+        ? "Vært"
+        : id === listing.brought_partner_id
+          ? "Makker"
+          : undefined;
+    const canRemove =
+      isHost &&
+      live &&
+      id !== listing.host_id &&
+      id !== listing.brought_partner_id &&
+      !assignedIds.has(id);
+    return {
+      badge,
+      action: canRemove ? (
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void handleRemove(id)}
+          className="text-[0.65rem] font-semibold text-red-300 touch-manipulation disabled:opacity-50"
+        >
+          Fjern
+        </button>
+      ) : undefined,
+    };
+  }
+
   return (
     <SiteShell>
-      <Page>
+      <Page wide>
         <BackLink to="/matchmaker">Find kamp</BackLink>
-        <h1 className="mt-4 font-display text-5xl tracking-wide">
-          {personLabel(listing.host_id, people, ratings)}
-        </h1>
-        <p className="mt-2 text-sm text-line/70">
-          {formatListingWindow(listing.starts_at, listing.ends_at)}
-          {listing.location ? ` · ${listing.location}` : ""}
-        </p>
-        <p className="mt-1 text-sm font-semibold text-ball">
-          {listingOccupancyLabel(occupied)}
-        </p>
-        {listing.note ? (
-          <p className="mt-4 whitespace-pre-wrap rounded-2xl bg-court px-4 py-3 text-sm text-line/85">
-            {listing.note}
-          </p>
-        ) : null}
         {error ? (
           <p className="mt-4 text-sm text-red-300" role="alert">
             {error}
           </p>
         ) : null}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+          <article className="overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl tracking-wide sm:text-[1.75rem]">
+                  {title}
+                </h1>
+                <p className="mt-1 truncate text-sm text-line/55">
+                  {hostName}
+                  {listing.location ? ` · ${listing.location}` : ""}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-ball/15 px-2.5 py-1 text-xs font-semibold text-ball">
+                {listingNeedLabel(need)}
+              </span>
+            </div>
 
-        {listing.converted_match_id ? (
-          <Link
-            to={`/kampe/${listing.converted_match_id}`}
-            className="mt-4 rounded-full bg-ball px-4 py-2.5 text-center text-xs font-semibold text-court"
-          >
-            Åbn den planlagte kamp
-          </Link>
-        ) : null}
+            <div className="mt-4 space-y-3">
+              {displayCourts.map((slots, index) => (
+                <div key={index} className="space-y-3">
+                  <MatchmakerCourtDiagram
+                    slots={slots}
+                    people={people}
+                    ratings={ratings}
+                    label={labeledCourts ? `Bane ${index + 1}` : undefined}
+                    hrefForPerson={(person) =>
+                      person.username ? profilePath(person.username) : undefined
+                    }
+                    extrasForPerson={extrasForPerson}
+                  />
+                  {courtAction(index + 1, realCourts[index], listing, courtMatches, isHost, live)}
+                </div>
+              ))}
+            </div>
 
-        {live && !isLockedSeat ? (
-          <div className="mt-6 grid grid-cols-3 gap-2">
-            <RsvpButton
-              label="Deltager"
-              active={mine?.status === "going"}
-              disabled={saving}
-              onClick={() => void setRsvp("going")}
-            />
-            <RsvpButton
-              label="Interesseret"
-              active={mine?.status === "interested"}
-              disabled={saving}
-              onClick={() => void setRsvp("interested")}
-            />
-            <RsvpButton
-              label="Kan ikke"
-              active={mine?.status === "declined"}
-              disabled={saving}
-              onClick={() => void setRsvp("declined")}
-            />
-          </div>
-        ) : null}
+            {listing.note ? (
+              <p className="mt-3 whitespace-pre-wrap text-sm italic text-line/60">
+                “{listing.note}”
+              </p>
+            ) : null}
 
-        <section className="mt-8 space-y-5">
-          {courts.map((court, index) => {
-            const courtNumber = index + 1;
-            const matchId = matchIdForCourt(courtNumber, courtMatches);
-            const roleFor = (id: string) => {
-              if (id === listing.host_id) return " · vært";
-              if (id === listing.brought_partner_id) return " · makker";
-              return "";
-            };
-            return (
-              <div key={courtNumber}>
-                <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                  Bane {courtNumber} · {court.length}/4
-                </h2>
-                <ul className="mt-2 space-y-2 text-sm">
-                  {court.length === 0 ? (
-                    <li className="text-line/55">Ingen deltagere endnu.</li>
+            {listing.converted_match_id ? (
+              <Button
+                to={`/kampe/${listing.converted_match_id}`}
+                className="mt-4 px-4 py-2 text-xs"
+              >
+                Åbn den planlagte kamp
+              </Button>
+            ) : null}
+
+            {live && !isLockedSeat ? (
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <RsvpButton
+                  label="Deltager"
+                  active={mine?.status === "going"}
+                  disabled={saving}
+                  onClick={() => void setRsvp("going")}
+                />
+                <RsvpButton
+                  label="Interesseret"
+                  active={mine?.status === "interested"}
+                  disabled={saving}
+                  onClick={() => void setRsvp("interested")}
+                />
+                <RsvpButton
+                  label="Kan ikke"
+                  active={mine?.status === "declined"}
+                  disabled={saving}
+                  onClick={() => void setRsvp("declined")}
+                />
+              </div>
+            ) : null}
+
+            <PeopleSection
+              title="Interesseret"
+              empty="Ingen endnu."
+              hint={listingInterestedLabel(interested.length)}
+            >
+              {interested.map((row) => (
+                <PersonRow
+                  key={row.profile_id}
+                  person={people.find((item) => item.id === row.profile_id)}
+                  rating={ratings.get(row.profile_id)}
+                  fallbackId={row.profile_id}
+                />
+              ))}
+            </PeopleSection>
+
+            <PeopleSection title="Kan ikke" empty="Ingen endnu.">
+              {declined.map((row) => (
+                <PersonRow
+                  key={row.profile_id}
+                  person={people.find((item) => item.id === row.profile_id)}
+                  rating={ratings.get(row.profile_id)}
+                  fallbackId={row.profile_id}
+                />
+              ))}
+            </PeopleSection>
+
+            {isHost && live ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void handleClose()}
+                className="mt-5 rounded-full border border-line/20 px-4 py-2 text-xs font-semibold touch-manipulation disabled:opacity-60"
+              >
+                Luk annonce
+              </button>
+            ) : null}
+          </article>
+
+          <section className="overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-5 sm:p-6">
+            <h2 className="font-display text-3xl tracking-wide">Chat</h2>
+            <div className="mt-4">
+              <ChatThread
+                scrollKey={`${messages.length}:${messages[messages.length - 1]?.id ?? "empty"}`}
+                pin={pin}
+                footer={
+                  chatOk ? (
+                    <ChatComposer
+                      id="listing-chat"
+                      value={body}
+                      onChange={setBody}
+                      onSubmit={() => void handleSend()}
+                      sending={saving}
+                      placeholder="Skriv til de andre…"
+                    />
                   ) : (
-                    court.map((id) => (
-                      <li key={id} className="flex items-center justify-between gap-2">
-                        <span>
-                          {personLabel(id, people, ratings)}
-                          {roleFor(id)}
-                        </span>
-                        {isHost &&
-                        live &&
-                        id !== listing.host_id &&
-                        id !== listing.brought_partner_id &&
-                        !assignedIds.has(id) ? (
-                          <button
-                            type="button"
-                            disabled={saving}
-                            onClick={() => void handleRemove(id)}
-                            className="text-xs font-semibold text-red-300"
-                          >
-                            Fjern
-                          </button>
-                        ) : null}
-                      </li>
-                    ))
+                    <p className="text-xs text-line/50">
+                      {listingGoingIds(listing, rsvps).includes(user.id) ||
+                      mine?.status === "interested" ||
+                      isLockedSeat
+                        ? "Chatten er lukket."
+                        : "Svar Deltager eller Interesseret for at skrive."}
+                    </p>
+                  )
+                }
+              >
+                <ul className="space-y-3">
+                  {messages.length === 0 ? (
+                    <li className="text-sm text-line/60">Ingen beskeder endnu.</li>
+                  ) : (
+                    messages.map((message) => {
+                      const author = people.find((row) => row.id === message.author_id);
+                      return (
+                        <li
+                          key={message.id}
+                          className="rounded-2xl bg-court/60 px-4 py-3"
+                        >
+                          <p className="text-xs text-line/50">
+                            {author
+                              ? withRating(
+                                  fullName(author),
+                                  ratings.get(author.id),
+                                )
+                              : "Medlem"}{" "}
+                            · {formatMatchWhen(message.created_at)}
+                          </p>
+                          <p className="mt-1 text-sm text-line/85 whitespace-pre-wrap">
+                            {message.body}
+                          </p>
+                        </li>
+                      );
+                    })
                   )}
                 </ul>
-                {matchId ? (
-                  <Link
-                    to={`/kampe/${matchId}`}
-                    className="mt-3 inline-block text-sm font-semibold text-ball"
-                  >
-                    Åbn kamp
-                  </Link>
-                ) : isHost && live && court.length === 4 ? (
-                  <Link
-                    to={`/kampe/ny?annonce=${listing.id}&bane=${courtNumber}`}
-                    className="mt-3 inline-block rounded-full bg-ball px-4 py-2.5 text-center text-xs font-semibold text-court"
-                  >
-                    Opret kamp
-                  </Link>
-                ) : null}
-              </div>
-            );
-          })}
-        </section>
-
-        <section className="mt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-            Interesseret
-          </h2>
-          <ul className="mt-2 space-y-1 text-sm text-line/75">
-            {interested.length === 0 ? (
-              <li>Ingen endnu.</li>
-            ) : (
-              interested.map((row) => (
-                <li key={row.profile_id}>
-                  {personLabel(row.profile_id, people, ratings)}
-                </li>
-              ))
-            )}
-          </ul>
-        </section>
-
-        <section className="mt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-            Kan ikke
-          </h2>
-          <ul className="mt-2 space-y-1 text-sm text-line/75">
-            {declined.length === 0 ? (
-              <li>Ingen endnu.</li>
-            ) : (
-              declined.map((row) => (
-                <li key={row.profile_id}>
-                  {personLabel(row.profile_id, people, ratings)}
-                </li>
-              ))
-            )}
-          </ul>
-        </section>
-
-        {isHost && live ? (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void handleClose()}
-            className="mt-3 rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-          >
-            Luk annonce
-          </button>
-        ) : null}
-
-        <section className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
-          <h2 className="font-display text-3xl tracking-wide">Chat</h2>
-          <div className="mt-4">
-            <ChatThread
-              scrollKey={`${messages.length}:${messages[messages.length - 1]?.id ?? "empty"}`}
-              pin={pin}
-              footer={
-                chatOk ? (
-                  <ChatComposer
-                    id="listing-chat"
-                    value={body}
-                    onChange={setBody}
-                    onSubmit={() => void handleSend()}
-                    sending={saving}
-                    placeholder="Skriv til de andre…"
-                  />
-                ) : (
-                  <p className="text-xs text-line/50">
-                    {listingGoingIds(listing, rsvps).includes(user.id) ||
-                    mine?.status === "interested" ||
-                    isLockedSeat
-                      ? "Chatten er lukket."
-                      : "Svar Deltager eller Interesseret for at skrive."}
-                  </p>
-                )
-              }
-            >
-              <ul className="space-y-3">
-                {messages.length === 0 ? (
-                  <li className="text-sm text-line/60">Ingen beskeder endnu.</li>
-                ) : (
-                  messages.map((message) => {
-                    const author = people.find((row) => row.id === message.author_id);
-                    return (
-                      <li
-                        key={message.id}
-                        className="rounded-2xl bg-court/60 px-4 py-3"
-                      >
-                        <p className="text-xs text-line/50">
-                          {author
-                            ? withRating(
-                                fullName(author),
-                                ratings.get(author.id),
-                              )
-                            : "Medlem"}{" "}
-                          · {formatMatchWhen(message.created_at)}
-                        </p>
-                        <p className="mt-1 text-sm text-line/85 whitespace-pre-wrap">
-                          {message.body}
-                        </p>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
-            </ChatThread>
-          </div>
-        </section>
+              </ChatThread>
+            </div>
+          </section>
+        </div>
       </Page>
     </SiteShell>
+  );
+}
+
+function courtAction(
+  courtNumber: number,
+  court: string[] | undefined,
+  listing: MatchmakerListing,
+  courtMatches: MatchmakerListingMatch[],
+  isHost: boolean,
+  live: boolean,
+) {
+  const matchId = matchIdForCourt(courtNumber, courtMatches);
+  if (matchId) {
+    return (
+      <Button to={`/kampe/${matchId}`} className="px-4 py-2 text-xs">
+        Åbn kamp
+      </Button>
+    );
+  }
+  if (isHost && live && court?.length === 4) {
+    return (
+      <Button
+        to={`/kampe/ny?annonce=${listing.id}&bane=${courtNumber}`}
+        className="px-4 py-2 text-xs"
+      >
+        Opret kamp
+      </Button>
+    );
+  }
+  return null;
+}
+
+function PeopleSection({
+  title,
+  empty,
+  hint,
+  children,
+}: {
+  title: string;
+  empty: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  const items = Array.isArray(children) ? children : children ? [children] : [];
+  const hasItems = items.filter(Boolean).length > 0;
+  return (
+    <section className="mt-6">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-line/45">
+          {title}
+        </h2>
+        {hint && hasItems ? (
+          <p className="text-xs font-medium text-line/45">{hint}</p>
+        ) : null}
+      </div>
+      <ul className="mt-2 space-y-1">
+        {hasItems ? children : (
+          <li className="text-sm text-line/55">{empty}</li>
+        )}
+      </ul>
+    </section>
+  );
+}
+
+function PersonRow({
+  person,
+  rating,
+  fallbackId,
+}: {
+  person: PartnerPreview | undefined;
+  rating?: number;
+  fallbackId: string;
+}) {
+  const resolved = person ?? {
+    id: fallbackId,
+    username: null,
+    first_name: null,
+    last_name: null,
+    avatar_url: null,
+  };
+  const name = fullName(resolved);
+  const inner = (
+    <>
+      <MemberAvatar person={resolved} size="xs" ring="line" />
+      <span className="min-w-0 truncate font-semibold">
+        {name}
+        {rating != null ? (
+          <span className="font-normal tabular-nums text-line/45"> ({rating})</span>
+        ) : null}
+      </span>
+    </>
+  );
+  if (!resolved.username) {
+    return (
+      <li className="flex items-center gap-3 rounded-2xl px-1 py-1.5 text-sm">
+        {inner}
+      </li>
+    );
+  }
+  return (
+    <li>
+      <Link
+        to={profilePath(resolved.username)}
+        className="flex items-center gap-3 rounded-2xl px-1 py-1.5 text-sm touch-manipulation hover:bg-court/60"
+      >
+        {inner}
+      </Link>
+    </li>
   );
 }
 
@@ -471,11 +574,12 @@ function RsvpButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-2xl px-2 py-3 text-xs font-semibold disabled:opacity-50 ${
+      className={cx(
+        "flex min-h-11 items-center justify-center rounded-full px-2 py-2.5 text-xs font-semibold touch-manipulation disabled:opacity-50 sm:text-sm",
         active
           ? "bg-ball text-court"
-          : "border border-line/20 bg-court-mid"
-      }`}
+          : "border border-line/20 bg-court",
+      )}
     >
       {label}
     </button>

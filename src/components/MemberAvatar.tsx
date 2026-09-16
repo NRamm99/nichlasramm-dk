@@ -3,7 +3,7 @@ import { fullName, profilePath, type PartnerPreview } from "../lib/profile";
 
 type MemberAvatarProps = {
   person: PartnerPreview;
-  size?: "xs" | "sm" | "md" | "lg" | "stack";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "stack";
   ring?: "ball" | "court" | "line";
   className?: string;
 };
@@ -21,34 +21,47 @@ export function MemberAvatar({
         ? "h-11 w-11"
         : size === "lg"
           ? "h-28 w-28"
-          : size === "stack"
-            ? "h-[4.5rem] w-[4.5rem] lg:h-28 lg:w-28"
-            : "h-16 w-16";
+          : size === "xl"
+            ? "h-[6.75rem] w-[6.75rem] sm:h-32 sm:w-32 lg:h-40 lg:w-40"
+            : size === "stack"
+              ? "h-[4.5rem] w-[4.5rem] lg:h-28 lg:w-28"
+              : "h-16 w-16";
   const initialsSize =
-    size === "lg"
-      ? "text-2xl"
-      : size === "stack"
-        ? "text-lg lg:text-2xl"
-        : size === "xs"
-          ? "text-[0.65rem]"
-          : "text-sm";
+    size === "xl"
+      ? "text-3xl lg:text-4xl"
+      : size === "lg"
+        ? "text-2xl"
+        : size === "stack"
+          ? "text-lg lg:text-2xl"
+          : size === "xs"
+            ? "text-[0.65rem]"
+            : "text-sm";
   const photoRing =
     ring === "court"
       ? "ring-2 ring-court-mid"
       : ring === "line"
         ? "ring-2 ring-line/10"
-        : size === "xs"
-          ? "ring-2 ring-court-mid"
-          : "ring-2 ring-ball/30";
+        : ring === "ball"
+          ? "ring-[3px] ring-ball"
+          : size === "xs"
+            ? "ring-2 ring-court-mid"
+            : "ring-2 ring-ball/30";
   const initialsRing =
     ring === "court"
       ? "ring-2 ring-court-mid"
       : ring === "ball"
-        ? "ring-2 ring-ball/30"
+        ? "ring-[3px] ring-ball"
         : size === "xs"
           ? "ring-2 ring-court-mid"
           : "ring-2 ring-line/10";
   const name = fullName(person);
+  const wideInitials = size === "lg" || size === "xl" || size === "stack";
+  const first = person.first_name?.trim()?.[0];
+  const last = person.last_name?.trim()?.[0];
+  const letters =
+    wideInitials && first && last
+      ? `${first}${last}`.toUpperCase()
+      : (first ?? person.username?.[0] ?? "?").toUpperCase();
 
   if (person.avatar_url) {
     return (
@@ -64,9 +77,9 @@ export function MemberAvatar({
   return (
     <div
       title={name}
-      className={`flex ${dim} items-center justify-center rounded-full bg-court ${initialsSize} font-semibold text-line/50 ${initialsRing} ${className}`}
+      className={`flex ${dim} items-center justify-center rounded-full bg-court ${initialsSize} font-semibold tracking-wide text-line/50 ${initialsRing} ${className}`}
     >
-      {(person.first_name?.[0] ?? person.username?.[0] ?? "?").toUpperCase()}
+      {letters}
     </div>
   );
 }

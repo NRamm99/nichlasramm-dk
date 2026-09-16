@@ -107,6 +107,34 @@ export function listingCourts(
   return courts;
 }
 
+/** Occupancy courts padded to 4, plus an empty overflow court while the listing is live. */
+export function listingDisplayCourts(
+  listing: MatchmakerListing,
+  rsvps: MatchmakerRsvp[],
+) {
+  const courts = listingCourts(listing, rsvps).map((court) => {
+    const padded: Array<string | null> = [...court];
+    while (padded.length < 4) padded.push(null);
+    return padded;
+  });
+  const last = courts[courts.length - 1] ?? [];
+  const lastFilled = last.filter(Boolean).length;
+  if (listingIsLive(listing) && lastFilled === 4) {
+    courts.push([null, null, null, null]);
+  }
+  return courts;
+}
+
+export function listingNeedCount(courts: Array<Array<string | null>>) {
+  const last = courts[courts.length - 1] ?? [];
+  return Math.max(0, 4 - last.filter(Boolean).length);
+}
+
+export function listingNeedLabel(need: number) {
+  if (need === 0) return "Fuldt";
+  return `Mangler ${need}`;
+}
+
 export function listingOccupancyLabel(occupied: number) {
   if (occupied <= 4) return `${occupied}/4`;
   const courts = Math.ceil(occupied / 4);
@@ -163,6 +191,21 @@ export function formatListingWindow(startsAt: string, endsAt: string) {
     minute: "2-digit",
   });
   return `${day} · ${time.format(start)}–${time.format(end)}`;
+}
+
+function listingClock(value: Date) {
+  return `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Compact card title, e.g. `TOR · 18:30–20:00`. */
+export function formatListingCardTitle(startsAt: string, endsAt: string) {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  const weekday = new Intl.DateTimeFormat("da-DK", { weekday: "short" })
+    .format(start)
+    .replace(/\.$/, "")
+    .toUpperCase();
+  return `${weekday} · ${listingClock(start)}–${listingClock(end)}`;
 }
 
 export function notificationCopy(row: AppNotification) {

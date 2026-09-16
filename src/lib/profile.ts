@@ -1,3 +1,4 @@
+import { parsePlaySide, type PlaySide } from "./profilePlayStyle";
 import { supabase } from "./supabase";
 
 export type PartnerPreview = {
@@ -16,6 +17,10 @@ export type PublicProfile = PartnerPreview & {
   seeking_note?: string | null;
   hide_record?: boolean;
   match_finder_hidden?: boolean;
+  handed: PlaySide | null;
+  preferred_side: PlaySide | null;
+  created_at: string | null;
+  partnered_at: string | null;
 };
 
 export type PartnershipRequest = {
@@ -28,7 +33,7 @@ export type PartnershipRequest = {
 };
 
 export const PROFILE_SELECT =
-  "id, username, first_name, last_name, avatar_url, bio, partner_id, seeking_partner, seeking_note, hide_record, match_finder_hidden";
+  "id, username, first_name, last_name, avatar_url, bio, partner_id, seeking_partner, seeking_note, hide_record, match_finder_hidden, handed, preferred_side, created_at, partnered_at";
 
 export const REQUEST_SELECT =
   "id, requester_id, recipient_id, created_at";
@@ -80,6 +85,14 @@ export function profileMatchesPath(username: string | null | undefined) {
   return `${profilePath(username)}/kampe`;
 }
 
+export function profileDuoMatchesPath(
+  username: string | null | undefined,
+  partnerUsername: string | null | undefined,
+) {
+  if (!username || !partnerUsername) return profileMatchesPath(username);
+  return `${profileMatchesPath(username)}?duo=${encodeURIComponent(partnerUsername)}`;
+}
+
 export async function fetchMembersByIds(ids: Array<string | null | undefined>) {
   const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
   const byId = new Map<string, PartnerPreview>();
@@ -97,11 +110,20 @@ export async function fetchMembersByIds(ids: Array<string | null | undefined>) {
 }
 
 export function attachPartner(
-  profile: Omit<PublicProfile, "partner"> & { partner?: PartnerPreview | null },
+  profile: Omit<PublicProfile, "partner" | "handed" | "preferred_side"> & {
+    partner?: PartnerPreview | null;
+    handed?: string | null;
+    preferred_side?: string | null;
+    partnered_at?: string | null;
+  },
   people: Map<string, PartnerPreview>,
 ): PublicProfile {
   return {
     ...profile,
+    handed: parsePlaySide(profile.handed),
+    preferred_side: parsePlaySide(profile.preferred_side),
+    created_at: profile.created_at ?? null,
+    partnered_at: profile.partnered_at ?? null,
     partner: profile.partner_id ? (people.get(profile.partner_id) ?? null) : null,
   };
 }

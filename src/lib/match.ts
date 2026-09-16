@@ -206,12 +206,14 @@ export function validateMatchSets(sets: Array<{ team1: number; team2: number }>)
   return null;
 }
 
-export function setScoreLine(sets: MatchSet[]) {
+export function setScoreLine(sets: MatchSet[], team: 1 | 2 = 1) {
   const ordered = [...sets].sort((a, b) => a.set_number - b.set_number);
   if (ordered.length === 0) return "Ikke spillet";
   return ordered
     .map((row) => {
-      const score = `${row.team1_games}–${row.team2_games}`;
+      const left = team === 1 ? row.team1_games : row.team2_games;
+      const right = team === 1 ? row.team2_games : row.team1_games;
+      const score = `${left}–${right}`;
       return isCompleteSet(row.team1_games, row.team2_games) ? score : `${score}*`;
     })
     .join("  ");
@@ -267,6 +269,7 @@ export type PlayerRecord = {
   draws: number;
   losses: number;
   played: number;
+  streak: number;
   recentPlayed: number;
   recentWinRate: number | null;
   recentForm: FormLetter[];
@@ -278,6 +281,7 @@ export function emptyPlayerRecord(): PlayerRecord {
     draws: 0,
     losses: 0,
     played: 0,
+    streak: 0,
     recentPlayed: 0,
     recentWinRate: null,
     recentForm: [],
@@ -296,11 +300,17 @@ export function recordFromResults(results: Array<"V" | "U" | "T">): PlayerRecord
   const losses = results.filter((row) => row === "T").length;
   const recent = results.slice(0, 10);
   const lastFive = results.slice(0, 5).reverse();
+  let streak = 0;
+  for (const row of results) {
+    if (row !== "V") break;
+    streak += 1;
+  }
   return {
     wins,
     draws,
     losses,
     played: results.length,
+    streak,
     recentPlayed: recent.length,
     recentWinRate:
       recent.length === 0
@@ -462,6 +472,49 @@ export function recordFromPlayerMatches(
 
 export async function fetchPlayerRecord(profileId: string): Promise<PlayerRecord> {
   return recordFromPlayerMatches(profileId, await fetchPlayerMatches(profileId));
+}
+
+export type DuoRecord = {
+  played: number;
+  wins: number;
+  winRate: number | null;
+};
+
+export function emptyDuoRecord(): DuoRecord {
+  return { played: 0, wins: 0, winRate: null };
+}
+
+export function isSameTeamDuo(
+  profileId: string,
+  partnerId: string,
+  row: MatchCard,
+) {
+  const me = row.players.find((player) => player.profile_id === profileId);
+  const them = row.players.find((player) => player.profile_id === partnerId);
+  return Boolean(me && them && me.team === them.team);
+}
+
+export function duoRecordFromMatches(
+  profileId: string,
+  partnerId: string,
+  matches: MatchCard[],
+): DuoRecord {
+  const results = matches.flatMap((row) => {
+    if (row.status !== "played" || row.sets.length === 0 || row.disputed) {
+      return [];
+    }
+    if (!isSameTeamDuo(profileId, partnerId, row)) return [];
+    const me = row.players.find((player) => player.profile_id === profileId);
+    if (!me) return [];
+    return [resultForTeam(row.sets, me.team)];
+  });
+  if (results.length === 0) return emptyDuoRecord();
+  const wins = results.filter((result) => result === "V").length;
+  return {
+    played: results.length,
+    wins,
+    winRate: Math.round((wins / results.length) * 100),
+  };
 }
 
 export function formatMatchWhen(value: string) {
