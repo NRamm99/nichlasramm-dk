@@ -51,10 +51,10 @@ export function MatchmakerRsvpSheet({
               disabled={saving}
               onClick={() => onSelect(option.status)}
               className={cx(
-                "flex min-h-11 items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold touch-manipulation disabled:opacity-50",
+                "flex min-h-11 items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition touch-manipulation disabled:opacity-50",
                 active
-                  ? "bg-ball text-court"
-                  : "border border-line/20 bg-court",
+                  ? "bg-ball text-court hover:bg-line"
+                  : "border border-line/20 bg-court hover:border-ball hover:text-ball",
               )}
             >
               {option.label}

@@ -90,17 +90,55 @@ function OccupiedSlot({
   );
 }
 
-function EmptySlot() {
+function EmptySlotMark() {
   return (
-    <div
-      aria-hidden
-      className="flex min-h-[6.5rem] flex-col items-center justify-center gap-1 px-2 py-3"
-    >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-ball/40 text-lg font-semibold leading-none text-ball/55">
+    <>
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-ball/40 text-lg font-semibold leading-none text-ball/55 transition group-hover:border-ball group-hover:text-ball">
         +
       </span>
-      <span className="text-xs text-line/45">Ledig</span>
-    </div>
+      <span className="text-xs text-line/45 transition group-hover:text-ball">
+        Ledig
+      </span>
+    </>
+  );
+}
+
+function EmptySlot({
+  onJoin,
+  disabled,
+}: {
+  onJoin?: () => void;
+  disabled?: boolean;
+}) {
+  if (!onJoin) {
+    return (
+      <div
+        aria-hidden
+        className="flex min-h-[6.5rem] flex-col items-center justify-center gap-1 px-2 py-3"
+      >
+        <EmptySlotMark />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        aria-hidden
+        className="flex min-h-[6.5rem] flex-col items-center justify-center gap-1 px-2 py-3 lg:hidden"
+      >
+        <EmptySlotMark />
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onJoin}
+        aria-label="Deltag i kampen"
+        className="group hidden min-h-[6.5rem] w-full flex-col items-center justify-center gap-1 px-2 py-3 transition hover:text-ball disabled:opacity-50 lg:flex"
+      >
+        <EmptySlotMark />
+      </button>
+    </>
   );
 }
 
@@ -111,6 +149,8 @@ export function MatchmakerCourtDiagram({
   label,
   hrefForPerson,
   extrasForPerson,
+  onEmptySlotClick,
+  emptySlotDisabled,
 }: {
   slots: Array<string | null>;
   people: PartnerPreview[];
@@ -118,6 +158,8 @@ export function MatchmakerCourtDiagram({
   label?: string;
   hrefForPerson?: (person: PartnerPreview) => string | undefined;
   extrasForPerson?: (id: string) => { badge?: string; action?: ReactNode } | null;
+  onEmptySlotClick?: () => void;
+  emptySlotDisabled?: boolean;
 }) {
   return (
     <div>
@@ -140,7 +182,10 @@ export function MatchmakerCourtDiagram({
             if (!id) {
               return (
                 <div key={`empty-${index}`} className="min-w-0">
-                  <EmptySlot />
+                  <EmptySlot
+                    onJoin={onEmptySlotClick}
+                    disabled={emptySlotDisabled}
+                  />
                 </div>
               );
             }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { MatchmakerCourtDiagram } from "../components/MatchmakerCourtDiagram";
@@ -59,6 +60,10 @@ export function MatchmakerDetail() {
   const [saving, setSaving] = useState(false);
   const [pin, setPin] = useState(0);
   const [body, setBody] = useState("");
+  const [joinConfirmOpen, setJoinConfirmOpen] = useState(false);
+  const closeJoinConfirm = useCallback(() => {
+    setJoinConfirmOpen(false);
+  }, []);
 
   const load = useCallback(async () => {
     if (!listingId || !user) return;
@@ -173,6 +178,7 @@ export function MatchmakerDetail() {
   const hostName = host ? fullName(host) : "Medlem";
   const title = formatListingCardTitle(liveListing.starts_at, liveListing.ends_at);
   const labeledCourts = displayCourts.length > 1;
+  const canJoinEmptySlot = live && !isLockedSeat && mine?.status !== "going";
 
   async function setRsvp(status: MatchmakerRsvpStatus) {
     if (!listingId) return;
@@ -188,6 +194,11 @@ export function MatchmakerDetail() {
       return;
     }
     await load();
+  }
+
+  async function confirmJoin() {
+    await setRsvp("going");
+    setJoinConfirmOpen(false);
   }
 
   async function handleClose() {
@@ -305,6 +316,12 @@ export function MatchmakerDetail() {
                       person.username ? profilePath(person.username) : undefined
                     }
                     extrasForPerson={extrasForPerson}
+                    onEmptySlotClick={
+                      canJoinEmptySlot
+                        ? () => setJoinConfirmOpen(true)
+                        : undefined
+                    }
+                    emptySlotDisabled={saving}
                   />
                   {courtAction(index + 1, realCourts[index], listing, courtMatches, isHost, live)}
                 </div>
@@ -447,7 +464,91 @@ export function MatchmakerDetail() {
           </section>
         </div>
       </Page>
+      <JoinConfirmDialog
+        open={joinConfirmOpen}
+        saving={saving}
+        onClose={closeJoinConfirm}
+        onConfirm={() => void confirmJoin()}
+      />
     </SiteShell>
+  );
+}
+
+function JoinConfirmDialog({
+  open,
+  saving,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  saving: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const titleId = useId();
+  const descriptionId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (!saving) onClose();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [open, onClose, saving]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-court/80 p-4"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !saving) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="w-full max-w-sm rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6 shadow-xl"
+      >
+        <h2 id={titleId} className="font-display text-3xl tracking-wide">
+          Er du sikker?
+        </h2>
+        <p id={descriptionId} className="mt-3 text-sm text-line/80">
+          Vil du deltage i kampen?
+        </p>
+        <div className="mt-6 flex gap-2">
+          <Button
+            variant="secondary"
+            className="flex-1"
+            disabled={saving}
+            onClick={onClose}
+          >
+            Annuller
+          </Button>
+          <Button
+            autoFocus
+            className="flex-1"
+            disabled={saving}
+            onClick={onConfirm}
+          >
+            {saving ? "Gemmer…" : "Deltag"}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -576,10 +677,10 @@ function RsvpButton({
       disabled={disabled}
       onClick={onClick}
       className={cx(
-        "flex min-h-11 items-center justify-center rounded-full px-2 py-2.5 text-xs font-semibold touch-manipulation disabled:opacity-50 sm:text-sm",
+        "flex min-h-11 items-center justify-center rounded-full px-2 py-2.5 text-xs font-semibold transition touch-manipulation disabled:opacity-50 sm:text-sm",
         active
-          ? "bg-ball text-court"
-          : "border border-line/20 bg-court",
+          ? "bg-ball text-court hover:bg-line"
+          : "border border-line/20 bg-court hover:border-ball hover:text-ball",
       )}
     >
       {label}
