@@ -3,7 +3,7 @@ import { fullName, profilePath, type PartnerPreview } from "../lib/profile";
 
 type MemberAvatarProps = {
   person: PartnerPreview;
-  size?: "xs" | "sm" | "md" | "lg" | "xl" | "stack";
+  size?: "cell" | "xs" | "sm" | "md" | "lg" | "xl" | "stack";
   ring?: "ball" | "court" | "line";
   className?: string;
 };
@@ -15,7 +15,9 @@ export function MemberAvatar({
   className = "",
 }: MemberAvatarProps) {
   const dim =
-    size === "xs"
+    size === "cell"
+      ? "h-6 w-6"
+      : size === "xs"
       ? "h-7 w-7"
       : size === "sm"
         ? "h-11 w-11"
@@ -33,7 +35,9 @@ export function MemberAvatar({
         ? "text-2xl"
         : size === "stack"
           ? "text-lg lg:text-2xl"
-          : size === "xs"
+          : size === "cell"
+            ? "text-[0.5rem]"
+            : size === "xs"
             ? "text-[0.65rem]"
             : "text-sm";
   const photoRing =
@@ -43,7 +47,7 @@ export function MemberAvatar({
         ? "ring-2 ring-line/10"
         : ring === "ball"
           ? "ring-[3px] ring-ball"
-          : size === "xs"
+          : size === "xs" || size === "cell"
             ? "ring-2 ring-court-mid"
             : "ring-2 ring-ball/30";
   const initialsRing =
@@ -51,7 +55,7 @@ export function MemberAvatar({
       ? "ring-2 ring-court-mid"
       : ring === "ball"
         ? "ring-[3px] ring-ball"
-        : size === "xs"
+        : size === "xs" || size === "cell"
           ? "ring-2 ring-court-mid"
           : "ring-2 ring-line/10";
   const name = fullName(person);

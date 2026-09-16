@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
 import type { HomeMatchFinder } from "../lib/home";
 import {
@@ -55,6 +56,17 @@ export function MatchFinderCard({
   const [stripHidden, setStripHidden] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { username, firstName, lastName, avatarUrl } = useAuth();
+  const me: PartnerPreview = {
+    id: userId,
+    username,
+    first_name: firstName,
+    last_name: lastName,
+    avatar_url: avatarUrl,
+  };
+  const mineMarker = (
+    <MemberAvatar person={me} size="cell" ring="court" />
+  );
 
   // Expiry is only checked against the moment the data arrived; Landing
   // refetches on focus, so a stale overlay disappears on the next visit.
@@ -273,9 +285,10 @@ export function MatchFinderCard({
                 value={mineKeys}
                 heat={result.heat}
                 titles={titles}
+                mineMarker={mineMarker}
                 onCellClick={(slot) => openSheet(slot)}
               />
-              <HeatLegend />
+              <HeatLegend person={me} />
             </div>
             <div className="mt-5 lg:mt-0">
               <p className="text-sm text-line/70">{MATCH_FINDER_COPY.noOverlap}</p>
@@ -371,6 +384,7 @@ export function MatchFinderCard({
                 heat={result.heat}
                 highlight={activeFilter ? new Set([activeFilter]) : undefined}
                 titles={titles}
+                mineMarker={mineMarker}
                 onCellClick={(slot) => {
                   const key = slotKey(slot);
                   if (!mineKeys.has(key)) {
@@ -381,6 +395,7 @@ export function MatchFinderCard({
                 }}
               />
               <HeatLegend
+                person={me}
                 extra={[
                   "Klik på en af dine tider for at filtrere listen",
                   "Klik på en tom tid for at tilføje den",
@@ -501,14 +516,17 @@ export function MatchFinderCard({
   );
 }
 
-function HeatLegend({ extra = [] }: { extra?: string[] }) {
+function HeatLegend({
+  person,
+  extra = [],
+}: {
+  person: PartnerPreview;
+  extra?: string[];
+}) {
   return (
     <ul className="mt-3 space-y-1.5 text-xs text-line/50">
       <li className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="h-3.5 w-3.5 shrink-0 rounded-[0.3rem] bg-line/[0.06] ring-2 ring-inset ring-ball"
-        />
+        <MemberAvatar person={person} size="cell" ring="court" className="shrink-0" />
         Dine tider
       </li>
       <li className="flex items-center gap-2">

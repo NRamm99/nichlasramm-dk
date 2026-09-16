@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { cloneElement, isValidElement, type ReactNode } from "react";
 import {
   BANDS,
   WEEKDAYS,
@@ -20,6 +20,8 @@ type SlotGridProps = {
   highlight?: ReadonlySet<SlotKey>;
   /** Heatmap mode: tap a cell. */
   onCellClick?: (slot: Slot) => void;
+  /** Heatmap mode: marker on the viewer's own slots (replaces the outline). */
+  mineMarker?: ReactNode;
   /** Hover text per cell (desktop). */
   titles?: ReadonlyMap<SlotKey, string>;
   compact?: boolean;
@@ -47,6 +49,7 @@ export function SlotGrid({
   heat,
   highlight,
   onCellClick,
+  mineMarker,
   titles,
   compact = false,
   className,
@@ -134,12 +137,25 @@ export function SlotGrid({
                   ? "bg-ball text-court hover:bg-line"
                   : "bg-line/[0.06] text-line/30 hover:bg-line/15"
                 : heatClass(count),
-              !editable && isSelected && "ring-2 ring-inset ring-ball",
+              !editable &&
+                isSelected &&
+                !mineMarker &&
+                "ring-2 ring-inset ring-ball",
               isHighlighted && "outline outline-2 outline-offset-1 outline-line",
             );
 
-            const content =
-              editable && isSelected ? <CheckIcon compact={compact} /> : null;
+            const content = editable && isSelected ? (
+              <CheckIcon compact={compact} />
+            ) : !editable && isSelected && mineMarker ? (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              >
+                {isValidElement(mineMarker)
+                  ? cloneElement(mineMarker)
+                  : mineMarker}
+              </span>
+            ) : null;
 
             const srText = editable
               ? label
