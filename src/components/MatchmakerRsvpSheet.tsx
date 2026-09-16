@@ -30,14 +30,14 @@ export function MatchmakerRsvpSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      eyebrow="Find kamp"
+      eyebrow="Vælg svar"
       title={title}
       footer={
         <Link
           to={listingHref}
           className="flex min-h-11 items-center justify-center text-sm font-semibold text-ball touch-manipulation"
         >
-          Se opslag
+          Se detaljer
         </Link>
       }
     >

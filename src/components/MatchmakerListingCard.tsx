@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { MatchmakerCourtDiagram } from "./MatchmakerCourtDiagram";
 import { MatchmakerRsvpSheet } from "./MatchmakerRsvpSheet";
 import { Button } from "./ui/Button";
-import { cx } from "./ui/cx";
 import {
   formatListingCardTitle,
   listingCourts,
@@ -56,14 +55,16 @@ export function MatchmakerListingCard({
   const hostName = host ? fullName(host) : "Medlem";
   const title = formatListingCardTitle(listing.starts_at, listing.ends_at);
   const detailHref = `/matchmaker/${listing.id}`;
-  const showDeltag = live && !isLockedSeat;
-  const going = mine?.status === "going";
+  const canRsvp = live && !isLockedSeat;
   const labeledCourts = displayCourts.length > 1;
-
-  function handleDesktopDeltag() {
-    if (going || saving) return;
-    onRsvp("going");
-  }
+  const myRsvpLabel =
+    mine?.status === "going"
+      ? "Deltager"
+      : mine?.status === "interested"
+        ? "Interesseret"
+        : mine?.status === "declined"
+          ? "Kan ikke"
+          : null;
 
   function handleSheetSelect(status: MatchmakerRsvpStatus) {
     if (mine?.status === status) {
@@ -123,9 +124,10 @@ export function MatchmakerListingCard({
       </Link>
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 px-4 pt-3 pb-4">
-        <p className="text-xs font-medium text-line/50">
-          {listingInterestedLabel(interestedCount)}
-        </p>
+        <div className="min-w-0 text-xs font-medium text-line/50">
+          <p>{listingInterestedLabel(interestedCount)}</p>
+          {myRsvpLabel ? <p className="mt-0.5">Dit svar: {myRsvpLabel}</p> : null}
+        </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {realCourts.map((court, index) => {
             const courtNumber = index + 1;
@@ -154,40 +156,21 @@ export function MatchmakerListingCard({
             }
             return null;
           })}
-          {showDeltag ? (
-            <>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setSheetOpen(true)}
-                className={cx(
-                  "inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-xs font-semibold touch-manipulation lg:hidden disabled:opacity-60",
-                  going
-                    ? "bg-ball text-court"
-                    : mine?.status === "interested"
-                      ? "border border-ball/40 text-ball"
-                      : "bg-ball text-court",
-                )}
-              >
-                {going
-                  ? "Deltager"
-                  : mine?.status === "interested"
-                    ? "Interesseret"
-                    : "Deltag"}
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                aria-pressed={going}
-                onClick={handleDesktopDeltag}
-                className={cx(
-                  "hidden min-h-11 items-center justify-center rounded-full px-4 py-2 text-xs font-semibold touch-manipulation lg:inline-flex disabled:opacity-60",
-                  "bg-ball text-court hover:bg-line",
-                )}
-              >
-                {going ? "Deltager" : "Deltag"}
-              </button>
-            </>
+          <Button
+            variant="secondary"
+            to={detailHref}
+            className="px-4 py-2 text-xs"
+          >
+            Se detaljer
+          </Button>
+          {canRsvp ? (
+            <Button
+              disabled={saving}
+              onClick={() => setSheetOpen(true)}
+              className="px-4 py-2 text-xs"
+            >
+              {myRsvpLabel ? "Ændr svar" : "Vælg svar"}
+            </Button>
           ) : null}
         </div>
       </div>
