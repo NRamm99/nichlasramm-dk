@@ -177,6 +177,7 @@ export function MatchmakerList() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  const currentUser = user;
 
   async function toggleFollow() {
     const next = !following;
@@ -196,18 +197,20 @@ export function MatchmakerList() {
     const now = new Date().toISOString();
     setRsvps((prev) => {
       const others = prev.filter(
-        (row) => !(row.listing_id === listingId && row.profile_id === user.id),
+        (row) =>
+          !(row.listing_id === listingId && row.profile_id === currentUser.id),
       );
       return [
         ...others,
         {
           listing_id: listingId,
-          profile_id: user.id,
+          profile_id: currentUser.id,
           status,
           created_at:
             prev.find(
               (row) =>
-                row.listing_id === listingId && row.profile_id === user.id,
+                row.listing_id === listingId &&
+                row.profile_id === currentUser.id,
             )?.created_at ?? now,
           updated_at: now,
         },

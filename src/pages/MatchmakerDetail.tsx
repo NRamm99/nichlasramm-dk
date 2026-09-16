@@ -154,23 +154,24 @@ export function MatchmakerDetail() {
     );
   }
 
-  const live = listingIsLive(listing);
-  const displayCourts = listingDisplayCourts(listing, rsvps);
-  const realCourts = listingCourts(listing, rsvps);
+  const liveListing = listing;
+  const live = listingIsLive(liveListing);
+  const displayCourts = listingDisplayCourts(liveListing, rsvps);
+  const realCourts = listingCourts(liveListing, rsvps);
   const need = listingNeedCount(displayCourts);
   const assignedIds = new Set(
     courtMatches.flatMap((row) => realCourts[row.court_number - 1] ?? []),
   );
-  const isHost = listing.host_id === user.id;
+  const isHost = liveListing.host_id === user.id;
   const isLockedSeat =
-    isHost || listing.brought_partner_id === user.id;
+    isHost || liveListing.brought_partner_id === user.id;
   const mine = rsvps.find((row) => row.profile_id === user.id);
   const interested = rsvps.filter((row) => row.status === "interested");
   const declined = rsvps.filter((row) => row.status === "declined");
-  const chatOk = canChat(listing, rsvps, user.id);
-  const host = people.find((row) => row.id === listing.host_id);
+  const chatOk = canChat(liveListing, rsvps, user.id);
+  const host = people.find((row) => row.id === liveListing.host_id);
   const hostName = host ? fullName(host) : "Medlem";
-  const title = formatListingCardTitle(listing.starts_at, listing.ends_at);
+  const title = formatListingCardTitle(liveListing.starts_at, liveListing.ends_at);
   const labeledCourts = displayCourts.length > 1;
 
   async function setRsvp(status: MatchmakerRsvpStatus) {
@@ -240,16 +241,16 @@ export function MatchmakerDetail() {
 
   function extrasForPerson(id: string) {
     const badge =
-      id === listing.host_id
+      id === liveListing.host_id
         ? "Vært"
-        : id === listing.brought_partner_id
+        : id === liveListing.brought_partner_id
           ? "Makker"
           : undefined;
     const canRemove =
       isHost &&
       live &&
-      id !== listing.host_id &&
-      id !== listing.brought_partner_id &&
+      id !== liveListing.host_id &&
+      id !== liveListing.brought_partner_id &&
       !assignedIds.has(id);
     return {
       badge,
