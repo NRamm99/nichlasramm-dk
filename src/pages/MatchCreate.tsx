@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { PlayerPicker, SetScores } from "../components/MatchFields";
+import {
+  MatchDraftCard,
+  type DraftSlot,
+} from "../components/MatchDraftCard";
+import { PlayerSearchSheet } from "../components/PlayerSearchSheet";
 import { SiteShell } from "../components/SiteShell";
 import { BackLink, Page, PageStatus } from "../components/ui/Page";
+import { Button } from "../components/ui/Button";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
-import { teamName, type LeagueTeamPlayer } from "../lib/league";
+import type { LeagueTeamPlayer } from "../lib/league";
 import {
   DEFAULT_MATCH_DURATION_MINUTES,
-  MATCH_DURATION_MINUTES,
-  formatMatchDuration,
   fromDatetimeLocalValue,
-  isMatchDurationMinutes,
   playerPickToJson,
   toDatetimeLocalValue,
   validateMatchSets,
@@ -24,15 +27,23 @@ import {
   type MatchmakerListing,
   type MatchmakerRsvp,
 } from "../lib/matchmaker";
-import { fetchMembersByIds, fullName, type PartnerPreview } from "../lib/profile";
-import {
-  fetchPlayerRatingsByIds,
-  ratingValues,
-  withRating,
-} from "../lib/rating";
+import { fetchMembersByIds, type PartnerPreview } from "../lib/profile";
+import { fetchPlayerRatingsByIds, ratingValues } from "../lib/rating";
 import { supabase } from "../lib/supabase";
 
 type Kind = "played" | "scheduled";
+type Format = "singles" | "doubles";
+type SlotKey = "partner" | "opp1" | "opp2";
+
+const KIND_OPTIONS = [
+  { id: "played", label: "Spillet" },
+  { id: "scheduled", label: "Planlagt" },
+] as const;
+
+const FORMAT_OPTIONS = [
+  { id: "doubles", label: "Double" },
+  { id: "singles", label: "Single" },
+] as const;
 
 export function MatchCreate() {
   const { user, loading } = useAuth();
@@ -41,7 +52,8 @@ export function MatchCreate() {
   const fixtureId = searchParams.get("liga");
   const listingId = searchParams.get("annonce");
   const listingCourt = Number(searchParams.get("bane") || "1");
-  const [kind, setKind] = useState<Kind | null>(null);
+  const [kind, setKind] = useState<Kind>("played");
+  const [self, setSelf] = useState<PartnerPreview | null>(null);
   const [members, setMembers] = useState<PartnerPreview[]>([]);
   const [clubPartnerId, setClubPartnerId] = useState<string | null>(null);
   const [when, setWhen] = useState(() => toDatetimeLocalValue(new Date()));
@@ -60,8 +72,9 @@ export function MatchCreate() {
   const [listingLocked, setListingLocked] = useState(false);
   const [listingHostPlays, setListingHostPlays] = useState(true);
   const [listingCourtPlayers, setListingCourtPlayers] = useState<string[]>([]);
-  const [format, setFormat] = useState<"singles" | "doubles">("doubles");
+  const [format, setFormat] = useState<Format>("doubles");
   const [ratings, setRatings] = useState<Map<string, number>>(new Map());
+  const [picking, setPicking] = useState<SlotKey | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -78,6 +91,13 @@ export function MatchCreate() {
         .maybeSingle(),
     ]).then(async ([list, me]) => {
       const rows = (list.data ?? []) as PartnerPreview[];
+      setSelf(rows.find((row) => row.id === user.id) ?? {
+        id: user.id,
+        username: null,
+        first_name: null,
+        last_name: null,
+        avatar_url: null,
+      });
       setMembers(rows.filter((row) => row.id !== user.id));
       const currentPartner = me.data?.partner_id ?? null;
       setClubPartnerId(currentPartner);
@@ -127,9 +147,9 @@ export function MatchCreate() {
       const hostPlays = court.includes(user.id);
       const others = court.filter((id) => id !== user.id);
       const partnerId = hostPlays
-        ? (listing.brought_partner_id && court.includes(listing.brought_partner_id)
-            ? listing.brought_partner_id
-            : others[0])
+        ? listing.brought_partner_id && court.includes(listing.brought_partner_id)
+          ? listing.brought_partner_id
+          : others[0]
         : court[1];
       const rest = hostPlays
         ? others.filter((id) => id !== partnerId)
@@ -196,32 +216,58 @@ export function MatchCreate() {
     })();
   }, [fixtureId, user]);
 
-  const excludePartner = useMemo(() => {
+  const people = useMemo(() => {
+    const map = new Map<string, PartnerPreview>();
+    if (self) map.set(self.id, self);
+    for (const member of members) map.set(member.id, member);
+    for (const person of leagueHome) map.set(person.id, person);
+    for (const person of leagueAway) map.set(person.id, person);
+    return map;
+  }, [leagueAway, leagueHome, members, self]);
+
+  const { team1, team2 } = useMemo(
+    () =>
+      draftTeams({
+        userId: user?.id,
+        format,
+        partner,
+        opponent1,
+        opponent2,
+        fixtureId,
+        leagueHome,
+        leagueAway,
+        listingLocked,
+        listingHostPlays,
+        listingCourtPlayers,
+      }),
+    [
+      fixtureId,
+      format,
+      leagueAway,
+      leagueHome,
+      listingCourtPlayers,
+      listingHostPlays,
+      listingLocked,
+      opponent1,
+      opponent2,
+      partner,
+      user?.id,
+    ],
+  );
+
+  const pickingSlot = picking
+    ? [...team1, ...team2].find((slot) => slot.key === picking) ?? null
+    : null;
+
+  const excludeIds = useMemo(() => {
     const ids = [
       user?.id,
+      partner?.kind === "member" ? partner.id : null,
       opponent1?.kind === "member" ? opponent1.id : null,
       opponent2?.kind === "member" ? opponent2.id : null,
     ];
     return ids.filter((id): id is string => Boolean(id));
-  }, [opponent1, opponent2, user?.id]);
-
-  const excludeOpp1 = useMemo(() => {
-    const ids = [
-      user?.id,
-      partner?.kind === "member" ? partner.id : null,
-      opponent2?.kind === "member" ? opponent2.id : null,
-    ];
-    return ids.filter((id): id is string => Boolean(id));
-  }, [opponent2, partner, user?.id]);
-
-  const excludeOpp2 = useMemo(() => {
-    const ids = [
-      user?.id,
-      partner?.kind === "member" ? partner.id : null,
-      opponent1?.kind === "member" ? opponent1.id : null,
-    ];
-    return ids.filter((id): id is string => Boolean(id));
-  }, [opponent1, partner, user?.id]);
+  }, [opponent1, opponent2, partner, user?.id]);
 
   if (loading) {
     return (
@@ -236,10 +282,52 @@ export function MatchCreate() {
   }
 
   const userId = user.id;
+  const blocked =
+    Boolean(listingId && !listingLocked) || Boolean(fixtureId && !leagueReady);
+  const partnerHint =
+    !fixtureId &&
+    !listingId &&
+    format === "doubles" &&
+    clubPartnerId &&
+    partner?.kind === "member" &&
+    partner.id === clubPartnerId
+      ? "Din klubpartner er valgt. Tryk for at skifte, hvis I spillede i en anden kombination."
+      : null;
+
+  function changeKind(next: Kind) {
+    setKind(next);
+    const playedAt = fromDatetimeLocalValue(when);
+    if (!playedAt) return;
+    const now = Date.now();
+    const t = new Date(playedAt).getTime();
+    if (next === "played" && t > now + 15 * 60 * 1000) {
+      setWhen(toDatetimeLocalValue(new Date()));
+    }
+    if (next === "scheduled" && t < now - 15 * 60 * 1000) {
+      setWhen(toDatetimeLocalValue(new Date(now + 24 * 60 * 60 * 1000)));
+    }
+  }
+
+  function changeFormat(next: Format) {
+    setFormat(next);
+    if (next === "doubles") {
+      if (clubPartnerId && (partner === null || format === "singles")) {
+        setPartner({ kind: "member", id: clubPartnerId });
+      }
+      return;
+    }
+    setPartner(null);
+    setOpponent2(null);
+  }
+
+  function setSlotPick(key: SlotKey, pick: PlayerPick | null) {
+    if (key === "partner") setPartner(pick);
+    else if (key === "opp1") setOpponent1(pick);
+    else setOpponent2(pick);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!kind) return;
     setError(null);
 
     const playedAt = fromDatetimeLocalValue(when);
@@ -323,17 +411,17 @@ export function MatchCreate() {
             p_players: listingPlayers as string[],
             p_duration_minutes: durationMinutes,
           })
-      : await supabase.rpc("create_match", {
-          p_status: kind,
-          p_played_at: playedAt,
-          p_partner: format === "singles" ? null : partnerJson,
-          p_opponent1: opp1Json,
-          p_opponent2: format === "singles" ? null : opp2Json,
-          p_sets: setPayload,
-          ...(kind === "scheduled"
-            ? { p_duration_minutes: durationMinutes }
-            : {}),
-        });
+        : await supabase.rpc("create_match", {
+            p_status: kind,
+            p_played_at: playedAt,
+            p_partner: format === "singles" ? null : partnerJson,
+            p_opponent1: opp1Json,
+            p_opponent2: format === "singles" ? null : opp2Json,
+            p_sets: setPayload,
+            ...(kind === "scheduled"
+              ? { p_duration_minutes: durationMinutes }
+              : {}),
+          });
     setSaving(false);
 
     if (createError) {
@@ -356,321 +444,69 @@ export function MatchCreate() {
           {fixtureId ? "Liga" : listingId ? "Find kamp" : "Kampe"}
         </p>
         <h1 className="mt-2 font-display text-4xl tracking-wide sm:text-5xl lg:text-4xl">
-          {fixtureId ? "Ny ligakamp" : listingId ? `Kamp på bane ${listingCourt}` : "Ny kamp"}
+          {fixtureId
+            ? "Ny ligakamp"
+            : listingId
+              ? `Kamp på bane ${listingCourt}`
+              : "Ny kamp"}
         </h1>
 
-        {error && !kind ? (
-          <p className="mt-6 text-sm text-red-300" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        {!kind ? (
-          <div className="mt-10 grid gap-4 lg:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => {
-                setKind("played");
-                setWhen(
-                  toDatetimeLocalValue(new Date(Date.now() - 60 * 60 * 1000)),
-                );
-              }}
-              className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-6 py-8 text-left transition hover:border-ball/40"
-            >
-              <p className="font-display text-3xl tracking-wide">
-                Allerede spillet
-              </p>
-              <p className="mt-2 text-sm text-line/65">
-                Resultatet skal registreres med det samme.
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setKind("scheduled");
-                setWhen(
-                  toDatetimeLocalValue(
-                    new Date(Date.now() + 24 * 60 * 60 * 1000),
-                  ),
-                );
-              }}
-              className="rounded-[var(--radius-card)] border border-line/10 bg-court-mid px-6 py-8 text-left transition hover:border-ball/40"
-            >
-              <p className="font-display text-3xl tracking-wide">Planlagt kamp</p>
-              <p className="mt-2 text-sm text-line/65">
-                Tid, spillere og kommentarer. Resultat kan tilføjes senere.
-              </p>
-            </button>
-          </div>
+        {blocked ? (
+          error ? (
+            <p className="mt-6 text-sm text-red-300" role="alert">
+              {error}
+            </p>
+          ) : (
+            <p className="mt-6 text-sm text-line/60">Indlæser…</p>
+          )
         ) : (
           <form
             onSubmit={(event) => void handleSubmit(event)}
-            className="mt-8 max-w-2xl space-y-6 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6"
+            className="mt-6 space-y-5"
           >
-            <p className="text-sm text-line/70">
-              {kind === "played" ? "Allerede spillet" : "Planlagt kamp"}
+            <div className="flex flex-wrap gap-2">
               {!listingLocked ? (
-                <>
-                  {" · "}
-                  <button
-                    type="button"
-                    onClick={() => setKind(null)}
-                    className="font-semibold text-ball hover:underline"
-                  >
-                    Skift
-                  </button>
-                </>
-              ) : (
-                " · spillere fra annoncen"
-              )}
-            </p>
-
-            {!fixtureId && !listingId ? (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                  Kampform
-                </p>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormat("doubles");
-                      if (
-                        clubPartnerId &&
-                        (partner === null || format === "singles")
-                      ) {
-                        setPartner({ kind: "member", id: clubPartnerId });
-                      }
-                    }}
-                    className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                      format === "doubles"
-                        ? "bg-ball text-court"
-                        : "border border-line/20 text-line/80"
-                    }`}
-                  >
-                    Double
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormat("singles");
-                      setPartner(null);
-                      setOpponent2(null);
-                    }}
-                    className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                      format === "singles"
-                        ? "bg-ball text-court"
-                        : "border border-line/20 text-line/80"
-                    }`}
-                  >
-                    Single
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            <label className="block text-sm font-medium text-line/80">
-              Dato og tid
-              <input
-                type="datetime-local"
-                required
-                value={when}
-                onChange={(event) => setWhen(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-              />
-            </label>
-
-            {kind === "scheduled" ? (
-              <label className="block text-sm font-medium text-line/80">
-                Varighed
-                <select
-                  value={durationMinutes}
-                  onChange={(event) => {
-                    const next = Number(event.target.value);
-                    if (isMatchDurationMinutes(next)) setDurationMinutes(next);
-                  }}
-                  className="mt-2 w-full rounded-2xl border border-line/15 bg-court px-4 py-3 outline-none focus:border-ball"
-                >
-                  {MATCH_DURATION_MINUTES.map((minutes) => (
-                    <option key={minutes} value={minutes}>
-                      {formatMatchDuration(minutes)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-
-            {fixtureId ? (
-              <div className="rounded-2xl border border-line/10 bg-court px-4 py-3 text-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                  Holdene er låst
-                </p>
-                <p className="mt-2 font-semibold">
-                  {teamName(leagueHome, ratings) || "Jeres hold"}
-                </p>
-                <ul className="mt-1 text-line/70">
-                  {leagueHome.map((player) => (
-                    <li key={player.id}>
-                      {withRating(fullName(player), ratings.get(player.id))}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-line/45">vs</p>
-                <p className="mt-2 font-semibold">
-                  {teamName(leagueAway, ratings) || "Modstandere"}
-                </p>
-                <ul className="mt-1 text-line/70">
-                  {leagueAway.map((player) => (
-                    <li key={player.id}>
-                      {withRating(fullName(player), ratings.get(player.id))}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-xs text-line/50">
-                  Spillere kan ikke ændres på en ligakamp.
-                </p>
-              </div>
-            ) : listingLocked && listingHostPlays ? (
-              <div className="rounded-2xl border border-line/10 bg-court px-4 py-3 text-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                  Bane {listingCourt}
-                </p>
-                <p className="mt-2">Dig</p>
-                <p className="text-line/70">
-                  {partner?.kind === "member"
-                    ? labeledMember(members, partner.id, ratings, "Makker")
-                    : "Makker"}
-                </p>
-                <p className="mt-3 text-line/45">vs</p>
-                <p className="text-line/70">
-                  {opponent1?.kind === "member"
-                    ? labeledMember(members, opponent1.id, ratings, "Modstander")
-                    : "Modstander"}
-                </p>
-                <p className="text-line/70">
-                  {opponent2?.kind === "member"
-                    ? labeledMember(members, opponent2.id, ratings, "Modstander")
-                    : "Modstander"}
-                </p>
-              </div>
-            ) : listingLocked ? (
-              <div className="rounded-2xl border border-line/10 bg-court px-4 py-3 text-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                  Bane {listingCourt} · du er ikke med
-                </p>
-                <p className="mt-2 text-line/70">
-                  {labeledMember(
-                    members,
-                    listingCourtPlayers[0],
-                    ratings,
-                    "Spiller",
-                  )}
-                </p>
-                <p className="text-line/70">
-                  {labeledMember(
-                    members,
-                    listingCourtPlayers[1],
-                    ratings,
-                    "Spiller",
-                  )}
-                </p>
-                <p className="mt-3 text-line/45">vs</p>
-                <p className="text-line/70">
-                  {labeledMember(
-                    members,
-                    listingCourtPlayers[2],
-                    ratings,
-                    "Spiller",
-                  )}
-                </p>
-                <p className="text-line/70">
-                  {labeledMember(
-                    members,
-                    listingCourtPlayers[3],
-                    ratings,
-                    "Spiller",
-                  )}
-                </p>
-              </div>
-            ) : (
-              <>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                {format === "singles" ? "Dig" : "Dit hold"}
-              </p>
-              {format === "doubles" ? (
-                <p className="mt-2 text-sm text-line/80">Dig</p>
-              ) : (
-                <p className="mt-2 text-sm text-line/80">Du spiller single.</p>
-              )}
-              {format === "doubles" &&
-              clubPartnerId &&
-              partner?.kind === "member" &&
-              partner.id === clubPartnerId ? (
-                <p className="mt-1 text-xs text-line/50">
-                  Din klubpartner er valgt. Du kan skifte, hvis I spillede i en
-                  anden kombination.
-                </p>
-              ) : null}
-              {format === "doubles" ? (
-                <div className="mt-3">
-                  <PlayerPicker
-                    label="Partner"
-                    members={members}
-                    excludeIds={excludePartner}
-                    ratings={ratings}
-                    value={partner}
-                    onChange={setPartner}
-                  />
-                </div>
-              ) : null}
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                {format === "singles" ? "Modstander" : "Modstandere"}
-              </p>
-              <div className="mt-3 space-y-4">
-                <PlayerPicker
-                  label={format === "singles" ? "Modstander" : "Modstander 1"}
-                  members={members}
-                  excludeIds={excludeOpp1}
-                  ratings={ratings}
-                  value={opponent1}
-                  onChange={setOpponent1}
+                <SegmentedControl
+                  label="Kampens type"
+                  value={kind}
+                  onChange={changeKind}
+                  options={KIND_OPTIONS}
                 />
-                {format === "doubles" ? (
-                  <PlayerPicker
-                    label="Modstander 2"
-                    members={members}
-                    excludeIds={excludeOpp2}
-                    ratings={ratings}
-                    value={opponent2}
-                    onChange={setOpponent2}
-                  />
-                ) : null}
-              </div>
+              ) : null}
+              {!fixtureId && !listingId ? (
+                <SegmentedControl
+                  label="Kampform"
+                  value={format}
+                  onChange={changeFormat}
+                  options={FORMAT_OPTIONS}
+                />
+              ) : null}
             </div>
-              </>
-            )}
 
-            {kind === "played" ? (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-line/45">
-                  Resultat
-                </p>
-                <div className="mt-3">
-                  <SetScores
-                    sets={sets}
-                    onChange={setSets}
-                    team1Label={format === "singles" ? "Dig" : "Dit hold"}
-                    team2Label={
-                      format === "singles" ? "Modstander" : "Modstandere"
-                    }
-                  />
-                </div>
-              </div>
-            ) : null}
+            <MatchDraftCard
+              kind={kind}
+              when={when}
+              onWhenChange={setWhen}
+              durationMinutes={durationMinutes}
+              onDurationChange={setDurationMinutes}
+              team1={team1}
+              team2={team2}
+              people={people}
+              ratings={ratings}
+              sets={sets}
+              onSetsChange={setSets}
+              onSlotClick={(slot) => {
+                if (slot.locked) return;
+                if (
+                  slot.key === "partner" ||
+                  slot.key === "opp1" ||
+                  slot.key === "opp2"
+                ) {
+                  setPicking(slot.key);
+                }
+              }}
+              hint={partnerHint}
+            />
 
             {error ? (
               <p className="text-sm text-red-300" role="alert">
@@ -678,28 +514,131 @@ export function MatchCreate() {
               </p>
             ) : null}
 
-            <button
+            <Button
               type="submit"
+              block
               disabled={saving || Boolean(fixtureId && !leagueReady)}
-              className="w-full rounded-full bg-ball py-3 text-sm font-semibold text-court disabled:opacity-60"
             >
               {saving ? "Opretter…" : "Opret kamp"}
-            </button>
+            </Button>
           </form>
         )}
+
+        <PlayerSearchSheet
+          open={Boolean(picking)}
+          onClose={() => setPicking(null)}
+          title={pickingSlot ? `Vælg ${pickingSlot.label.toLowerCase()}` : "Vælg spiller"}
+          members={members}
+          excludeIds={excludeIds}
+          ratings={ratings}
+          allowGuest
+          value={pickingSlot?.pick ?? null}
+          onSelect={(pick) => {
+            if (picking) setSlotPick(picking, pick);
+          }}
+        />
       </Page>
     </SiteShell>
   );
 }
 
-function labeledMember(
-  members: PartnerPreview[],
+function memberSlot(
+  key: string,
   id: string | undefined,
-  ratings: Map<string, number>,
-  fallback: string,
-) {
-  if (!id) return fallback;
-  const member = members.find((row) => row.id === id);
-  if (!member) return fallback;
-  return withRating(fullName(member), ratings.get(id));
+  label: string,
+  youId?: string,
+): DraftSlot {
+  return {
+    key,
+    pick: id ? { kind: "member", id } : null,
+    locked: true,
+    you: Boolean(id && youId && id === youId),
+    label,
+  };
+}
+
+function draftTeams({
+  userId,
+  format,
+  partner,
+  opponent1,
+  opponent2,
+  fixtureId,
+  leagueHome,
+  leagueAway,
+  listingLocked,
+  listingHostPlays,
+  listingCourtPlayers,
+}: {
+  userId?: string;
+  format: Format;
+  partner: PlayerPick | null;
+  opponent1: PlayerPick | null;
+  opponent2: PlayerPick | null;
+  fixtureId: string | null;
+  leagueHome: PartnerPreview[];
+  leagueAway: PartnerPreview[];
+  listingLocked: boolean;
+  listingHostPlays: boolean;
+  listingCourtPlayers: string[];
+}): { team1: DraftSlot[]; team2: DraftSlot[] } {
+  if (fixtureId) {
+    return {
+      team1: leagueHome.map((person, index) =>
+        memberSlot(`home-${person.id}`, person.id, `Hold 1 · ${index + 1}`, userId),
+      ),
+      team2: leagueAway.map((person, index) =>
+        memberSlot(`away-${person.id}`, person.id, `Hold 2 · ${index + 1}`, userId),
+      ),
+    };
+  }
+
+  if (listingLocked && !listingHostPlays) {
+    return {
+      team1: [
+        memberSlot("court-0", listingCourtPlayers[0], "Spiller", userId),
+        memberSlot("court-1", listingCourtPlayers[1], "Spiller", userId),
+      ],
+      team2: [
+        memberSlot("court-2", listingCourtPlayers[2], "Spiller", userId),
+        memberSlot("court-3", listingCourtPlayers[3], "Spiller", userId),
+      ],
+    };
+  }
+
+  const locked = listingLocked;
+  const team1: DraftSlot[] = [
+    {
+      key: "self",
+      pick: userId ? { kind: "member", id: userId } : null,
+      locked: true,
+      you: true,
+      label: "Dig",
+    },
+  ];
+  if (format === "doubles" || listingLocked) {
+    team1.push({
+      key: "partner",
+      pick: partner,
+      locked,
+      label: "Partner",
+    });
+  }
+  const team2: DraftSlot[] = [
+    {
+      key: "opp1",
+      pick: opponent1,
+      locked,
+      label: format === "singles" && !listingLocked ? "Modstander" : "Modstander 1",
+    },
+  ];
+  if (format === "doubles" || listingLocked) {
+    team2.push({
+      key: "opp2",
+      pick: opponent2,
+      locked,
+      label: "Modstander 2",
+    });
+  }
+  return { team1, team2 };
 }

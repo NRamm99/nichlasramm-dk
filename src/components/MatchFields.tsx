@@ -93,6 +93,7 @@ type SetScoresProps = {
   onChange: (sets: Array<{ team1: string; team2: string }>) => void;
   team1Label: string;
   team2Label: string;
+  compact?: boolean;
 };
 
 export function SetScores({
@@ -100,11 +101,114 @@ export function SetScores({
   onChange,
   team1Label,
   team2Label,
+  compact = false,
 }: SetScoresProps) {
   function update(index: number, side: "team1" | "team2", value: string) {
     const next = [...sets];
     next[index] = { ...sets[index], [side]: value.replace(/[^\d]/g, "") };
     onChange(next);
+  }
+
+  const setActions = (
+    <div className={`flex ${compact ? "justify-center gap-1.5" : "gap-2"}`}>
+      {sets.length < 5 ? (
+        <button
+          type="button"
+          onClick={() => onChange([...sets, { team1: "", team2: "" }])}
+          className={`rounded-full border border-line/20 font-semibold touch-manipulation ${
+            compact ? "px-3 py-1.5 text-[0.65rem]" : "px-4 py-2 text-xs"
+          }`}
+        >
+          Tilføj sæt
+        </button>
+      ) : null}
+      {sets.length > 1 ? (
+        <button
+          type="button"
+          onClick={() => onChange(sets.slice(0, -1))}
+          className={`rounded-full border border-line/20 font-semibold touch-manipulation ${
+            compact ? "px-3 py-1.5 text-[0.65rem]" : "px-4 py-2 text-xs"
+          }`}
+        >
+          {compact ? "Fjern" : "Fjern sidste sæt"}
+        </button>
+      ) : null}
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <div className="flex max-w-full flex-col items-center gap-2">
+        {/* Stacked teams (mobile): team 1 above, team 2 below. */}
+        <div className="flex max-w-full flex-col items-center gap-2 overflow-x-auto lg:hidden">
+          <div className="flex gap-1.5">
+            {sets.map((_, index) => (
+              <p
+                key={index}
+                className={`w-11 text-center text-[0.58rem] font-semibold uppercase tracking-[0.1em] ${
+                  setLabelClass(index, sets.length)
+                }`}
+              >
+                {setLabel(index, sets.length)}
+              </p>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            {sets.map((row, index) => (
+              <CompactScoreInput
+                key={`m-t1-${index}`}
+                aria-label={`${team1Label}, sæt ${index + 1}`}
+                value={row.team1}
+                onChange={(value) => update(index, "team1", value)}
+              />
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            {sets.map((row, index) => (
+              <CompactScoreInput
+                key={`m-t2-${index}`}
+                aria-label={`${team2Label}, sæt ${index + 1}`}
+                value={row.team2}
+                onChange={(value) => update(index, "team2", value)}
+              />
+            ))}
+          </div>
+        </div>
+        {/* Side-by-side teams (desktop): team 1 left, team 2 right — same axis as MatchScore. */}
+        <div className="hidden flex-col items-center gap-3 lg:flex">
+          {sets.map((row, index) => (
+            <div
+              key={`d-${index}`}
+              className="flex flex-col items-center gap-1"
+            >
+              <p
+                className={`text-center text-[0.58rem] font-semibold uppercase tracking-[0.1em] ${
+                  setLabelClass(index, sets.length)
+                }`}
+              >
+                {setLabel(index, sets.length)}
+              </p>
+              <div className="flex items-center gap-2">
+                <CompactScoreInput
+                  aria-label={`${team1Label}, sæt ${index + 1}`}
+                  value={row.team1}
+                  onChange={(value) => update(index, "team1", value)}
+                />
+                <span className="font-display text-3xl leading-none text-line/25">
+                  –
+                </span>
+                <CompactScoreInput
+                  aria-label={`${team2Label}, sæt ${index + 1}`}
+                  value={row.team2}
+                  onChange={(value) => update(index, "team2", value)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        {setActions}
+      </div>
+    );
   }
 
   return (
@@ -162,27 +266,36 @@ export function SetScores({
           ))}
         </div>
       </div>
-      <div className="flex gap-2">
-        {sets.length < 5 ? (
-          <button
-            type="button"
-            onClick={() => onChange([...sets, { team1: "", team2: "" }])}
-            className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-          >
-            Tilføj sæt
-          </button>
-        ) : null}
-        {sets.length > 1 ? (
-          <button
-            type="button"
-            onClick={() => onChange(sets.slice(0, -1))}
-            className="rounded-full border border-line/20 px-4 py-2 text-xs font-semibold"
-          >
-            Fjern sidste sæt
-          </button>
-        ) : null}
-      </div>
+      {setActions}
     </div>
+  );
+}
+
+function setLabel(index: number, count: number) {
+  return index === count - 1 && count > 1 ? "Sidste" : `S${index + 1}`;
+}
+
+function setLabelClass(index: number, count: number) {
+  return index === count - 1 ? "text-ball/80" : "text-line/40";
+}
+
+function CompactScoreInput({
+  value,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  "aria-label": string;
+}) {
+  return (
+    <input
+      inputMode="numeric"
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-11 w-11 rounded-xl border border-line/15 bg-court text-center font-display text-2xl leading-none outline-none focus:border-ball lg:h-12 lg:w-12 lg:text-3xl"
+    />
   );
 }
 

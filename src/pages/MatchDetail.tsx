@@ -6,7 +6,9 @@ import { LeagueMatchTitle } from "../components/LeagueBadge";
 import { MatchLineup, MatchMeta } from "../components/MatchLineup";
 import { ChatComposer, ChatThread } from "../components/ChatThread";
 import { SiteShell } from "../components/SiteShell";
+import { Button } from "../components/ui/Button";
 import { BackLink, Page, PageHeader } from "../components/ui/Page";
+import { Sheet } from "../components/ui/Sheet";
 import { ListGroup } from "../components/ui/ListGroup";
 import {
   Skeleton,
@@ -72,6 +74,7 @@ export function MatchDetail() {
   const [pin, setPin] = useState(0);
   const [resultSets, setResultSets] = useState([{ team1: "", team2: "" }]);
   const [savingResult, setSavingResult] = useState(false);
+  const [resultSheetOpen, setResultSheetOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [correction, setCorrection] = useState<MatchResultCorrection | null>(
     null,
@@ -351,6 +354,7 @@ export function MatchDetail() {
       return;
     }
     setInfo("Resultatet er gemt.");
+    setResultSheetOpen(false);
     await load();
   }
 
@@ -860,35 +864,67 @@ export function MatchDetail() {
             <section className="mt-8 rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-6">
               <h2 className="font-display text-2xl tracking-wide">Resultat</h2>
               {isPlayer ? (
-                <form
-                  onSubmit={(event) => void handleResult(event)}
-                  className="mt-4 space-y-4"
-                >
+                <div className="mt-4 space-y-4">
                   <p className="text-sm text-line/65">
-                    Kampen har ikke et resultat endnu. Registrér sættene her.
-                    Sidste sæt må gerne være ufærdigt; det tæller kun, hvis
-                    kampen ellers ville være uafgjort.
+                    Kampen har ikke et resultat endnu. Registrér sættene, når I
+                    er færdige.
                   </p>
-                  <SetScores
-                    sets={resultSets}
-                    onChange={setResultSets}
-                    team1Label="Hold 1"
-                    team2Label="Hold 2"
-                  />
-                  <button
-                    type="submit"
-                    disabled={savingResult}
-                    className="rounded-full bg-ball px-5 py-2 text-sm font-semibold text-court disabled:opacity-60"
+                  <Button
+                    type="button"
+                    onClick={() => setResultSheetOpen(true)}
                   >
-                    {savingResult ? "Gemmer…" : "Gem resultat"}
-                  </button>
-                </form>
+                    Gem resultat
+                  </Button>
+                </div>
               ) : (
                 <p className="mt-2 text-sm text-line/65">Ikke spillet endnu.</p>
               )}
             </section>
           </>
         )}
+
+        {match.status === "scheduled" && isPlayer ? (
+          <Sheet
+            open={resultSheetOpen}
+            onClose={() => setResultSheetOpen(false)}
+            eyebrow="Kamp"
+            title="Gem resultat"
+            footer={
+              <Button
+                type="submit"
+                form="match-result-form"
+                block
+                disabled={savingResult}
+              >
+                {savingResult ? "Gemmer…" : "Gem resultat"}
+              </Button>
+            }
+          >
+            <form
+              id="match-result-form"
+              onSubmit={(event) => void handleResult(event)}
+              className="space-y-4"
+            >
+              <MatchLineup
+                players={players}
+                people={peopleById}
+                ratings={playerRatings}
+                size="detail"
+              />
+              <SetScores
+                sets={resultSets}
+                onChange={setResultSets}
+                team1Label="Hold 1"
+                team2Label="Hold 2"
+              />
+              {error ? (
+                <p className="text-sm text-red-300" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </form>
+          </Sheet>
+        ) : null}
 
         <section className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line/10 bg-court-mid p-4 lg:p-6">
           <h2 className="font-display text-2xl tracking-wide">Kommentarer</h2>
