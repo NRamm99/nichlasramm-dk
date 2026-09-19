@@ -1,4 +1,7 @@
-import { fetchUnreadNotificationCount } from "./matchmaker";
+import {
+  fetchUnreadNotificationCount,
+  notifyUnreadNotificationsChanged,
+} from "./matchmaker";
 
 type AppBadgeTarget = {
   setAppBadge?: (contents?: number) => Promise<void>;
@@ -33,4 +36,9 @@ export async function syncAppBadge() {
   } catch {
     /* Ignore while logged out or offline. */
   }
+}
+
+export function afterNotificationsRead() {
+  notifyUnreadNotificationsChanged();
+  void syncAppBadge();
 }

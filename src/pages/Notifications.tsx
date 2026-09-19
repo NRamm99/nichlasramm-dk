@@ -6,15 +6,14 @@ import { ListEmpty, ListGroup } from "../components/ui/ListGroup";
 import { BackLink, Page, PageHeader } from "../components/ui/Page";
 import { SkeletonListRows, SkeletonRegion } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
+import { afterNotificationsRead, setAppBadgeCount } from "../lib/appBadge";
 import { danishAuthError } from "../lib/authErrors";
 import {
   notificationCopy,
   notificationHref,
-  notifyUnreadNotificationsChanged,
   type AppNotification,
 } from "../lib/matchmaker";
 import { supabase } from "../lib/supabase";
-import { setAppBadgeCount, syncAppBadge } from "../lib/appBadge";
 
 export function Notifications() {
   const { user, loading } = useAuth();
@@ -71,8 +70,7 @@ export function Notifications() {
   async function openRow(row: AppNotification) {
     if (!row.read_at) {
       await supabase.rpc("mark_notification_read", { p_id: row.id });
-      notifyUnreadNotificationsChanged();
-      void syncAppBadge();
+      afterNotificationsRead();
     }
     navigate(notificationHref(row));
   }
@@ -86,8 +84,7 @@ export function Notifications() {
       return;
     }
     await load();
-    notifyUnreadNotificationsChanged();
-    void syncAppBadge();
+    afterNotificationsRead();
   }
 
   async function clearAll() {
@@ -100,7 +97,7 @@ export function Notifications() {
       return;
     }
     await load();
-    notifyUnreadNotificationsChanged();
+    afterNotificationsRead();
     void setAppBadgeCount(0);
   }
 

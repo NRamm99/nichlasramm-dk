@@ -53,6 +53,8 @@ import {
   ratingValues,
   withRating,
 } from "../lib/rating";
+import { afterNotificationsRead } from "../lib/appBadge";
+import { markLeagueJoinRequestsRead } from "../lib/matchmaker";
 import { supabase } from "../lib/supabase";
 
 export function League() {
@@ -140,6 +142,11 @@ export function League() {
       setGroups([]);
       setTeamGroups({});
       setReady(true);
+      void markLeagueJoinRequestsRead()
+        .then(() => afterNotificationsRead())
+        .catch(() => {
+          /* Keep the league page usable if the receipt fails. */
+        });
       return;
     }
 
@@ -308,6 +315,11 @@ export function League() {
     }
 
     setReady(true);
+    void markLeagueJoinRequestsRead()
+      .then(() => afterNotificationsRead())
+      .catch(() => {
+        /* Keep the league page usable if the receipt fails. */
+      });
   }, [user]);
 
   useEffect(() => {
@@ -1598,7 +1610,10 @@ function FixtureDialog({
       "mark_league_fixture_read",
       { p_fixture_id: fixture.id },
     );
-    if (!readError) onRead(fixture.id);
+    if (!readError) {
+      onRead(fixture.id);
+      afterNotificationsRead();
+    }
   }
 
   useEffect(() => {

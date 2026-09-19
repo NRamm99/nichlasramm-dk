@@ -314,7 +314,23 @@ export async function markMatchCommentsRead(matchId: string) {
     p_match_id: matchId,
   });
   if (error) throw error;
-  notifyUnreadNotificationsChanged();
+}
+
+export async function markMatchmakerListingRead(listingId: string) {
+  const { error } = await supabase.rpc("mark_matchmaker_listing_read", {
+    p_listing_id: listingId,
+  });
+  if (error) throw error;
+}
+
+export async function markPartnershipRequestsRead() {
+  const { error } = await supabase.rpc("mark_partnership_requests_read");
+  if (error) throw error;
+}
+
+export async function markLeagueJoinRequestsRead() {
+  const { error } = await supabase.rpc("mark_league_join_requests_read");
+  if (error) throw error;
 }
 
 export function listingHasUnreadChat(

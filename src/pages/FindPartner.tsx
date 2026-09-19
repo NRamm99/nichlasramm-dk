@@ -11,6 +11,8 @@ import {
 } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
+import { afterNotificationsRead } from "../lib/appBadge";
+import { markPartnershipRequestsRead } from "../lib/matchmaker";
 import { messagePath } from "../lib/messages";
 import {
   PROFILE_SELECT,
@@ -83,6 +85,11 @@ export function FindPartner() {
       (requestRows ?? []).map((row) => attachRequestPeople(row, people)),
     );
     setReady(true);
+    void markPartnershipRequestsRead()
+      .then(() => afterNotificationsRead())
+      .catch(() => {
+        /* Keep Find Partner usable if the receipt fails. */
+      });
   }, [user]);
 
   useEffect(() => {

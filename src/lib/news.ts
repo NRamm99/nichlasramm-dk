@@ -1,3 +1,4 @@
+import { afterNotificationsRead } from "./appBadge";
 import { supabase } from "./supabase";
 
 export const NEWS_TITLE_MAX = 80;
@@ -101,6 +102,7 @@ export async function ackClubNews(newsId: string) {
     p_news_id: newsId,
   });
   if (error) throw error;
+  afterNotificationsRead();
 }
 
 export async function createClubNews(input: {

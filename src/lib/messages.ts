@@ -1,3 +1,4 @@
+import { afterNotificationsRead } from "./appBadge";
 import { supabase } from "./supabase";
 
 export type DirectInboxRow = {
@@ -157,4 +158,5 @@ export async function markDirectThreadRead(threadId: string) {
   });
   if (error) throw error;
   notifyUnreadMessagesChanged();
+  afterNotificationsRead();
 }

@@ -15,6 +15,7 @@ import {
 } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
+import { afterNotificationsRead } from "../lib/appBadge";
 import {
   canChat,
   formatListingCardTitle,
@@ -25,6 +26,7 @@ import {
   listingIsLive,
   listingNeedCount,
   listingNeedLabel,
+  markMatchmakerListingRead,
   matchIdForCourt,
   type MatchmakerListing,
   type MatchmakerListingMatch,
@@ -102,11 +104,11 @@ export function MatchmakerDetail() {
       ...peopleMap.keys(),
     ]).catch(() => new Map());
     setRatings(ratingValues(ratingRows));
-    if (canChat(next, nextRsvps, user.id)) {
-      await supabase.rpc("mark_matchmaker_listing_read", {
-        p_listing_id: listingId,
+    await markMatchmakerListingRead(listingId)
+      .then(() => afterNotificationsRead())
+      .catch(() => {
+        /* Keep the listing usable if the receipt fails. */
       });
-    }
   }, [listingId, user]);
 
   useEffect(() => {

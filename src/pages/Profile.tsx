@@ -23,6 +23,7 @@ import {
 } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import { danishAuthError } from "../lib/authErrors";
+import { afterNotificationsRead } from "../lib/appBadge";
 import {
   fetchPlayerLeagueCard,
   type PlayerLeagueCard,
@@ -43,6 +44,7 @@ import {
   fetchMemberPrefs,
   type MemberPrefs,
 } from "../lib/matchFinder";
+import { markPartnershipRequestsRead } from "../lib/matchmaker";
 import {
   PROFILE_SELECT,
   REQUEST_SELECT,
@@ -208,6 +210,13 @@ export function Profile() {
     );
     setIncoming(requests.filter((row) => row.recipient_id === user.id));
     setOutgoing(requests.filter((row) => row.requester_id === user.id));
+    if (isOwn) {
+      void markPartnershipRequestsRead()
+        .then(() => afterNotificationsRead())
+        .catch(() => {
+          /* Keep the profile usable if the receipt fails. */
+        });
+    }
   }, [isOwn, loadMatchFinder, user, usernameParam]);
 
   useEffect(() => {

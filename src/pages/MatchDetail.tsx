@@ -17,7 +17,7 @@ import {
   SkeletonRegion,
 } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
-import { syncAppBadge } from "../lib/appBadge";
+import { afterNotificationsRead } from "../lib/appBadge";
 import { danishAuthError } from "../lib/authErrors";
 import {
   asMatchRow,
@@ -196,7 +196,7 @@ export function MatchDetail() {
       (playerRows ?? []).some((row) => row.profile_id === userId)
     ) {
       void markMatchCommentsRead(matchId)
-        .then(() => void syncAppBadge())
+        .then(() => afterNotificationsRead())
         .catch(() => {
           /* Keep the match page usable if the receipt fails. */
         });
